@@ -14,8 +14,8 @@ import numpy as np
 
 class Agent:
     """ Agent implements an agent to communicate with space Environment.
-    Agent can make actions to the space environment by taking it's state
-    and reward after the last action.
+        Agent can make actions to the space environment by taking it's state
+        and reward after the last action.
     """
 
     def __init__(self):
@@ -35,7 +35,7 @@ class Agent:
 
 class Environment:
     """ Environment provides the space environment with space objects:
-    satellites and garbage, in it.
+        satellites and garbage, in it.
     """
 
     def __init__(self, protected, garbage):
@@ -90,8 +90,7 @@ class EnvState:
 
 
 class SpaceObject:
-    """
-    """
+    """ SpaceObject represents a satellite or a space garbage. """
 
     def __init__(self, pos, v, t):
         """

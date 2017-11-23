@@ -34,17 +34,24 @@ class Simulator:
             action = self.agent.get_action(s, r)
             self.environment.act(action)
 
-            print 'Step #%d. \tTime: %.2f. \tNO Collision.' % (step, time.time() - start)
+            self.is_end = self.environment.state.is_end
+
+            print 'Step #%d \tTime: %.2f \tNO Collision' % (step, time.time() - start)
 
             time.sleep(1)
 
 
 if __name__ == "__main__":
+    start_pos = np.zeros(3)
+    start_v, start_t = 1, 0
+
     agent = Agent()
     # Our protected object
-    ISS = SpaceObject(np.zeros(3), 0, 0)
+    ISS = SpaceObject(start_pos, start_v, start_t)
     # Space garbage
-    garbage = [SpaceObject(np.zeros(3), 0, 0), SpaceObject(np.zeros(3), 0, 0)]
+    garbage = [SpaceObject(start_pos, start_v, start_t),
+               SpaceObject(start_pos, start_v, start_t)]
     env = Environment(ISS, garbage)
+
     simulator = Simulator(agent, env)
     simulator.run()
