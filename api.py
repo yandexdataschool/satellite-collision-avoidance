@@ -95,7 +95,7 @@ class SpaceObject:
         """
         Args:
             pos -- np.array([x, y, z]), position in space.
-            v -- np.array([vx, vy, vz]), velocity.
+            v -- np.array([Vx, Vy, Vz]), velocity.
             t -- pykep.epoch, start time in epoch format.
             f -- float, initial fuel capacity.
         """

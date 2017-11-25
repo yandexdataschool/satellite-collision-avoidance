@@ -18,7 +18,7 @@ class Simulator:
         """
             agent -- Agent(), agent, to do actions in environment.
             environment -- Environment(), the initial space environment.
-            step -- step in julian date.
+            step -- float, step in julian date.
         """
         self.is_end = False
         self.agent = agent
@@ -64,10 +64,12 @@ def main():
     ISS = SpaceObject(*space_init)
     # Space debris
     debris = [SpaceObject(*space_init),
-               SpaceObject(*space_init)]
+              SpaceObject(*space_init)]
     env = Environment(ISS, debris)
 
     simulator = Simulator(agent, env)
     simulator.run()
 
-main()
+
+if __name__ == "__main__":
+    main()
