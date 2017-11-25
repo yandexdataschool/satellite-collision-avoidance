@@ -3,7 +3,7 @@
 # by the Agent and state/reward exchanging.
 #
 # In the first implementation wi will have only one protected
-# object. All other objects will be treated as space garbage.
+# object. All other objects will be treated as space debris.
 # As a first, we will observe only ideal satellite's trajectories,
 # so that we can describe any object location at time t after the
 # simulation has been started.
@@ -27,7 +27,7 @@ class Agent:
             s - np.array, state of the environment as matrix.
             r - reward after last action.
         Returns:
-            Vector of deltas for protected object.
+            Vector of ΔV for protected object.
         """
         action = np.zeros(4)
         return action
@@ -35,23 +35,23 @@ class Agent:
 
 class Environment:
     """ Environment provides the space environment with space objects:
-        satellites and garbage, in it.
+        satellites and debris, in it.
     """
 
-    def __init__(self, protected, garbage):
+    def __init__(self, protected, debris):
         """
             protected - SpaceObject, protected space object in Environment.
             grabage - [SpaceObject], list of other space objects.
         """
         self.protected = protected
-        self.garbage = garbage
+        self.debris = debris
         self.state = EnvState()
 
     def get_state(self, params):
         """ Provides environment state.
             params -- dict(), which parameters to return in state.
         """
-        objects = [self.protected] + self.garbage
+        objects = [self.protected] + self.debris
         return self.state.get_state(params, objects)
 
     def get_reward(self):
@@ -59,9 +59,9 @@ class Environment:
         return 0
 
     def act(self, action):
-        """ Change direction for protected object.
+        """ Change velocity for protected object.
         Args:
-            action -- np.array([dx, dy, dz, pk.epoch]), vector of deltas.
+            action -- np.array([dVx, dVy, dVz, pk.epoch]), vector of deltas.
         """
         self.protected.act(action)
 
@@ -89,7 +89,7 @@ class EnvState:
 
 
 class SpaceObject:
-    """ SpaceObject represents a satellite or a space garbage. """
+    """ SpaceObject represents a satellite or a space debris. """
 
     def __init__(self, pos, v, t, f):
         """

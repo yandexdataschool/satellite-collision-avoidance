@@ -47,7 +47,7 @@ class Simulator:
             time.sleep(1)
 
 
-if __name__ == "__main__":
+def main():
     start_pos = np.zeros(3)
 
     # Time in format YYYY-MM-DD HH:MM:SS
@@ -62,10 +62,12 @@ if __name__ == "__main__":
     agent = Agent()
     # Our protected object
     ISS = SpaceObject(*space_init)
-    # Space garbage
-    garbage = [SpaceObject(*space_init),
+    # Space debris
+    debris = [SpaceObject(*space_init),
                SpaceObject(*space_init)]
-    env = Environment(ISS, garbage)
+    env = Environment(ISS, debris)
 
     simulator = Simulator(agent, env)
     simulator.run()
+
+main()
