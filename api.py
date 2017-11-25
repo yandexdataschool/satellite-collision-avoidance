@@ -8,7 +8,7 @@
 # so that we can describe any object location at time t after the
 # simulation has been started.
 
-# import PyKEP
+# import pykep
 import numpy as np
 
 
@@ -29,7 +29,7 @@ class Agent:
         Returns:
             Vector of deltas for protected object.
         """
-        action = np.zeros(3)
+        action = np.zeros(4)
         return action
 
 
@@ -61,7 +61,7 @@ class Environment:
     def act(self, action):
         """ Change direction for protected object.
         Args:
-            action -- np.array([dx, dy, dz]), vector of deltas.
+            action -- np.array([dx, dy, dz, pk.epoch]), vector of deltas.
         """
         self.protected.act(action)
 
@@ -85,23 +85,24 @@ class EnvState:
         """"""
 
     def get_v(self):
-        """
-        """
+        """"""
 
 
 class SpaceObject:
     """ SpaceObject represents a satellite or a space garbage. """
 
-    def __init__(self, pos, v, t):
+    def __init__(self, pos, v, t, f):
         """
         Args:
-            pos -- np.array([x, y, z]), position in space
-            v -- velocity,
-            t -- start timestamp.
+            pos -- np.array([x, y, z]), position in space.
+            v -- np.array([vx, vy, vz]), velocity.
+            t -- pykep.epoch, start time in epoch format.
+            f -- float, initial fuel capacity.
         """
         self.pos = pos
         self.v = v
         self.t = t
+        self.f = f
 
     def act(self, action):
         """ Make manoeuvre for the object. """
