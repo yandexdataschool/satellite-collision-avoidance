@@ -8,8 +8,9 @@
 # so that we can describe any object location at time t after the
 # simulation has been started.
 
-# import pykep
+import pykep as pk
 import numpy as np
+# from collections import defaultdict
 
 
 class Agent:
@@ -54,6 +55,16 @@ class Environment:
         objects = [self.protected] + self.debris
         return self.state.get_state(params, objects)
 
+    # def get_debris_position(self, epoch):
+    #     """ Provide debris position at epoch. """
+    #     positions = defaultdict(tuple)
+    #     for obj in self.debris:
+    #         positions[obj.get_name()] = obj.position(epoch)
+    #     return positions
+
+    # def get_protected_position(self, epoch):
+    #     return self.protected.position(epoch)
+
     def get_reward(self):
         """"""
         return 0
@@ -70,8 +81,8 @@ class EnvState:
     """ Describes Environment state."""
 
     def __init__(self):
-        self.is_end = False
         """"""
+        self.is_end = False
 
     def get_state(self, params, objects):
         """ Provides the state of the environment as matrix.
@@ -91,19 +102,49 @@ class EnvState:
 class SpaceObject:
     """ SpaceObject represents a satellite or a space debris. """
 
-    def __init__(self, pos, v, t, f):
+    def __init__(self, name, is_tle, params):
         """
         Args:
-            pos -- np.array([x, y, z]), position in space.
-            v -- np.array([Vx, Vy, Vz]), velocity.
-            t -- pykep.epoch, start time in epoch format.
-            f -- float, initial fuel capacity.
+            name -- str, name of satellite or a space debris.
+            is_tle -- bool, whether tle parameteres are provided.
+            params -- dict, dictionary of space object coordinates. Keys are:
+                "f" -- float, initial fuel capacity.
+
+                for TLE cooridantes:
+                    "tle1" -- str, tle line1
+                    "tle2" -- str, tle line2
+
+                otherwise:
+                    "pos" -- [x, y, z], position (cartesian).
+                    "v" -- [Vx, Vy, Vz], velocity (cartesian).
+                    "epoch" -- pykep.epoch, start time in epoch format.
+                    "mu" -- float, gravity parameter.
         """
-        self.pos = pos
-        self.v = v
-        self.t = t
-        self.f = f
+
+        self.f = params["f"]
+
+        if is_tle:
+            self.type = "tle"
+            self.satellite = pk.planet.tle(
+                params["tle_line1"], params["tle_line2"])
+        else:
+            self.type = "keplerian"
+            self.satellite = pk.planet.keplerian(params["epoch"],
+                                                 pk.ic2eq(r=params["pos"],
+                                                          v=params["v"],
+                                                          mu=params["mu"]))
+        self.satellite.name = name
 
     def act(self, action):
         """ Make manoeuvre for the object. """
         return
+
+    def position(self, epoch):
+        """ Provide SpaceObject position:
+            (x, y, z) and (Vx, Vy, Vz), at given epoch.
+        """
+        pos, v = self.satellite.eph(epoch)
+        return pos, v
+
+    def get_name(self):
+        return self.satellite.name
