@@ -4,11 +4,14 @@
 import argparse
 import sys
 import time
+
 import numpy as np
+import matplotlib.pyplot as plt
+
 import pykep as pk
 from pykep.orbit_plots import plot_planet
+
 from api import Agent, Environment, SpaceObject
-import matplotlib.pyplot as plt
 
 PARAMS = dict(coord=True, v=True)
 
@@ -78,13 +81,9 @@ class Simulator:
 
             print("Iter #{} \tEpoch: {}\tCollision: {}".format(
                 iteration,  self.curr_time, self.is_end))
-
             print_position(self.env.protected, self.curr_time)
             for obj in self.env.debris:
                 print_position(obj, self.curr_time)
-
-            self.curr_time = pk.epoch(
-                self.curr_time.mjd2000 + self.step, "mjd2000")
 
             if vizualize:
                 self.plot_protected(ax)
@@ -92,6 +91,9 @@ class Simulator:
                 # pause, to see the figure.
                 plt.pause(0.05)
                 plt.cla()
+
+            self.curr_time = pk.epoch(
+                self.curr_time.mjd2000 + self.step, "mjd2000")
 
     def plot_protected(self, ax):
         """ Plot Protected SpaceObject. """
@@ -113,7 +115,7 @@ def main(args):
     parser.add_argument("-N", "--N_iteration", type=int,
                         default=None, required=False)
     parser.add_argument("-v", "--vizualize", type=str,
-                        default="False", required=False)
+                        default="True", required=False)
     args = parser.parse_args(args)
 
     print(args.vizualize)
