@@ -112,11 +112,12 @@ def main(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("-N", "--N_iteration", type=int,
                         default=None, required=False)
-    parser.add_argument("-v", "--vizualize", type=bool,
-                        default=True, required=False)
+    parser.add_argument("-v", "--vizualize", type=str,
+                        default="False", required=False)
     args = parser.parse_args(args)
 
-    N, vizualize = args.N_iteration, args.vizualize
+    print(args.vizualize)
+    N, vizualize = args.N_iteration, args.vizualize.lower() == "true"
 
     sattelites = read_tle_satellites("stations.txt")
     # ISS - first row in the file, our protected object. Other satellites -
