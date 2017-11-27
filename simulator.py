@@ -1,10 +1,12 @@
 # Module simulator provides simulator of space environment
 # and learning proccess of the agent.
 
+import argparse
+import sys
+import time
 import numpy as np
 import pykep as pk
 from pykep.orbit_plots import plot_planet
-import time
 from api import Agent, Environment, SpaceObject
 import matplotlib.pyplot as plt
 
@@ -55,14 +57,16 @@ class Simulator:
         self.start_time = pk.epoch_from_string(time.strftime("%Y-%m-%d %T"))
         self.curr_time = self.start_time
 
-    def run(self):
+    def run(self, vizualize=True, N=None):
         iteration = 0
-        fig = plt.figure()
-        ax = fig.gca(projection='3d')
-        plt.ion()
-        plt.show()
 
-        while not self.is_end:
+        if vizualize:
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')
+            plt.ion()
+            plt.show()
+
+        while iteration != N:
             iteration += 1
 
             r = self.env.get_reward()
@@ -82,11 +86,12 @@ class Simulator:
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + self.step, "mjd2000")
 
-            self.plot_protected(ax)
-            self.plot_debris(ax)
-            # pause, to see the figure.
-            plt.pause(0.05)
-            plt.cla()
+            if vizualize:
+                self.plot_protected(ax)
+                self.plot_debris(ax)
+                # pause, to see the figure.
+                plt.pause(0.05)
+                plt.cla()
 
     def plot_protected(self, ax):
         """ Plot Protected SpaceObject. """
@@ -103,7 +108,16 @@ class Simulator:
                         t0=self.curr_time, s=25, legend=True, color=colors[i])
 
 
-def main():
+def main(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-N", "--N_iteration", type=int,
+                        default=None, required=False)
+    parser.add_argument("-v", "--vizualize", type=bool,
+                        default=True, required=False)
+    args = parser.parse_args(args)
+
+    N, vizualize = args.N_iteration, args.vizualize
+
     sattelites = read_tle_satellites("stations.txt")
     # ISS - first row in the file, our protected object. Other satellites -
     # space debris.
@@ -121,8 +135,9 @@ def main():
     env = Environment(ISS, debris)
 
     simulator = Simulator(agent, env)
-    simulator.run()
+    simulator.run(vizualize=vizualize, N=N)
+    return
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
