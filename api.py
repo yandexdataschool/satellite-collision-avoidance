@@ -41,7 +41,7 @@ class Environment:
     def __init__(self, protected, debris):
         """
             protected - SpaceObject, protected space object in Environment.
-            devris - [SpaceObject], list of other space objects.
+            debris - [SpaceObject], list of other space objects.
         """
         self.protected = protected
         self.debris = debris
@@ -63,6 +63,8 @@ class Environment:
         Args:
             action -- np.array([dVx, dVy, dVz, pk.epoch]), vector of deltas.
         """
+        # TODO(dsdubov): populate the function.
+        # Learn how to make action for pykep.planet [tle or keplerian] object.
         self.protected.act(action)
 
 
@@ -79,6 +81,8 @@ class EnvState:
             params - dict(), which parameteres to include into state.
             in the first implementation may consist of keys: "coord", "v".
         """
+        # TODO(dsdubov): populate the function.
+        # Provide state for reward function.
         return
 
     def get_coordinates(self, t, objects):
