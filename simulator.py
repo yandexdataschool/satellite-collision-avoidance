@@ -1,11 +1,12 @@
 # Module simulator provides simulator of space environment
 # and learning proccess of the agent.
 
-# import numpy as np
+import numpy as np
 import pykep as pk
+from pykep.orbit_plots import plot_planet
 import time
 from api import Agent, Environment, SpaceObject
-
+import matplotlib.pyplot as plt
 
 PARAMS = dict(coord=True, v=True)
 
@@ -19,12 +20,29 @@ def print_position(satellite, epoch):
                  satellite.get_name(), v[0], v[1], v[2]))
 
 
+def read_tle_satellites(f):
+    """Create SpaceObjects from a text file f."""
+    space_objects = []
+    with open(f, 'r') as satellites:
+        while True:
+            name = satellites.readline().strip()
+            if not name:
+                break
+            tle_line1 = satellites.readline().strip()
+            tle_line2 = satellites.readline().strip()
+            satellite = SpaceObject(name, True, dict(tle_line1=tle_line1,
+                                                     tle_line2=tle_line2,
+                                                     f=0))
+            space_objects.append(satellite)
+    return space_objects
+
+
 class Simulator:
     """ Simulator allows to start the simulation of provided environment,
     and starts agent-environment collaboration.
     """
 
-    def __init__(self, agent, environment, step=0.5):
+    def __init__(self, agent, environment, step=0.01):
         """
             agent -- Agent(), agent, to do actions in environment.
             environment -- Environment(), the initial space environment.
@@ -39,6 +57,11 @@ class Simulator:
 
     def run(self):
         iteration = 0
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        plt.ion()
+        plt.show()
+
         while not self.is_end:
             iteration += 1
 
@@ -58,32 +81,39 @@ class Simulator:
 
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + self.step, "mjd2000")
-            time.sleep(3)
+
+            # Plot Protected SpaceObject
+            plot_planet(self.environment.protected.satellite,
+                        ax=ax, t0=self.curr_time, s=100, legend=True)
+            
+            # Plot space debris
+            cmap = plt.get_cmap('gnuplot')
+            N = len(self.environment.debris)
+            colors = [cmap(i) for i in np.linspace(0, 1, N)]
+            for i in range(N):
+                plot_planet(self.environment.debris[i].satellite, ax=ax,
+                            t0=self.curr_time, s=10, legend=True, color=colors[i])
+            # pause, to see the figure.
+            plt.pause(0.5)
+            plt.cla()
 
 
 def main():
-    pos = [1, 0, 1]
-    # Time in format YYYY-MM-DD HH:MM:SS
+    sattelites = read_tle_satellites("stations.txt")
+    print(len(sattelites))
+    # ISS - first row in the file, our protected object. Other satellites - space debris.
+    ISS, debris = sattelites[0], sattelites[1:5]
+
+    # Example of SpaceObject with initial parameters: pos, v, epoch.
+    pos, v = [1, 0, 1], [1, 0, 1]
     t = time.strftime("%Y-%m-%d %T")
-    # Time in epoch format to use in pykep methods.
     epoch = pk.epoch_from_string(t)
-    v = [1, 0, 1]
-    mu = 1.0
-    f = 1.0
-
-    # ISS tle parameteres.
-    iss1 = '1 25544U 98067A   17328.30743056  .00003472  00000-0  59488-4 0  9993'
-    iss2 = '2 25544  51.6407 320.0980 0004356 149.0109  38.9204 15.54217487 86654'
-
-    params_ISS = dict(tle_line1=iss1, tle_line2=iss2, f=f)
-    params_debris = dict(pos=pos, v=v, epoch=epoch, mu=mu, f=f)
+    mu, f = 1.0, 1.0
+    d1 = SpaceObject("Debris 1", False, dict(
+        pos=pos, v=v, epoch=epoch, mu=mu, f=f))
+    debris.append(d1)
 
     agent = Agent()
-    # Our protected object
-    ISS = SpaceObject("ISS", True, params_ISS)
-    # Space debris
-    debris = [SpaceObject("D1", False, params_debris),
-              SpaceObject("D2", False, params_debris)]
     env = Environment(ISS, debris)
 
     simulator = Simulator(agent, env)
