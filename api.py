@@ -42,7 +42,7 @@ class Environment:
     def __init__(self, protected, debris):
         """
             protected - SpaceObject, protected space object in Environment.
-            grabage - [SpaceObject], list of other space objects.
+            devris - [SpaceObject], list of other space objects.
         """
         self.protected = protected
         self.debris = debris
@@ -54,16 +54,6 @@ class Environment:
         """
         objects = [self.protected] + self.debris
         return self.state.get_state(params, objects)
-
-    # def get_debris_position(self, epoch):
-    #     """ Provide debris position at epoch. """
-    #     positions = defaultdict(tuple)
-    #     for obj in self.debris:
-    #         positions[obj.get_name()] = obj.position(epoch)
-    #     return positions
-
-    # def get_protected_position(self, epoch):
-    #     return self.protected.position(epoch)
 
     def get_reward(self):
         """"""

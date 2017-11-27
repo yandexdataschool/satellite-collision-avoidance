@@ -42,7 +42,7 @@ class Simulator:
     and starts agent-environment collaboration.
     """
 
-    def __init__(self, agent, environment, step=0.01):
+    def __init__(self, agent, environment, step=0.001):
         """
             agent -- Agent(), agent, to do actions in environment.
             environment -- Environment(), the initial space environment.
@@ -50,7 +50,7 @@ class Simulator:
         """
         self.is_end = False
         self.agent = agent
-        self.environment = environment
+        self.env = environment
         self.step = step
         self.start_time = pk.epoch_from_string(time.strftime("%Y-%m-%d %T"))
         self.curr_time = self.start_time
@@ -65,50 +65,54 @@ class Simulator:
         while not self.is_end:
             iteration += 1
 
-            r = self.environment.get_reward()
-            s = self.environment.get_state(PARAMS)
+            r = self.env.get_reward()
+            s = self.env.get_state(PARAMS)
             action = self.agent.get_action(s, r)
-            self.environment.act(action)
+            self.env.act(action)
 
-            self.is_end = self.environment.state.is_end
+            self.is_end = self.env.state.is_end
 
             print("Iter #{} \tEpoch: {}\tCollision: {}".format(
                 iteration,  self.curr_time, self.is_end))
 
-            print_position(self.environment.protected, self.curr_time)
-            for obj in self.environment.debris:
+            print_position(self.env.protected, self.curr_time)
+            for obj in self.env.debris:
                 print_position(obj, self.curr_time)
 
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + self.step, "mjd2000")
 
-            # Plot Protected SpaceObject
-            plot_planet(self.environment.protected.satellite,
-                        ax=ax, t0=self.curr_time, s=100, legend=True)
-            
-            # Plot space debris
-            cmap = plt.get_cmap('gnuplot')
-            N = len(self.environment.debris)
-            colors = [cmap(i) for i in np.linspace(0, 1, N)]
-            for i in range(N):
-                plot_planet(self.environment.debris[i].satellite, ax=ax,
-                            t0=self.curr_time, s=10, legend=True, color=colors[i])
+            self.plot_protected(ax)
+            self.plot_debris(ax)
             # pause, to see the figure.
-            plt.pause(0.5)
+            plt.pause(0.05)
             plt.cla()
+
+    def plot_protected(self, ax):
+        """ Plot Protected SpaceObject. """
+        plot_planet(self.env.protected.satellite,
+                    ax=ax, t0=self.curr_time, s=100, legend=True)
+
+    def plot_debris(self, ax):
+        """ Plot space debris. """
+        cmap = plt.get_cmap('gnuplot')
+        N = len(self.env.debris)
+        colors = [cmap(i) for i in np.linspace(0, 1, N)]
+        for i in range(N):
+            plot_planet(self.env.debris[i].satellite, ax=ax,
+                        t0=self.curr_time, s=25, legend=True, color=colors[i])
 
 
 def main():
     sattelites = read_tle_satellites("stations.txt")
-    print(len(sattelites))
-    # ISS - first row in the file, our protected object. Other satellites - space debris.
-    ISS, debris = sattelites[0], sattelites[1:5]
+    # ISS - first row in the file, our protected object. Other satellites -
+    # space debris.
+    ISS, debris = sattelites[0], sattelites[1:4]
 
     # Example of SpaceObject with initial parameters: pos, v, epoch.
-    pos, v = [1, 0, 1], [1, 0, 1]
-    t = time.strftime("%Y-%m-%d %T")
-    epoch = pk.epoch_from_string(t)
-    mu, f = 1.0, 1.0
+    pos, v = [2315921.25, 3814078.37, 5096751.46], [4363.18, 1981.83, 5982.45]
+    epoch = pk.epoch_from_string("2017-Nov-27 15:16:20")
+    mu, f = 398600800000000, 1.0
     d1 = SpaceObject("Debris 1", False, dict(
         pos=pos, v=v, epoch=epoch, mu=mu, f=f))
     debris.append(d1)
