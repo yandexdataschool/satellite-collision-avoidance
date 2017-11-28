@@ -18,7 +18,6 @@ logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
                     filemode='w', format='%(name)s:%(levelname)s\n%(message)s\n')
 
 
-PARAMS = dict(coord=True, v=True)
 DEBRIS_NUM = 5
 
 
@@ -104,12 +103,10 @@ class Simulator:
             self.viz.run()
 
         while iteration != N and not self.is_end:
-            s = self.env.get_state(PARAMS, self.curr_time)
+            self.is_end, s = self.env.get_state(self.curr_time)
             r = self.env.get_reward(s, self.env.get_curr_reward())
             action = self.agent.get_action(s, r)
             self.env.act(action)
-
-            self.is_end = self.env.state.is_end
 
             self.log_iteration(iteration)
             self.log_protected_position()

@@ -57,11 +57,12 @@ class Environment:
         self.reward = 0
         self.state = EnvState()
 
-    def get_state(self, params, epoch):
+    def get_state(self, epoch):
         """ Provides environment state.
-            params -- dict(), which parameters to return in state.
+        Args:
+            epoch -- pk.epoch, at which time to return environment state.
         """
-        return self.state.get_state(params, self.protected, self.debris, epoch)
+        return self.state.get_state(self.protected, self.debris, epoch)
 
     def get_reward(self, state, current_reward):
         """
@@ -123,13 +124,18 @@ class EnvState:
 
     def __init__(self):
         """"""
+        self.state = dict()
         self.is_end = False
 
-    def get_state(self, params, protected, debris, epoch):
-        """ Provides the state of the environment as dictionary.
+    def get_state(self, protected, debris, epoch):
+        """ Provides the state of the environment as dictionary
+            and is_end flag.
         Args:
-            params - dict(), which parameteres to include into state.
-            in the first implementation may consist of keys: "coord", "v".
+            protected -- pk.planet, protected satellite in the environment.
+            debris -- [pk.planet], other space objects.
+            epoch -- pk.epoch, at which time to return environment state.
+        ---
+        output: bool, dict()
         """
         st_pos, st_v = protected.position(epoch)
         st = np.hstack((np.array(st_pos), np.array(st_v)))
@@ -140,14 +146,15 @@ class EnvState:
             db[i] = np.hstack((np.array(pos), np.array(v)))
 
         coord = dict(st=st, db=db)
+        self.state = dict(coord=coord, trajectory_deviation_coef=0.0)
+        self.is_end = self.check_collision()
         # Provide state for reward function.
-        return dict(coord=coord, trajectory_deviation_coef=0.0)
+        return self.is_end, self.state
 
-    def get_coordinates(self, t, objects):
-        """"""
-
-    def get_v(self):
-        """"""
+    def check_collision(self):
+        """ Return True if collision with protected object appears. """
+        # TODO: populate function. Compare protected and debris positions.
+        return False
 
 
 class SpaceObject:
