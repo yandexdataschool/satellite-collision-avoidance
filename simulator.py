@@ -104,7 +104,7 @@ class Simulator:
             self.viz.run()
 
         while iteration != N and not self.is_end:
-            s = self.env.get_state(PARAMS)
+            s = self.env.get_state(PARAMS, self.curr_time)
             r = self.env.get_reward(s, self.env.get_curr_reward())
             action = self.agent.get_action(s, r)
             self.env.act(action)

@@ -57,12 +57,11 @@ class Environment:
         self.reward = 0
         self.state = EnvState()
 
-    def get_state(self, params):
+    def get_state(self, params, epoch):
         """ Provides environment state.
             params -- dict(), which parameters to return in state.
         """
-        objects = [self.protected] + self.debris
-        return self.state.get_state(params, objects)
+        return self.state.get_state(params, self.protected, self.debris, epoch)
 
     def get_reward(self, state, current_reward):
         """
@@ -76,7 +75,7 @@ class Environment:
         output: float
         """
         sat_coordinates = to_xyz(state['coord']['st'])
-        debr_coordinates = to_xyz(state['coord']['db'])
+        debr_coordinates = to_xyz(state['coord']['db'][0])
 
         # Euclidean distance
         # distances array
@@ -126,17 +125,23 @@ class EnvState:
         """"""
         self.is_end = False
 
-    def get_state(self, params, objects):
-        """ Provides the state of the environment as matrix.
+    def get_state(self, params, protected, debris, epoch):
+        """ Provides the state of the environment as dictionary.
         Args:
             params - dict(), which parameteres to include into state.
             in the first implementation may consist of keys: "coord", "v".
         """
-        # TODO(dsdubov): populate the function.
+        st_pos, st_v = protected.position(epoch)
+        st = np.hstack((np.array(st_pos), np.array(st_v)))
+        N = len(debris)
+        db = np.zeros((N, 6))
+        for i in range(N):
+            pos, v = debris[i].position(epoch)
+            db[i] = np.hstack((np.array(pos), np.array(v)))
+
+        coord = dict(st=st, db=db)
         # Provide state for reward function.
-        return dict(coord=dict(st=np.zeros((1, 6)),
-                               db=np.zeros((10, 6))),
-                    trajectory_deviation_coef=0.0)
+        return dict(coord=coord, trajectory_deviation_coef=0.0)
 
     def get_coordinates(self, t, objects):
         """"""
