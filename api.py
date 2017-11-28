@@ -81,7 +81,7 @@ class Environment:
         collision_danger = distance_to_reward(distances)
 
         # fuel reward
-        fuel_consumption = SpaceObject.f
+        fuel_consumption = protected.f
 
         # trajectory reward
         traj_reward = -state['trajectory_deviation_coef']
