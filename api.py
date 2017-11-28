@@ -3,12 +3,12 @@
 # by the Agent and state/reward exchanging.
 #
 # In the first implementation wi will have only one protected
-# object. All other objects will be treated as space garbage.
+# object. All other objects will be treated as space debris.
 # As a first, we will observe only ideal satellite's trajectories,
 # so that we can describe any object location at time t after the
 # simulation has been started.
 
-# import PyKEP
+import pykep as pk
 import numpy as np
 
 
@@ -27,31 +27,31 @@ class Agent:
             s - np.array, state of the environment as matrix.
             r - reward after last action.
         Returns:
-            Vector of deltas for protected object.
+            Vector of ΔV for protected object.
         """
-        action = np.zeros(3)
+        action = np.zeros(4)
         return action
 
 
 class Environment:
     """ Environment provides the space environment with space objects:
-        satellites and garbage, in it.
+        satellites and debris, in it.
     """
 
-    def __init__(self, protected, garbage):
+    def __init__(self, protected, debris):
         """
             protected - SpaceObject, protected space object in Environment.
-            grabage - [SpaceObject], list of other space objects.
+            debris - [SpaceObject], list of other space objects.
         """
         self.protected = protected
-        self.garbage = garbage
+        self.debris = debris
         self.state = EnvState()
 
     def get_state(self, params):
         """ Provides environment state.
             params -- dict(), which parameters to return in state.
         """
-        objects = [self.protected] + self.garbage
+        objects = [self.protected] + self.debris
         return self.state.get_state(params, objects)
 
     def get_reward(self, state, next_state, current_reward):
@@ -93,10 +93,12 @@ class Environment:
         return new_reward
 
     def act(self, action):
-        """ Change direction for protected object.
+        """ Change velocity for protected object.
         Args:
-            action -- np.array([dx, dy, dz]), vector of deltas.
+            action -- np.array([dVx, dVy, dVz, pk.epoch]), vector of deltas.
         """
+        # TODO(dsdubov): populate the function.
+        # Learn how to make action for pykep.planet [tle or keplerian] object.
         self.protected.act(action)
 
 
@@ -104,8 +106,8 @@ class EnvState:
     """ Describes Environment state."""
 
     def __init__(self):
-        self.is_end = False
         """"""
+        self.is_end = False
 
     def get_state(self, params, objects):
         """ Provides the state of the environment as matrix.
@@ -113,30 +115,63 @@ class EnvState:
             params - dict(), which parameteres to include into state.
             in the first implementation may consist of keys: "coord", "v".
         """
+        # TODO(dsdubov): populate the function.
+        # Provide state for reward function.
         return
 
     def get_coordinates(self, t, objects):
         """"""
 
     def get_v(self):
-        """
-        """
+        """"""
 
 
 class SpaceObject:
-    """ SpaceObject represents a satellite or a space garbage. """
+    """ SpaceObject represents a satellite or a space debris. """
 
-    def __init__(self, pos, v, t):
+    def __init__(self, name, is_tle, params):
         """
         Args:
-            pos -- np.array([x, y, z]), position in space
-            v -- velocity,
-            t -- start timestamp.
+            name -- str, name of satellite or a space debris.
+            is_tle -- bool, whether tle parameteres are provided.
+            params -- dict, dictionary of space object coordinates. Keys are:
+                "f" -- float, initial fuel capacity.
+
+                for TLE cooridantes:
+                    "tle1" -- str, tle line1
+                    "tle2" -- str, tle line2
+
+                otherwise:
+                    "pos" -- [x, y, z], position (cartesian).
+                    "v" -- [Vx, Vy, Vz], velocity (cartesian).
+                    "epoch" -- pykep.epoch, start time in epoch format.
+                    "mu" -- float, gravity parameter.
         """
-        self.pos = pos
-        self.v = v
-        self.t = t
+
+        self.f = params["f"]
+
+        if is_tle:
+            self.type = "tle"
+            self.satellite = pk.planet.tle(
+                params["tle_line1"], params["tle_line2"])
+        else:
+            self.type = "keplerian"
+            self.satellite = pk.planet.keplerian(params["epoch"],
+                                                 pk.ic2eq(r=params["pos"],
+                                                          v=params["v"],
+                                                          mu=params["mu"]))
+        self.satellite.name = name
 
     def act(self, action):
         """ Make manoeuvre for the object. """
         return
+
+    def position(self, epoch):
+        """ Provide SpaceObject position:
+            (x, y, z) and (Vx, Vy, Vz), at given epoch.
+        """
+        pos, v = self.satellite.eph(epoch)
+        return pos, v
+
+    def get_name(self):
+        return self.satellite.name
