@@ -14,7 +14,7 @@ from pykep.orbit_plots import plot_planet
 
 from api import Agent, Environment, SpaceObject
 
-logging.basicConfig(filename="simulator.log", level=logging.INFO,
+logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
                     filemode='w', format='%(name)s:%(levelname)s\n%(message)s\n')
 
 
@@ -104,8 +104,8 @@ class Simulator:
             self.viz.run()
 
         while iteration != N and not self.is_end:
-            r = self.env.get_reward()
             s = self.env.get_state(PARAMS)
+            r = self.env.get_reward(s, self.env.get_curr_reward())
             action = self.agent.get_action(s, r)
             self.env.act(action)
 
@@ -135,8 +135,8 @@ class Simulator:
             self.logger.info(strf_position(obj, self.curr_time))
 
     def log_iteration(self, iteration):
-        self.logger.info("Iter #{} \tEpoch: {}\tCollision: {}".format(
-            iteration,  self.curr_time, self.is_end))
+        self.logger.debug("Iter #{} \tEpoch: {}\tCollision: {}\t Reward: {}".format(
+            iteration,  self.curr_time, self.is_end, self.env.get_curr_reward()))
 
     def plot_protected(self):
         """ Plot Protected SpaceObject. """

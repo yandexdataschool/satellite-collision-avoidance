@@ -12,6 +12,15 @@ import pykep as pk
 import numpy as np
 
 
+def to_xyz(coordinates):
+    """
+    ф-я переводит координаты в xyz
+    (пока случайно)
+    """
+    result = np.random.normal(size=[coordinates.shape[0], 3])
+    return result
+
+
 class Agent:
     """ Agent implements an agent to communicate with space Environment.
         Agent can make actions to the space environment by taking it's state
@@ -45,6 +54,7 @@ class Environment:
         """
         self.protected = protected
         self.debris = debris
+        self.reward = 0
         self.state = EnvState()
 
     def get_state(self, params):
@@ -61,13 +71,12 @@ class Environment:
                 {'st': np.array shape (1, 6)},  satellite coordinates
                 {'db': np.array shape (n_items, 6)},  debris coordinates
             'trajectory_deviation_coef': float
-        action: ... besides, we get fuel_cunsumption from action 
         current_reward: float
         ---
         output: float
         """
         sat_coordinates = to_xyz(state['coord']['st'])
-        debr_coordinates = to_xyz(state['coord']['gb'])
+        debr_coordinates = to_xyz(state['coord']['db'])
 
         # Euclidean distance
         # distances array
@@ -81,7 +90,7 @@ class Environment:
         collision_danger = distance_to_reward(distances)
 
         # fuel reward
-        fuel_consumption = SpaceObject.f
+        fuel_consumption = self.protected.f
 
         # trajectory reward
         traj_reward = -state['trajectory_deviation_coef']
@@ -93,7 +102,12 @@ class Environment:
             + traj_reward
         )
         new_reward = current_reward + reward
+        self.reward = new_reward
         return new_reward
+
+    def get_curr_reward(self):
+        """ Provide the last calculated reward. """
+        return self.reward
 
     def act(self, action):
         """ Change velocity for protected object.
@@ -120,7 +134,9 @@ class EnvState:
         """
         # TODO(dsdubov): populate the function.
         # Provide state for reward function.
-        return
+        return dict(coord=dict(st=np.zeros((1, 6)),
+                               db=np.zeros((10, 6))),
+                    trajectory_deviation_coef=0.0)
 
     def get_coordinates(self, t, objects):
         """"""
