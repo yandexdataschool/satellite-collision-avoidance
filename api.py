@@ -90,7 +90,7 @@ class Environment:
         collision_danger = distance_to_reward(distances)
 
         # fuel reward
-        fuel_consumption = self.protected.f
+        fuel_consumption = self.protected.fuel
 
         # trajectory reward
         traj_reward = -state['trajectory_deviation_coef']
@@ -179,7 +179,7 @@ class SpaceObject:
                     "mu" -- float, gravity parameter.
         """
 
-        self.f = params["f"]
+        self.fuel = params["fuel"]
 
         if is_tle:
             self.type = "tle"

@@ -17,7 +17,6 @@ from api import Agent, Environment, SpaceObject
 logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
                     filemode='w', format='%(name)s:%(levelname)s\n%(message)s\n')
 
-
 DEBRIS_NUM = 5
 
 
@@ -42,7 +41,7 @@ def read_tle_satellites(f):
             tle_line2 = satellites.readline().strip()
             satellite = SpaceObject(name, True, dict(tle_line1=tle_line1,
                                                      tle_line2=tle_line2,
-                                                     f=0))
+                                                     fuel=1))
             space_objects.append(satellite)
     return space_objects
 
@@ -172,9 +171,9 @@ def main(args):
     # Example of SpaceObject with initial parameters: pos, v, epoch.
     pos, v = [2315921.25, 3814078.37, 5096751.46], [4363.18, 1981.83, 5982.45]
     epoch = pk.epoch_from_string("2017-Nov-27 15:16:20")
-    mu, f = 398600800000000, 1.0
+    mu, fuel = 398600800000000, 1.0
     d1 = SpaceObject("Debris 1", False, dict(
-        pos=pos, v=v, epoch=epoch, mu=mu, f=f))
+        pos=pos, v=v, epoch=epoch, mu=mu, fuel=fuel))
     debris.append(d1)
 
     agent = Agent()
