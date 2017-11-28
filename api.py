@@ -54,9 +54,43 @@ class Environment:
         objects = [self.protected] + self.garbage
         return self.state.get_state(params, objects)
 
-    def get_reward(self):
-        """"""
-        return 0
+    def get_reward(self, state, next_state, current_reward):
+        """
+        state, next_state: dict where keys:
+            'coord': dict where:
+                {'st': np.array shape (n_satellites, 6)},  satellites coordinates
+                {'gb': np.array shape (n_items, 6)},  garbage coordinates
+            'fuel': float
+            'trajectory_deviation_coef': float
+        current_reward: float
+        ---
+        output: float
+        """
+        sat_coordinates = to_xyz(state['coord']['st'])
+        garb_coordinates = to_xyz(state['coord']['gb'])
+
+        # Euclidean distance
+        # distances array
+        distances = np.sum((sat_coordinates - garb_coordinates) ** 2, axis=1) ** 0.5
+        def distance_to_reward(dist_array):
+            result = -1. / (dist_array + 0.001)
+            return np.sum(result)
+        collision_danger = distance_to_reward(distances)
+        
+        # fuel reward  
+        fuel_consumption = -(state['fuel'] - next_state['fuel'])
+        
+        # trajectory reward
+        traj_reward = -state['trajectory_deviation_coef']
+        
+        # whole reward    
+        reward = (
+            collision_danger
+            + fuel_consumption
+            + traj_reward
+        ) 
+        new_reward = current_reward + reward
+        return new_reward
 
     def act(self, action):
         """ Change direction for protected object.
