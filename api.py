@@ -38,7 +38,7 @@ class Environment:
         satellites and debris, in it.
     """
 
-    def __init__(self, protected, debris):
+    def __init__(self, protected, debris, fuel):
         """
             protected - SpaceObject, protected space object in Environment.
             debris - [SpaceObject], list of other space objects.
@@ -46,6 +46,7 @@ class Environment:
         self.protected = protected
         self.debris = debris
         self.state = EnvState()
+	self.fuel = fuel
 
     def get_state(self, params):
         """ Provides environment state.
@@ -54,14 +55,15 @@ class Environment:
         objects = [self.protected] + self.debris
         return self.state.get_state(params, objects)
 
-    def get_reward(self, state, next_state, current_reward):
+    def get_reward(self, state, action, current_reward):
         """
-        state, next_state: dict where keys:
+        state: dict where keys:
             'coord': dict where:
-                {'st': np.array shape (n_satellites, 6)},  satellites coordinates
+                {'st': np.array shape (1, 6)},  satellite coordinates
                 {'gb': np.array shape (n_items, 6)},  garbage coordinates
             'fuel': float
             'trajectory_deviation_coef': float
+	action: ... besides, we get fuel_cunsumption from action
         current_reward: float
         ---
         output: float
@@ -78,7 +80,7 @@ class Environment:
         collision_danger = distance_to_reward(distances)
         
         # fuel reward  
-        fuel_consumption = -(state['fuel'] - next_state['fuel'])
+        fuel_consumption = -action.fuel_cunsumption
         
         # trajectory reward
         traj_reward = -state['trajectory_deviation_coef']
