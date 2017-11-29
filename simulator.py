@@ -7,7 +7,9 @@ import sys
 import logging
 
 import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+
 
 import pykep as pk
 from pykep.orbit_plots import plot_planet
