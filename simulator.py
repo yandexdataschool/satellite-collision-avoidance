@@ -29,10 +29,10 @@ def strf_position(satellite, epoch):
                satellite.get_name(), vel[0], vel[1], vel[2])
 
 
-def read_tle_satellites(f):
+def read_tle_satellites(file):
     """Create SpaceObjects from a text file f."""
     space_objects = []
-    with open(f, 'r') as satellites:
+    with open(file, 'r') as satellites:
         while True:
             name = satellites.readline().strip()
             if not name:
