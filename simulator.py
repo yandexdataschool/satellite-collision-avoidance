@@ -22,11 +22,11 @@ DEBRIS_NUM = 5
 
 def strf_position(satellite, epoch):
     """ Print SpaceObject position. """
-    pos, v = satellite.position(epoch)
+    pos, vel = satellite.position(epoch)
     return "{} position: x - {:0.2f}, y - {:0.2f}, z - {:0.2f}.\
       \n{} velocity: Vx - {:0.2f}, Vy - {:0.2f}, Vz - {:0.2f}\
       ".format(satellite.get_name(), pos[0], pos[1], pos[2],
-               satellite.get_name(), v[0], v[1], v[2])
+               satellite.get_name(), vel[0], vel[1], vel[2])
 
 
 def read_tle_satellites(f):
@@ -66,7 +66,7 @@ class Vizualizer:
 
     def pause_and_clear(self):
         """ Pause the frame to watch it. Clear axis for next frame. """
-        plt.pause(0.005)
+        plt.pause(0.0001)
         plt.cla()
 
 
@@ -166,18 +166,19 @@ def main(args):
     sattelites = read_tle_satellites("stations.txt")
     # ISS - first row in the file, our protected object. Other satellites -
     # space debris.
-    ISS, debris = sattelites[0], sattelites[1:DEBRIS_NUM]
+    iss, debris = sattelites[0], sattelites[1:DEBRIS_NUM]
 
     # Example of SpaceObject with initial parameters: pos, v, epoch.
-    pos, v = [2315921.25, 3814078.37, 5096751.46], [4363.18, 1981.83, 5982.45]
+    pos, vel = [2315921.25, 3814078.37, 5096751.46], [
+        4363.18, 1981.83, 5982.45]
     epoch = pk.epoch_from_string("2017-Nov-27 15:16:20")
     mu, fuel = 398600800000000, 1.0
     d1 = SpaceObject("Debris 1", False, dict(
-        pos=pos, v=v, epoch=epoch, mu=mu, fuel=fuel))
+        pos=pos, vel=vel, epoch=epoch, mu=mu, fuel=fuel))
     debris.append(d1)
 
     agent = Agent()
-    env = Environment(ISS, debris)
+    env = Environment(iss, debris)
 
     simulator = Simulator(agent, env)
     simulator.run(vizualize=vizualize, N=N, step=step)
