@@ -7,6 +7,8 @@ import sys
 import logging
 
 import numpy as np
+
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
 import pykep as pk
@@ -64,8 +66,14 @@ class Vizualizer:
         plot_planet(satellite, ax=self.ax,
                     t0=t, s=size, legend=True, color=color)
 
+    def plot_earth(self):
+        """ Add earth to the plot and legend. """
+        self.ax.scatter(0, 0, 0, color='green', label="Earth")
+        plt.legend()
+
     def pause_and_clear(self):
         """ Pause the frame to watch it. Clear axis for next frame. """
+        plt.legend()
         plt.pause(0.0001)
         plt.cla()
 
@@ -114,6 +122,7 @@ class Simulator:
             if vizualize:
                 self.plot_protected()
                 self.plot_debris()
+                self.viz.plot_earth()
                 self.viz.pause_and_clear()
 
             self.curr_time = pk.epoch(
