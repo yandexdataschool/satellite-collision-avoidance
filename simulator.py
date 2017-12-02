@@ -7,6 +7,10 @@ import sys
 import logging
 
 import numpy as np
+<<<<<<< HEAD
+=======
+
+>>>>>>> e89ab46850abe6cfaf38f04b4cbfdc917a59648f
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
@@ -19,23 +23,22 @@ from api import Agent, Environment, SpaceObject
 logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
                     filemode='w', format='%(name)s:%(levelname)s\n%(message)s\n')
 
-
 DEBRIS_NUM = 5
 
 
 def strf_position(satellite, epoch):
     """ Print SpaceObject position. """
-    pos, v = satellite.position(epoch)
+    pos, vel = satellite.position(epoch)
     return "{} position: x - {:0.2f}, y - {:0.2f}, z - {:0.2f}.\
       \n{} velocity: Vx - {:0.2f}, Vy - {:0.2f}, Vz - {:0.2f}\
       ".format(satellite.get_name(), pos[0], pos[1], pos[2],
-               satellite.get_name(), v[0], v[1], v[2])
+               satellite.get_name(), vel[0], vel[1], vel[2])
 
 
-def read_tle_satellites(f):
+def read_tle_satellites(file):
     """Create SpaceObjects from a text file f."""
     space_objects = []
-    with open(f, 'r') as satellites:
+    with open(file, 'r') as satellites:
         while True:
             name = satellites.readline().strip()
             if not name:
@@ -44,7 +47,7 @@ def read_tle_satellites(f):
             tle_line2 = satellites.readline().strip()
             satellite = SpaceObject(name, True, dict(tle_line1=tle_line1,
                                                      tle_line2=tle_line2,
-                                                     f=0))
+                                                     fuel=1))
             space_objects.append(satellite)
     return space_objects
 
@@ -67,9 +70,15 @@ class Vizualizer:
         plot_planet(satellite, ax=self.ax,
                     t0=t, s=size, legend=True, color=color)
 
+    def plot_earth(self):
+        """ Add earth to the plot and legend. """
+        self.ax.scatter(0, 0, 0, color='green', label="Earth")
+        plt.legend()
+
     def pause_and_clear(self):
         """ Pause the frame to watch it. Clear axis for next frame. """
-        plt.pause(0.005)
+        plt.legend()
+        plt.pause(0.0001)
         plt.cla()
 
 
@@ -117,6 +126,7 @@ class Simulator:
             if vizualize:
                 self.plot_protected()
                 self.plot_debris()
+                self.viz.plot_earth()
                 self.viz.pause_and_clear()
 
             self.curr_time = pk.epoch(
@@ -169,18 +179,19 @@ def main(args):
     sattelites = read_tle_satellites("stations.txt")
     # ISS - first row in the file, our protected object. Other satellites -
     # space debris.
-    ISS, debris = sattelites[0], sattelites[1:DEBRIS_NUM]
+    iss, debris = sattelites[0], sattelites[1:DEBRIS_NUM]
 
     # Example of SpaceObject with initial parameters: pos, v, epoch.
-    pos, v = [2315921.25, 3814078.37, 5096751.46], [4363.18, 1981.83, 5982.45]
+    pos, vel = [2315921.25, 3814078.37, 5096751.46], [
+        4363.18, 1981.83, 5982.45]
     epoch = pk.epoch_from_string("2017-Nov-27 15:16:20")
-    mu, f = 398600800000000, 1.0
+    mu, fuel = 398600800000000, 1.0
     d1 = SpaceObject("Debris 1", False, dict(
-        pos=pos, v=v, epoch=epoch, mu=mu, f=f))
+        pos=pos, vel=vel, epoch=epoch, mu=mu, fuel=fuel))
     debris.append(d1)
 
     agent = Agent()
-    env = Environment(ISS, debris)
+    env = Environment(iss, debris)
 
     simulator = Simulator(agent, env)
     simulator.run(vizualize=vizualize, N=N, step=step)

@@ -36,7 +36,8 @@ class Agent:
             s - np.array, state of the environment as matrix.
             r - reward after last action.
         Returns:
-            Vector of ΔV for protected object.
+            np.array([dVx, dVy, dVz, pk.epoch]) - vector of deltas for
+            protected object and maneuver time.
         """
         action = np.zeros(4)
         return action
@@ -55,14 +56,7 @@ class Environment:
         self.protected = protected
         self.debris = debris
         self.reward = 0
-        self.state = EnvState()
-
-    def get_state(self, epoch):
-        """ Provides environment state.
-        Args:
-            epoch -- pk.epoch, at which time to return environment state.
-        """
-        return self.state.get_state(self.protected, self.debris, epoch)
+        self.state = dict()
 
     def get_reward(self, state, current_reward):
         """
@@ -90,7 +84,7 @@ class Environment:
         collision_danger = distance_to_reward(distances)
 
         # fuel reward
-        fuel_consumption = self.protected.f
+        fuel_consumption = self.protected.fuel
 
         # trajectory reward
         traj_reward = -state['trajectory_deviation_coef']
@@ -112,37 +106,27 @@ class Environment:
     def act(self, action):
         """ Change velocity for protected object.
         Args:
-            action -- np.array([dVx, dVy, dVz, pk.epoch]), vector of deltas.
+            action -- np.array([dVx, dVy, dVz, pk.epoch]), vector of deltas
+            and maneuver time.
         """
         # TODO(dsdubov): populate the function.
         # Learn how to make action for pykep.planet [tle or keplerian] object.
         self.protected.act(action)
 
-
-class EnvState:
-    """ Describes Environment state."""
-
-    def __init__(self):
-        """"""
-        self.state = dict()
-        self.is_end = False
-
-    def get_state(self, protected, debris, epoch):
-        """ Provides the state of the environment as dictionary
+    def get_state(self, epoch):
+        """ Provides environment state as dictionary
             and is_end flag.
         Args:
-            protected -- pk.planet, protected satellite in the environment.
-            debris -- [pk.planet], other space objects.
             epoch -- pk.epoch, at which time to return environment state.
         ---
         output: bool, dict()
         """
-        st_pos, st_v = protected.position(epoch)
+        st_pos, st_v = self.protected.position(epoch)
         st = np.hstack((np.array(st_pos), np.array(st_v)))
-        N = len(debris)
+        N = len(self.debris)
         db = np.zeros((N, 6))
         for i in range(N):
-            pos, v = debris[i].position(epoch)
+            pos, v = self.debris[i].position(epoch)
             db[i] = np.hstack((np.array(pos), np.array(v)))
 
         coord = dict(st=st, db=db)
@@ -166,7 +150,7 @@ class SpaceObject:
             name -- str, name of satellite or a space debris.
             is_tle -- bool, whether tle parameteres are provided.
             params -- dict, dictionary of space object coordinates. Keys are:
-                "f" -- float, initial fuel capacity.
+                "fuel" -- float, initial fuel capacity.
 
                 for TLE cooridantes:
                     "tle1" -- str, tle line1
@@ -174,12 +158,12 @@ class SpaceObject:
 
                 otherwise:
                     "pos" -- [x, y, z], position (cartesian).
-                    "v" -- [Vx, Vy, Vz], velocity (cartesian).
+                    "vel" -- [Vx, Vy, Vz], velocity (cartesian).
                     "epoch" -- pykep.epoch, start time in epoch format.
                     "mu" -- float, gravity parameter.
         """
 
-        self.f = params["f"]
+        self.fuel = params["fuel"]
 
         if is_tle:
             self.type = "tle"
@@ -189,7 +173,7 @@ class SpaceObject:
             self.type = "keplerian"
             self.satellite = pk.planet.keplerian(params["epoch"],
                                                  pk.ic2eq(r=params["pos"],
-                                                          v=params["v"],
+                                                          v=params["vel"],
                                                           mu=params["mu"]))
         self.satellite.name = name
 
@@ -201,8 +185,8 @@ class SpaceObject:
         """ Provide SpaceObject position:
             (x, y, z) and (Vx, Vy, Vz), at given epoch.
         """
-        pos, v = self.satellite.eph(epoch)
-        return pos, v
+        pos, vel = self.satellite.eph(epoch)
+        return pos, vel
 
     def get_name(self):
         return self.satellite.name
