@@ -7,10 +7,6 @@ import sys
 import logging
 
 import numpy as np
-<<<<<<< HEAD
-=======
-
->>>>>>> e89ab46850abe6cfaf38f04b4cbfdc917a59648f
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 

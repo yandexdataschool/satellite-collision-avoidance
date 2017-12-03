@@ -11,16 +11,6 @@
 import pykep as pk
 import numpy as np
 
-
-def to_xyz(coordinates):
-    """
-    ф-я переводит координаты в xyz
-    (пока случайно)
-    """
-    result = np.random.normal(size=[coordinates.shape[0], 3])
-    return result
-
-
 class Agent:
     """ Agent implements an agent to communicate with space Environment.
         Agent can make actions to the space environment by taking it's state
@@ -58,25 +48,28 @@ class Environment:
         self.reward = 0
         self.state = dict()
 
-    def get_reward(self, state, current_reward):
+    def get_reward(self, state, current_reward, n_closest=1):
         """
         state: dict where keys:
             'coord': dict where:
-                {'st': np.array shape (1, 6)},  satellite coordinates
-                {'db': np.array shape (n_items, 6)},  debris coordinates
+                {'st': np.array shape (1, 6)},  satellite xyz and dVx, dVy, dVz coordinates
+                {'db': np.array shape (n_items, 6)},  debris xyz and dVx, dVy, dVz coordinates
             'trajectory_deviation_coef': float
         current_reward: float
+        n_closest: number of nearest dabris objects to be considered
         ---
         output: float
         """
-        sat_coordinates = to_xyz(state['coord']['st'])
-        debr_coordinates = to_xyz(state['coord']['db'][0])
+        sat_coordinates = state['coord']['st'][:, :3]
+        debr_coordinates = state['coord']['db'][:, :3]
 
         # Euclidean distance
         # distances array
         distances = np.sum(
             (sat_coordinates - debr_coordinates) ** 2,
             axis=1) ** 0.5
+        # closest distances
+        distances = np.sort(distances)[-n_closest:]
 
         def distance_to_reward(dist_array):
             result = -1. / (dist_array + 0.001)
@@ -123,11 +116,13 @@ class Environment:
         """
         st_pos, st_v = self.protected.position(epoch)
         st = np.hstack((np.array(st_pos), np.array(st_v)))
+        st = np.reshape(st, (1, -1))
         N = len(self.debris)
         db = np.zeros((N, 6))
         for i in range(N):
             pos, v = self.debris[i].position(epoch)
             db[i] = np.hstack((np.array(pos), np.array(v)))
+        db = np.reshape(db, (1, -1))
 
         coord = dict(st=st, db=db)
         self.state = dict(coord=coord, trajectory_deviation_coef=0.0)
