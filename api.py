@@ -11,6 +11,21 @@
 import pykep as pk
 import numpy as np
 
+def Euclidean_distance(xyz_main, xyz_list, rev_sort=False):
+    """ Return array of (reverse sorted) Euclidean distances between main object and other
+    Args:
+        xyz_main: np.array shape (1, 3) - coordinates of main object
+        xyz_other: np.array shape (n_objects, 3) - coordinates of other object
+    Returns:
+        np.array shape (n_objects)
+    """
+    # distances array
+    distances = np.sum(
+        (xyz_main - xyz_list) ** 2,
+        axis=1) ** 0.5
+    if rev_sort:
+        distances = np.sort(distances)[::-1]
+    return distances
 
 class Agent:
     """ Agent implements an agent to communicate with space Environment.
@@ -61,16 +76,12 @@ class Environment:
         ---
         output: float
         """
-        sat_coordinates = state['coord']['st'][:, :3]
-        debr_coordinates = state['coord']['db'][:, :3]
-
-        # Euclidean distance
-        # distances array
-        distances = np.sum(
-            (sat_coordinates - debr_coordinates) ** 2,
-            axis=1) ** 0.5
-        # closest distances
-        distances = np.sort(distances)[-n_closest:]
+        # min Euclidean distances
+        distances = Euclidean_distance(
+            state['coord']['st'][:, :3],
+            state['coord']['db'][:, :3],
+            rev_sort=True
+        )[:n_closest]
 
         def distance_to_reward(dist_array):
             result = -1. / (dist_array + 0.001)
@@ -130,9 +141,16 @@ class Environment:
         self.is_end = self.check_collision()
         return self.is_end, self.state
 
-    def check_collision(self):
+    def check_collision(self, collision_distance=100):
         """ Return True if collision with protected object appears. """
-        # TODO: populate function. Compare protected and debris positions.
+        # distance satellite and nearest debris objuect
+        min_distance = Euclidean_distance(
+            self.state['coord']['st'][:, :3],
+            self.state['coord']['db'][:, :3],
+            rev_sort=True
+        )[0]
+        if (min_distance <= collision_distance):
+            return True
         return False
 
 
