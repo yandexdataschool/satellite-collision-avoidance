@@ -11,6 +11,7 @@
 import pykep as pk
 import numpy as np
 
+
 class Agent:
     """ Agent implements an agent to communicate with space Environment.
         Agent can make actions to the space environment by taking it's state
@@ -26,10 +27,10 @@ class Agent:
             s - np.array, state of the environment as matrix.
             r - reward after last action.
         Returns:
-            np.array([dVx, dVy, dVz, pk.epoch]) - vector of deltas for
-            protected object and maneuver time.
+            np.array([dVx, dVy, dVz, pk.epochm, time_to_req]) - vector of deltas for
+            protected object, maneuver time and time to request the next action.
         """
-        action = np.zeros(4)
+        action = np.zeros(5)
         return action
 
 
@@ -99,8 +100,8 @@ class Environment:
     def act(self, action):
         """ Change velocity for protected object.
         Args:
-            action -- np.array([dVx, dVy, dVz, pk.epoch]), vector of deltas
-            and maneuver time.
+            action -- np.array([dVx, dVy, dVz, pk.epoch, time_to_req]), vector of deltas for
+            protected object, maneuver time and time to request the next action.
         """
         # TODO(dsdubov): populate the function.
         # Learn how to make action for pykep.planet [tle or keplerian] object.
@@ -127,7 +128,6 @@ class Environment:
         coord = dict(st=st, db=db)
         self.state = dict(coord=coord, trajectory_deviation_coef=0.0)
         self.is_end = self.check_collision()
-        # Provide state for reward function.
         return self.is_end, self.state
 
     def check_collision(self):
