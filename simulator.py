@@ -19,7 +19,8 @@ from api import Agent, Environment, SpaceObject
 logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
                     filemode='w', format='%(name)s:%(levelname)s\n%(message)s\n')
 
-DEBRIS_NUM = 5
+DEBRIS_NUM = 4
+PAUSE_TIME = 0.0001
 
 
 def strf_position(satellite, epoch):
@@ -74,7 +75,7 @@ class Vizualizer:
     def pause_and_clear(self):
         """ Pause the frame to watch it. Clear axis for next frame. """
         plt.legend()
-        plt.pause(0.0001)
+        plt.pause(PAUSE_TIME)
         plt.cla()
 
 
@@ -103,13 +104,13 @@ class Simulator:
         self.viz = Vizualizer()
         self.logger = logging.getLogger('simulator.Simulator')
 
-    def run(self, vizualize=True, N=None, step=1):
+    def run(self, vizualize=True, num_iter=None, step=1):
         iteration = 0
 
         if vizualize:
             self.viz.run()
 
-        while iteration != N and not self.is_end:
+        while iteration != num_iter and not self.is_end:
             self.is_end, s = self.env.get_state(self.curr_time)
             r = self.env.get_reward(s, self.env.get_curr_reward())
             action = self.agent.get_action(s, r)
@@ -151,9 +152,9 @@ class Simulator:
     def plot_debris(self):
         """ Plot space debris. """
         cmap = plt.get_cmap('gist_rainbow')
-        N = len(self.env.debris)
-        colors = [cmap(i) for i in np.linspace(0, 1, N)]
-        for i in range(N):
+        n_items = len(self.env.debris)
+        colors = [cmap(i) for i in np.linspace(0, 1, n_items)]
+        for i in range(n_items):
             self.viz.plot_planet(
                 self.env.debris[i].satellite, t=self.curr_time,
                 size=25, color=colors[i])
@@ -163,19 +164,19 @@ def main(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--vizualize", type=str,
                         default="True", required=False)
-    parser.add_argument("-N", "--N_iteration", type=int,
+    parser.add_argument("-n", "--num_iter", type=int,
                         default=None, required=False)
     parser.add_argument("-s", "--step", type=float,
                         default=1, required=False)
     args = parser.parse_args(args)
 
     vizualize = args.vizualize.lower() == "true"
-    N, step = args.N_iteration, args.step
+    num_iter, step = args.num_iter, args.step
 
     sattelites = read_tle_satellites("stations.txt")
     # ISS - first row in the file, our protected object. Other satellites -
     # space debris.
-    iss, debris = sattelites[0], sattelites[1:DEBRIS_NUM]
+    iss, debris = sattelites[0], sattelites[1: 1+DEBRIS_NUM]
 
     # Example of SpaceObject with initial parameters: pos, v, epoch.
     pos, vel = [2315921.25, 3814078.37, 5096751.46], [
@@ -190,7 +191,7 @@ def main(args):
     env = Environment(iss, debris)
 
     simulator = Simulator(agent, env)
-    simulator.run(vizualize=vizualize, N=N, step=step)
+    simulator.run(vizualize=vizualize, num_iter=num_iter, step=step)
     return
 
 
