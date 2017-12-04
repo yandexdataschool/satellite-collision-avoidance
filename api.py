@@ -11,6 +11,7 @@
 import pykep as pk
 import numpy as np
 
+
 def Euclidean_distance(xyz_main, xyz_list, rev_sort=False):
     """ Return array of (reverse sorted) Euclidean distances between main object and other
     Args:
@@ -27,6 +28,7 @@ def Euclidean_distance(xyz_main, xyz_list, rev_sort=False):
         distances = np.sort(distances)[::-1]
     return distances
 
+
 class Agent:
     """ Agent implements an agent to communicate with space Environment.
         Agent can make actions to the space environment by taking it's state
@@ -39,8 +41,12 @@ class Agent:
     def get_action(self, s, r):
         """ Provides action  for protected object.
         Args:
-            s - np.array, state of the environment as matrix.
-            r - reward after last action.
+            state -- dict where keys:
+                'coord' -- dict where:
+                    {'st': np.array shape (1, 6)},  satellite xyz and dVx, dVy, dVz coordinates
+                    {'db': np.array shape (n_items, 6)},  debris xyz and dVx, dVy, dVz coordinates
+                'trajectory_deviation_coef' -- float
+            r -- reward after last action.
         Returns:
             np.array([dVx, dVy, dVz, pk.epochm, time_to_req]) - vector of deltas for
             protected object, maneuver time and time to request the next action.
@@ -129,9 +135,9 @@ class Environment:
         st_pos, st_v = self.protected.position(epoch)
         st = np.hstack((np.array(st_pos), np.array(st_v)))
         st = np.reshape(st, (1, -1))
-        N = len(self.debris)
-        db = np.zeros((N, 6))
-        for i in range(N):
+        n_items = len(self.debris)
+        db = np.zeros((n_items, 6))
+        for i in range(n_items):
             pos, v = self.debris[i].position(epoch)
             db[i] = np.hstack((np.array(pos), np.array(v)))
         db = np.reshape(db, (1, -1))
@@ -149,7 +155,7 @@ class Environment:
             self.state['coord']['db'][:, :3],
             rev_sort=True
         )[0]
-        if (min_distance <= collision_distance):
+        if min_distance <= collision_distance:
             return True
         return False
 
