@@ -12,7 +12,7 @@ import pykep as pk
 import numpy as np
 
 
-def Euclidean_distance(xyz_main, xyz_list, rev_sort=False):
+def euclidean_distance(xyz_main, xyz_other, rev_sort=True):
     """ Return array of (reverse sorted) Euclidean distances between main object and other
     Args:
         xyz_main: np.array shape (1, 3) - coordinates of main object
@@ -22,7 +22,7 @@ def Euclidean_distance(xyz_main, xyz_list, rev_sort=False):
     """
     # distances array
     distances = np.sum(
-        (xyz_main - xyz_list) ** 2,
+        (xyz_main - xyz_other) ** 2,
         axis=1) ** 0.5
     if rev_sort:
         distances = np.sort(distances)[::-1]
@@ -83,10 +83,9 @@ class Environment:
         output: float
         """
         # min Euclidean distances
-        distances = Euclidean_distance(
+        distances = euclidean_distance(
             state['coord']['st'][:, :3],
             state['coord']['db'][:, :3],
-            rev_sort=True
         )[:n_closest]
 
         def distance_to_reward(dist_array):
@@ -150,10 +149,9 @@ class Environment:
     def check_collision(self, collision_distance=100):
         """ Return True if collision with protected object appears. """
         # distance satellite and nearest debris objuect
-        min_distance = Euclidean_distance(
+        min_distance = euclidean_distance(
             self.state['coord']['st'][:, :3],
             self.state['coord']['db'][:, :3],
-            rev_sort=True
         )[0]
         if min_distance <= collision_distance:
             return True
