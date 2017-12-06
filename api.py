@@ -8,8 +8,6 @@
 # so that we can describe any object location at time t after the
 # simulation has been started.
 
-import time
-
 import pykep as pk
 import numpy as np
 
@@ -50,10 +48,12 @@ class Agent:
                 'trajectory_deviation_coef' -- float
             r -- reward after last action.
         Returns:
-            np.array([dVx, dVy, dVz, pk.epochm, time_to_req]) - vector of deltas for
+            np.array([dVx, dVy, dVz, pk.epoch, time_to_req])  - vector of deltas for
             protected object, maneuver time and time to request the next action.
         """
-        action = np.zeros(5)
+        dVx, dVy, dVz = 0, 0, 0
+        time_to_req = 1
+        action = np.array([dVx, dVy, dVz, s.get("epoch").mjd2000, time_to_req])
         return action
 
 
@@ -70,6 +70,7 @@ class Environment:
         self.protected = protected
         self.debris = debris
         self.reward = 0
+        self.next_action = pk.epoch(0)
         self.state = dict()
 
     def get_reward(self, state, current_reward, n_closest=1):
@@ -123,6 +124,7 @@ class Environment:
         """
         # TODO(dsdubov): populate the function.
         # Learn how to make action for pykep.planet [tle or keplerian] object.
+        self.next_action = pk.epoch(self.state.get("epoch").mjd2000 + action[4], "mjd2000")
         self.protected.act(action)
 
     def get_state(self, epoch):
@@ -144,7 +146,7 @@ class Environment:
         db = np.reshape(db, (1, -1))
 
         coord = dict(st=st, db=db)
-        self.state = dict(coord=coord, trajectory_deviation_coef=0.0)
+        self.state = dict(coord=coord, trajectory_deviation_coef=0.0, epoch=epoch)
         self.is_end = self.check_collision()
         return self.is_end, self.state
 

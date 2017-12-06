@@ -149,10 +149,12 @@ class Simulator:
             self.vis.run()
 
         while iteration != num_iter and not self.is_end:
-            self.is_end, s = self.env.get_state(self.curr_time)
-            r = self.env.get_reward(s, self.env.get_curr_reward())
-            action = self.agent.get_action(s, r)
-            self.env.act(action)
+            if self.curr_time.mjd2000 >= self.env.next_action.mjd2000:
+                print("ACTION!")
+                self.is_end, s = self.env.get_state(self.curr_time)
+                r = self.env.get_reward(s, self.env.get_curr_reward())
+                action = self.agent.get_action(s, r)
+                self.env.act(action)
 
             self.log_iteration(iteration)
             self.log_protected_position()
