@@ -32,25 +32,63 @@ def strf_position(satellite, epoch):
                satellite.get_name(), vel[0], vel[1], vel[2])
 
 
-def read_tle_satellites(file):
-    """Create SpaceObjects from a text file f."""
+def read_space_objects(file, param_type):
+    """ Create SpaceObjects with TLE parameters from a text file.
+        param_type -- str, "tle", "oph" or "osc". Different parameter
+                      types for initializing SpaceObject.
+    """
     space_objects = []
     with open(file, 'r') as satellites:
         while True:
             name = satellites.readline().strip()
             if not name:
                 break
-            tle_line1 = satellites.readline().strip()
-            tle_line2 = satellites.readline().strip()
-            satellite = SpaceObject(name, True, dict(tle_line1=tle_line1,
-                                                     tle_line2=tle_line2,
-                                                     fuel=1))
+            if param_type == "tle":
+                tle_line1 = satellites.readline().strip()
+                tle_line2 = satellites.readline().strip()
+                params = dict(tle_line1=tle_line1,
+                              tle_line2=tle_line2,
+                              fuel=1)
+            elif param_type == "eph":
+                epoch = pk.epoch(
+                    float(satellites.readline().strip()), "mjd2000")
+                pos = [float(x)
+                       for x in satellites.readline().strip().split(",")]
+                vel = [float(x)
+                       for x in satellites.readline().strip().split(",")]
+                mu_central_body, mu_self, radius, safe_radius = [
+                    float(x) for x in satellites.readline().strip().split(",")]
+                fuel = float(satellites.readline().strip())
+                params = dict(pos=pos, vel=vel, epoch=epoch,
+                              mu_central_body=mu_central_body,
+                              mu_self=mu_self,
+                              radius=radius,
+                              safe_radius=safe_radius,
+                              fuel=fuel)
+
+            elif param_type == "osc":
+                epoch = pk.epoch(
+                    float(satellites.readline().strip()), "mjd2000")
+                elements = tuple(
+                    [float(x) for x in satellites.readline().strip().split(",")])
+                mu_central_body, mu_self, radius, safe_radius = [
+                    float(x) for x in satellites.readline().strip().split(",")]
+                fuel = float(satellites.readline().strip())
+                params = dict(elements=elements, epoch=epoch,
+                              mu_central_body=mu_central_body,
+                              mu_self=mu_self,
+                              radius=radius,
+                              safe_radius=safe_radius,
+                              fuel=fuel)
+
+            satellite = SpaceObject(name, param_type, params)
             space_objects.append(satellite)
+
     return space_objects
 
 
-class Vizualizer:
-    """ Vizualizer allows to plot satellite movement simulation
+class Visualizer:
+    """ Visualizer allows to plot satellite movement simulation
         in real time.
     """
 
@@ -101,14 +139,14 @@ class Simulator:
             self.start_time = start_time
         self.curr_time = self.start_time
 
-        self.viz = Vizualizer()
+        self.vis = Visualizer()
         self.logger = logging.getLogger('simulator.Simulator')
 
-    def run(self, vizualize=True, num_iter=None, step=1):
+    def run(self, visualize=True, num_iter=None, step=0.001):
         iteration = 0
 
-        if vizualize:
-            self.viz.run()
+        if visualize:
+            self.vis.run()
 
         while iteration != num_iter and not self.is_end:
             self.is_end, s = self.env.get_state(self.curr_time)
@@ -120,11 +158,11 @@ class Simulator:
             self.log_protected_position()
             self.log_debris_positions()
 
-            if vizualize:
+            if visualize:
                 self.plot_protected()
                 self.plot_debris()
-                self.viz.plot_earth()
-                self.viz.pause_and_clear()
+                self.vis.plot_earth()
+                self.vis.pause_and_clear()
 
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + step, "mjd2000")
@@ -146,7 +184,7 @@ class Simulator:
 
     def plot_protected(self):
         """ Plot Protected SpaceObject. """
-        self.viz.plot_planet(self.env.protected.satellite,
+        self.vis.plot_planet(self.env.protected.satellite,
                              t=self.curr_time, size=100, color="black")
 
     def plot_debris(self):
@@ -155,43 +193,45 @@ class Simulator:
         n_items = len(self.env.debris)
         colors = [cmap(i) for i in np.linspace(0, 1, n_items)]
         for i in range(n_items):
-            self.viz.plot_planet(
+            self.vis.plot_planet(
                 self.env.debris[i].satellite, t=self.curr_time,
                 size=25, color=colors[i])
 
 
 def main(args):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-v", "--vizualize", type=str,
+    parser.add_argument("-v", "--visualize", type=str,
                         default="True", required=False)
     parser.add_argument("-n", "--num_iter", type=int,
                         default=None, required=False)
     parser.add_argument("-s", "--step", type=float,
-                        default=1, required=False)
+                        default=0.001, required=False)
     args = parser.parse_args(args)
 
-    vizualize = args.vizualize.lower() == "true"
+    visualize = args.visualize.lower() == "true"
     num_iter, step = args.num_iter, args.step
 
-    sattelites = read_tle_satellites("stations.txt")
+    sattelites = read_space_objects("stations.tle", "tle")
     # ISS - first row in the file, our protected object. Other satellites -
     # space debris.
-    iss, debris = sattelites[0], sattelites[1: 1+DEBRIS_NUM]
+    iss, debris = sattelites[0], sattelites[1: 1 + DEBRIS_NUM]
 
-    # Example of SpaceObject with initial parameters: pos, v, epoch.
-    pos, vel = [2315921.25, 3814078.37, 5096751.46], [
-        4363.18, 1981.83, 5982.45]
-    epoch = pk.epoch_from_string("2017-Nov-27 15:16:20")
-    mu, fuel = 398600800000000, 1.0
-    d1 = SpaceObject("Debris 1", False, dict(
-        pos=pos, vel=vel, epoch=epoch, mu=mu, fuel=fuel))
-    debris.append(d1)
+    # Example of SpaceObject with "eph" initial parameters: pos, v, epoch.
+    eph = read_space_objects("space_objects.eph", "eph")
+    for obj in eph:
+        debris.append(obj)
+
+    # Example of SpaceObject with "osc" initial parameteres: 6 orbital
+    # elements and epoch.
+    osc = read_space_objects("space_objects.osc", "osc")
+    for obj in osc:
+        debris.append(obj)
 
     agent = Agent()
     env = Environment(iss, debris)
 
     simulator = Simulator(agent, env)
-    simulator.run(vizualize=vizualize, num_iter=num_iter, step=step)
+    simulator.run(visualize=visualize, num_iter=num_iter, step=step)
     return
 
 

@@ -8,6 +8,8 @@
 # so that we can describe any object location at time t after the
 # simulation has been started.
 
+import time
+
 import pykep as pk
 import numpy as np
 
@@ -161,37 +163,71 @@ class Environment:
 class SpaceObject:
     """ SpaceObject represents a satellite or a space debris. """
 
-    def __init__(self, name, is_tle, params):
+    def __init__(self, name, param_type, params):
         """
         Args:
             name -- str, name of satellite or a space debris.
-            is_tle -- bool, whether tle parameteres are provided.
+            type -- str, initial parameteres type. Can be:
+                    "tle" -- for TLE,
+                    "eph" -- ephemerides, position and velocity state vectors.
+                    "osc" -- osculating elements, 6 orbital parameteres.
             params -- dict, dictionary of space object coordinates. Keys are:
                 "fuel" -- float, initial fuel capacity.
 
-                for TLE cooridantes:
+                for "tle" type:
                     "tle1" -- str, tle line1
                     "tle2" -- str, tle line2
 
-                otherwise:
+                for "eph" type:
                     "pos" -- [x, y, z], position (cartesian).
                     "vel" -- [Vx, Vy, Vz], velocity (cartesian).
                     "epoch" -- pykep.epoch, start time in epoch format.
-                    "mu" -- float, gravity parameter.
+                    "mu_central_body" -- float, gravity parameter of the
+                                                central body (SI units, i.e. m^2/s^3).
+                    "mu_self" -- float, gravity parameter of the planet
+                                        (SI units, i.e. m^2/s^3).
+                    "radius" -- float, body radius (SI units, i.e. meters).
+                    "safe_radius" -- float, mimimual radius that is safe during
+                                            a fly-by of the planet (SI units, i.e. m)
+
+                for "osc" type:
+                    "elements" -- (a,e,i,W,w,M), tuple containing 6 osculating elements.
+                    "epoch" -- pykep.epoch, start time in epoch format.
+                    "mu_central_body", "mu_self", "radius", "safe_radius" -- same, as in "eph" type.
         """
 
         self.fuel = params["fuel"]
 
-        if is_tle:
-            self.type = "tle"
-            self.satellite = pk.planet.tle(
+        if param_type == "tle":
+            tle = pk.planet.tle(
                 params["tle_line1"], params["tle_line2"])
-        else:
-            self.type = "keplerian"
+
+            t0 = pk.epoch(tle.ref_mjd2000, "mjd2000")
+            mu_central_body, mu_self = tle.mu_central_body, tle.mu_self
+            radius, safe_radius = tle.radius, tle.safe_radius
+
+            elements = tle.osculating_elements(t0)
+            self.satellite = pk.planet.keplerian(
+                t0, elements, mu_central_body, mu_self, radius, safe_radius)
+        elif param_type == "eph":
+            elements = pk.ic2eq(r=params["pos"],
+                                v=params["vel"],
+                                mu=params["mu_central_body"])
             self.satellite = pk.planet.keplerian(params["epoch"],
-                                                 pk.ic2eq(r=params["pos"],
-                                                          v=params["vel"],
-                                                          mu=params["mu"]))
+                                                 elements,
+                                                 params["mu_central_body"],
+                                                 params["mu_self"],
+                                                 params["radius"],
+                                                 params["safe_radius"])
+        elif param_type == "osc":
+            self.satellite = pk.planet.keplerian(params["epoch"],
+                                                 params["elements"],
+                                                 params["mu_central_body"],
+                                                 params["mu_self"],
+                                                 params["radius"],
+                                                 params["safe_radius"])
+        else:
+            raise ValueError("Unknown initial parameteres type")
         self.satellite.name = name
 
     def act(self, action):
