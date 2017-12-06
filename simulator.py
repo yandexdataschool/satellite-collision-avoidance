@@ -19,7 +19,7 @@ from api import Agent, Environment, SpaceObject
 logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
                     filemode='w', format='%(name)s:%(levelname)s\n%(message)s\n')
 
-DEBRIS_NUM = 4
+DEBRIS_NUM = 3
 PAUSE_TIME = 0.0001
 
 
