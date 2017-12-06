@@ -210,11 +210,8 @@ class SpaceObject:
             self.satellite = pk.planet.keplerian(
                 t0, elements, mu_central_body, mu_self, radius, safe_radius)
         elif param_type == "eph":
-            elements = pk.ic2par(r=params["pos"],
-                                v=params["vel"],
-                                mu=params["mu_central_body"])
             self.satellite = pk.planet.keplerian(params["epoch"],
-                                                 elements,
+                                                 params["pos"], params["vel"],
                                                  params["mu_central_body"],
                                                  params["mu_self"],
                                                  params["radius"],
