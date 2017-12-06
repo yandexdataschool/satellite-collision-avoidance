@@ -33,9 +33,9 @@ def strf_position(satellite, epoch):
 
 
 def read_space_objects(file, param_type):
-    """ Create SpaceObjects with TLE parameters from a text file.
+    """ Create SpaceObjects from a text file.
         param_type -- str, "tle", "oph" or "osc". Different parameter
-                      types for initializing SpaceObject.
+                      types for initializing a SpaceObject.
     """
     space_objects = []
     with open(file, 'r') as satellites:

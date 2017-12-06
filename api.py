@@ -167,7 +167,7 @@ class SpaceObject:
         """
         Args:
             name -- str, name of satellite or a space debris.
-            type -- str, initial parameteres type. Can be:
+            param_type -- str, initial parameteres type. Can be:
                     "tle" -- for TLE,
                     "eph" -- ephemerides, position and velocity state vectors.
                     "osc" -- osculating elements, 6 orbital parameteres.
