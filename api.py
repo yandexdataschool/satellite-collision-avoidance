@@ -111,7 +111,7 @@ class Environment:
         r = self.crit_conv_dist
         d = crit_dist
         pi = 3.14
-        coll_prob = - (
+        coll_prob = -(
             pi * (2*r - d**2) *
             (d**2 + 4*d*r) /
             (12 * d)
@@ -124,6 +124,7 @@ class Environment:
         traj_reward = -state['trajectory_deviation_coef']
 
         # whole reward
+        # TODO - add constants to all reward components
         reward = (
             # collision_danger
             + fuel_consumption
