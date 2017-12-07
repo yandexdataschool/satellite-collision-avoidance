@@ -213,19 +213,19 @@ def main(args):
     num_iter, step = args.num_iter, args.step
 
     # SpaceObjects with TLE initial parameters.
-    sattelites = read_space_objects("stations.tle", "tle")
+    sattelites = read_space_objects("data/stations.tle", "tle")
     # ISS - first row in the file, our protected object. Other satellites -
     # space debris.
     iss, debris = sattelites[0], sattelites[1: 1 + DEBRIS_NUM]
 
     # SpaceObjects with "eph" initial parameters: pos, v, epoch.
-    eph = read_space_objects("space_objects.eph", "eph")
+    eph = read_space_objects("data/space_objects.eph", "eph")
     for obj in eph:
         debris.append(obj)
 
     # SpaceObjects with "osc" initial parameteres: 6 orbital
     # elements and epoch.
-    osc = read_space_objects("space_objects.osc", "osc")
+    osc = read_space_objects("data/space_objects.osc", "osc")
     for obj in osc:
         debris.append(obj)
 
