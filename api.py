@@ -110,7 +110,7 @@ class Environment:
         r = self.crit_conv_dist
         d = crit_dist
         coll_prob = (
-            (4*r + d) * ((2*r - d) ** 2) / (32 * r**3)
+            (4*r + d) * ((2*r - d) ** 2) / (16 * r**3)
         )
         coll_prob = (1 - np.prod(1 - coll_prob))
         coll_prob_reward = -coll_prob
