@@ -38,7 +38,7 @@ class Agent:
     def __init__(self):
         """"""
 
-    def get_action(self, s, r):
+    def get_action(self, s):
         """ Provides action  for protected object.
         Args:
             state -- dict where keys:
@@ -76,7 +76,7 @@ class Environment:
         # TODO choose true distance
         self.crit_conv_dist = 100
 
-    def get_reward(self, state, current_reward, n_closest=1):
+    def get_reward(self, state, action):
         """
         state: dict where keys:
             'coord': dict where:
@@ -116,22 +116,32 @@ class Environment:
         coll_prob_reward = -coll_prob
 
         # fuel reward
-        fuel_consumption = self.protected.fuel
+        def fuel_consumption(dV):
+            """ Fuel consumption by dV
+            Args:
+                dV -- np.array([dx, dy, dz])
+            ---
+            output: float
+            """
+            # TODO - true function
+            return np.sum(dV)
+
+        fuel_consum = fuel_consumption(action[:3])
 
         # trajectory reward
         traj_reward = -state['trajectory_deviation_coef']
 
         # whole reward
         # TODO - add constants to all reward components
-        reward = (
+        # reward
+        r = (
             # collision_danger
-            + fuel_consumption
+            + fuel_consum
             + traj_reward
             + coll_prob_reward
         )
-        new_reward = current_reward + reward
-        self.reward = new_reward
-        return new_reward
+        self.reward += r
+        return self.reward
 
     def get_curr_reward(self):
         """ Provide the last calculated reward. """
