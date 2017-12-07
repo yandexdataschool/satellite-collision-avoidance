@@ -111,11 +111,12 @@ class Environment:
         r = self.crit_conv_dist
         d = crit_dist
         pi = 3.14
-        coll_prob = -(
+        coll_prob = (
             pi * (2*r - d**2) *
             (d**2 + 4*d*r) /
             (12 * d)
         )
+        coll_prob = -np.sum(coll_prob)
 
         # fuel reward
         fuel_consumption = self.protected.fuel
