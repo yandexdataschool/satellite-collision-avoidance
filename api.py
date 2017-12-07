@@ -112,8 +112,8 @@ class Environment:
         d = crit_dist
         pi = 3.14
         coll_prob = (
-            pi * (2*r - d**2) *
-            (d**2 + 4*d*r) /
+            pi * (2 * r - d**2) *
+            (d**2 + 4 * d * r) /
             (12 * d)
         )
         coll_prob = -np.sum(coll_prob)
@@ -148,7 +148,8 @@ class Environment:
         """
         # TODO(dsdubov): populate the function.
         # Learn how to make action for pykep.planet [tle or keplerian] object.
-        self.next_action = pk.epoch(self.state.get("epoch").mjd2000 + action[4], "mjd2000")
+        self.next_action = pk.epoch(self.state.get(
+            "epoch").mjd2000 + action[4], "mjd2000")
         self.protected.act(action)
 
     def get_state(self, epoch):
@@ -170,7 +171,8 @@ class Environment:
         db = np.reshape(db, (1, -1))
 
         coord = dict(st=st, db=db)
-        self.state = dict(coord=coord, trajectory_deviation_coef=0.0, epoch=epoch)
+        self.state = dict(
+            coord=coord, trajectory_deviation_coef=0.0, epoch=epoch)
         self.is_end = self.check_collision()
         return self.is_end, self.state
 
