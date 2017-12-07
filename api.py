@@ -29,6 +29,15 @@ def euclidean_distance(xyz_main, xyz_other, rev_sort=True):
     return distances
 
 
+def fuel_consumption(dV):
+    """ Provide the value of fuel consumption for given velocity delta.
+    dV -- np.array([dVx, dVy, dVz]), vector of satellite velocity delta for maneuver.
+    ---
+    output: float.
+    """
+    return np.sum(dV)
+
+
 class Agent:
     """ Agent implements an agent to communicate with space Environment.
         Agent can make actions to the space environment by taking it's state
@@ -110,21 +119,10 @@ class Environment:
         r = self.crit_conv_dist
         d = crit_dist
         coll_prob = (
-            (4*r + d) * ((2*r - d) ** 2) / (16 * r**3)
+            (4 * r + d) * ((2 * r - d) ** 2) / (16 * r**3)
         )
         coll_prob = (1 - np.prod(1 - coll_prob))
         coll_prob_reward = -coll_prob
-
-        # fuel reward
-        def fuel_consumption(dV):
-            """ Fuel consumption by dV
-            Args:
-                dV -- np.array([dx, dy, dz])
-            ---
-            output: float
-            """
-            # TODO - true function
-            return np.sum(dV)
 
         fuel_consum = fuel_consumption(action[:3])
 
@@ -230,7 +228,6 @@ class SpaceObject:
                     "epoch" -- pykep.epoch, start time in epoch format.
                     "mu_central_body", "mu_self", "radius", "safe_radius" -- same, as in "eph" type.
         """
-
         self.fuel = params["fuel"]
 
         if param_type == "tle":
@@ -264,6 +261,15 @@ class SpaceObject:
 
     def act(self, action):
         """ Make manoeuvre for the object. """
+        dV = action[:3]
+        t_man = pk.epoch(action[3], "mjd2000")
+        pos, vel = self.position(t_man)
+        new_vel = list(np.array(vel) + dV)
+        mu_central_body, mu_self = self.satellite.mu_central_body, self.satellite.mu_self
+        radius, safe_radius = self.satellite.radius, self.satellite.safe_radius
+        self.satellite = pk.planet.keplerian(t_man, list(pos), new_vel, mu_central_body,
+                                             mu_self, radius, safe_radius)
+        self.fuel -= fuel_consumption(dV)
         return
 
     def position(self, epoch):
