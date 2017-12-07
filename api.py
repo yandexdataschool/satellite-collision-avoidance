@@ -107,16 +107,13 @@ class Environment:
             rev_sort=False
         )
         crit_dist = crit_dist[crit_dist < self.crit_conv_dist]
-        coll_prob = -np.sum(crit_dist)
         r = self.crit_conv_dist
         d = crit_dist
-        pi = 3.14
         coll_prob = (
-            pi * (2*r - d**2) *
-            (d**2 + 4*d*r) /
-            (12 * d)
+            (4*r + d) * ((2*r - d) ** 2) / (32 * r**3)
         )
-        coll_prob = -np.sum(coll_prob)
+        coll_prob = (1 - np.prod(1 - coll_prob))
+        coll_prob_reward = -coll_prob
 
         # fuel reward
         fuel_consumption = self.protected.fuel
@@ -130,7 +127,7 @@ class Environment:
             # collision_danger
             + fuel_consumption
             + traj_reward
-            + coll_prob
+            + coll_prob_reward
         )
         new_reward = current_reward + reward
         self.reward = new_reward
