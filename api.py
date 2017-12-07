@@ -72,6 +72,9 @@ class Environment:
         self.reward = 0
         self.next_action = pk.epoch(0)
         self.state = dict()
+        # critical convergence distance
+        # TODO choose true distance
+        self.crit_conv_dist = 100
 
     def get_reward(self, state, current_reward, n_closest=1):
         """
@@ -85,16 +88,34 @@ class Environment:
         ---
         output: float
         """
-        # min Euclidean distances
-        distances = euclidean_distance(
+        # # min Euclidean distances
+        # distances = euclidean_distance(
+        #     state['coord']['st'][:, :3],
+        #     state['coord']['db'][:, :3],
+        # )[:n_closest]
+        #
+        # def distance_to_reward(dist_array):
+        #     result = -1. / (dist_array + 0.001)
+        #     return np.sum(result)
+        # collision_danger = distance_to_reward(distances)
+
+        # collision probabitity (for uniform distribution)
+        # critical distances
+        crit_dist = euclidean_distance(
             state['coord']['st'][:, :3],
             state['coord']['db'][:, :3],
-        )[:n_closest]
-
-        def distance_to_reward(dist_array):
-            result = -1. / (dist_array + 0.001)
-            return np.sum(result)
-        collision_danger = distance_to_reward(distances)
+            rev_sort=False
+        )
+        crit_dist = crit_dist[crit_dist < self.crit_conv_dist]
+        coll_prob = -np.sum(crit_dist)
+        r = self.crit_conv_dist
+        d = crit_dist
+        pi = 3.14
+        coll_prob = - (
+            pi * (2*r - d**2) *
+            (d**2 + 4*d*r) /
+            (12 * d)
+        )
 
         # fuel reward
         fuel_consumption = self.protected.fuel
@@ -104,9 +125,10 @@ class Environment:
 
         # whole reward
         reward = (
-            collision_danger
+            # collision_danger
             + fuel_consumption
             + traj_reward
+            + coll_prob
         )
         new_reward = current_reward + reward
         self.reward = new_reward
