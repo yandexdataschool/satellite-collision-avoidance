@@ -78,25 +78,21 @@ class Environment:
         """
         self.protected = protected
         self.debris = debris
-        self.reward = 0
+        self.collision_risk_reward = 0
         self.next_action = pk.epoch(0)
         self.state = dict()
         # critical convergence distance
         # TODO choose true distance
         self.crit_conv_dist = 100
 
-    def get_reward(self, state, action):
+    def get_reward(self, action):
         """
-        state: dict where keys:
-            'coord': dict where:
-                {'st': np.array shape (1, 6)},  satellite xyz and dVx, dVy, dVz coordinates
-                {'db': np.array shape (n_items, 6)},  debris xyz and dVx, dVy, dVz coordinates
-            'trajectory_deviation_coef': float
-        current_reward: float
-        n_closest: number of nearest dabris objects to be considered
+        action -- np.array([dVx, dVy, dVz, pk.epoch, time_to_req]), vector of deltas for
+            protected object, maneuver time and time to request the next action.
         ---
         output: float
         """
+
         # # min Euclidean distances
         # distances = euclidean_distance(
         #     state['coord']['st'][:, :3],
@@ -108,11 +104,29 @@ class Environment:
         #     return np.sum(result)
         # collision_danger = distance_to_reward(distances)
 
+        fuel_consum = fuel_consumption(action[:3])
+
+        # trajectory reward
+        traj_reward = -self.state['trajectory_deviation_coef']
+
+        # whole reward
+        # TODO - add constants to all reward components
+        # reward
+        r = (
+            # collision_danger
+            + fuel_consum
+            + traj_reward
+            + self.collision_risk_reward
+        )
+        return
+
+    def update_total_collision_risk_for_iteration(self):
+        """ Update the risk of collision on the iteration. """
         # collision probabitity (for uniform distribution)
         # critical distances
         crit_dist = euclidean_distance(
-            state['coord']['st'][:, :3],
-            state['coord']['db'][:, :3],
+            self.state['coord']['st'][:, :3],
+            self.state['coord']['db'][:, :3],
             rev_sort=False
         )
         crit_dist = crit_dist[crit_dist < self.crit_conv_dist]
@@ -122,28 +136,10 @@ class Environment:
             (4 * r + d) * ((2 * r - d) ** 2) / (16 * r**3)
         )
         coll_prob = (1 - np.prod(1 - coll_prob))
-        coll_prob_reward = -coll_prob
+        self.collision_risk_reward = coll_prob
 
-        fuel_consum = fuel_consumption(action[:3])
-
-        # trajectory reward
-        traj_reward = -state['trajectory_deviation_coef']
-
-        # whole reward
-        # TODO - add constants to all reward components
-        # reward
-        r = (
-            # collision_danger
-            + fuel_consum
-            + traj_reward
-            + coll_prob_reward
-        )
-        self.reward += r
-        return self.reward
-
-    def get_curr_reward(self):
-        """ Provide the last calculated reward. """
-        return self.reward
+        self.is_end = self.check_collision()
+        return self.is_end
 
     def act(self, action):
         """ Change velocity for protected object.
@@ -153,7 +149,7 @@ class Environment:
         """
         self.next_action = pk.epoch(self.state.get(
             "epoch").mjd2000 + action[4], "mjd2000")
-        self.protected.maneuver(action)
+        self.protected.maneuver(action[:4])
         return
 
     def get_state(self, epoch):
@@ -177,8 +173,7 @@ class Environment:
         coord = dict(st=st, db=db)
         self.state = dict(
             coord=coord, trajectory_deviation_coef=0.0, epoch=epoch)
-        self.is_end = self.check_collision()
-        return self.is_end, self.state
+        return self.state
 
     def check_collision(self, collision_distance=100):
         """ Return True if collision with protected object appears. """

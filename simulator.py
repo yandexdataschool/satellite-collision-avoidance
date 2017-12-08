@@ -147,11 +147,16 @@ class Simulator:
         if visualize:
             self.vis.run()
 
-        while iteration != num_iter and not self.is_end:
+        while iteration != num_iter:
+            s = self.env.get_state(self.curr_time)
+            self.is_end = self.env.update_total_collision_risk_for_iteration()
+
+            if self.is_end:
+                break
+
             if self.curr_time.mjd2000 >= self.env.next_action.mjd2000:
-                self.is_end, s = self.env.get_state(self.curr_time)
                 action = self.agent.get_action(s)
-                r = self.env.get_reward(s, action)
+                r = self.env.get_reward(action)
                 self.env.act(action)
 
             self.log_iteration(iteration)
@@ -180,7 +185,7 @@ class Simulator:
 
     def log_iteration(self, iteration):
         self.logger.debug("Iter #{} \tEpoch: {}\tCollision: {}\t Reward: {}".format(
-            iteration,  self.curr_time, self.is_end, self.env.get_curr_reward()))
+            iteration,  self.curr_time, self.is_end, self.env.collision_risk_reward))
 
     def plot_protected(self):
         """ Plot Protected SpaceObject. """
