@@ -126,7 +126,6 @@ class Simulator:
         """
             agent -- Agent(), agent, to do actions in environment.
             environment -- Environment(), the initial space environment.
-            step -- float, step in julian date.
             start_time -- pk.epoch, start epoch of simulation.
         """
         self.is_end = False

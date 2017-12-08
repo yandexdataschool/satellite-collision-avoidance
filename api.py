@@ -151,11 +151,10 @@ class Environment:
             action -- np.array([dVx, dVy, dVz, pk.epoch, time_to_req]), vector of deltas for
             protected object, maneuver time and time to request the next action.
         """
-        # TODO(dsdubov): populate the function.
-        # Learn how to make action for pykep.planet [tle or keplerian] object.
         self.next_action = pk.epoch(self.state.get(
             "epoch").mjd2000 + action[4], "mjd2000")
-        self.protected.act(action)
+        self.protected.maneuver(action)
+        return
 
     def get_state(self, epoch):
         """ Provides environment state as dictionary
@@ -259,7 +258,7 @@ class SpaceObject:
             raise ValueError("Unknown initial parameteres type")
         self.satellite.name = name
 
-    def act(self, action):
+    def maneuver(self, action):
         """ Make manoeuvre for the object. """
         dV = action[:3]
         t_man = pk.epoch(action[3], "mjd2000")
