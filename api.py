@@ -55,10 +55,9 @@ class Agent:
                     {'st': np.array shape (1, 6)},  satellite xyz and dVx, dVy, dVz coordinates
                     {'db': np.array shape (n_items, 6)},  debris xyz and dVx, dVy, dVz coordinates
                 'trajectory_deviation_coef' -- float
-            r -- reward after last action.
         Returns:
             np.array([dVx, dVy, dVz, pk.epoch, time_to_req])  - vector of deltas for
-            protected object, maneuver time and time to request the next action.
+                protected object, maneuver time and time to request the next action.
         """
         dVx, dVy, dVz = 0, 0, 0
         time_to_req = 1
@@ -73,8 +72,8 @@ class Environment:
 
     def __init__(self, protected, debris):
         """
-            protected - SpaceObject, protected space object in Environment.
-            debris - [SpaceObject], list of other space objects.
+            protected -- SpaceObject, protected space object in Environment.
+            debris -- [SpaceObject], list of other space objects.
         """
         self.protected = protected
         self.debris = debris
@@ -85,37 +84,20 @@ class Environment:
         # TODO choose true distance
         self.crit_conv_dist = 100
 
-    def get_reward(self, action):
-        """
-        action -- np.array([dVx, dVy, dVz, pk.epoch, time_to_req]), vector of deltas for
-            protected object, maneuver time and time to request the next action.
+    def get_reward(self):
+        """ Provide total reward from the environment state.
         ---
         output: float
         """
-
-        # # min Euclidean distances
-        # distances = euclidean_distance(
-        #     state['coord']['st'][:, :3],
-        #     state['coord']['db'][:, :3],
-        # )[:n_closest]
-        #
-        # def distance_to_reward(dist_array):
-        #     result = -1. / (dist_array + 0.001)
-        #     return np.sum(result)
-        # collision_danger = distance_to_reward(distances)
-
-        fuel_consum = fuel_consumption(action[:3])
-
         # trajectory reward
         traj_reward = -self.state['trajectory_deviation_coef']
 
         # whole reward
         # TODO - add constants to all reward components
-        # reward
         r = (
-            # collision_danger
-            + fuel_consum
+            + self.protected.fuel
             + traj_reward
+            # collision_danger
             + self.collision_risk_reward
         )
         return r
