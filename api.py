@@ -35,7 +35,7 @@ def fuel_consumption(dV):
     ---
     output: float.
     """
-    return np.sum(dV)
+    return np.linalg.norm(dV)
 
 
 class Agent:
@@ -118,7 +118,7 @@ class Environment:
             + traj_reward
             + self.collision_risk_reward
         )
-        return
+        return r
 
     def update_total_collision_risk_for_iteration(self):
         """ Update the risk of collision on the iteration. """
