@@ -2,8 +2,6 @@
 # and learning proccess of the agent.
 
 import time
-import argparse
-import sys
 import logging
 
 import numpy as np
@@ -14,12 +12,11 @@ import matplotlib.pyplot as plt
 import pykep as pk
 from pykep.orbit_plots import plot_planet
 
-from api import Agent, Environment, SpaceObject
+from api import SpaceObject
 
 logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
                     filemode='w', format='%(name)s:%(levelname)s\n%(message)s\n')
 
-DEBRIS_NUM = 3
 PAUSE_TIME = 0.0001
 
 
@@ -156,8 +153,10 @@ class Simulator:
 
             if self.curr_time.mjd2000 >= self.env.next_action.mjd2000:
                 action = self.agent.get_action(s)
-                r = self.env.get_reward(action)
+                r = self.env.get_reward()
                 self.env.act(action)
+
+                self.log_ra(iteration, r, action)
 
             self.log_iteration(iteration)
             self.log_protected_position()
@@ -184,8 +183,12 @@ class Simulator:
             self.logger.info(strf_position(obj, self.curr_time))
 
     def log_iteration(self, iteration):
-        self.logger.debug("Iter #{} \tEpoch: {}\tCollision: {}\t Reward: {}".format(
+        self.logger.debug("Iter #{} \tEpoch: {}\tCollision: {}\t Collision Risk Reward: {}".format(
             iteration,  self.curr_time, self.is_end, self.env.collision_risk_reward))
+
+    def log_ra(self, iteration, reward, action):
+        self.logger.info("Iter: {}\tReward: {}\t action: {}".format(
+            iteration, reward, action))
 
     def plot_protected(self):
         """ Plot Protected SpaceObject. """
@@ -201,45 +204,3 @@ class Simulator:
             self.vis.plot_planet(
                 self.env.debris[i].satellite, t=self.curr_time,
                 size=25, color=colors[i])
-
-
-def main(args):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-v", "--visualize", type=str,
-                        default="True", required=False)
-    parser.add_argument("-n", "--num_iter", type=int,
-                        default=None, required=False)
-    parser.add_argument("-s", "--step", type=float,
-                        default=0.001, required=False)
-    args = parser.parse_args(args)
-
-    visualize = args.visualize.lower() == "true"
-    num_iter, step = args.num_iter, args.step
-
-    # SpaceObjects with TLE initial parameters.
-    sattelites = read_space_objects("data/stations.tle", "tle")
-    # ISS - first row in the file, our protected object. Other satellites -
-    # space debris.
-    iss, debris = sattelites[0], sattelites[1: 1 + DEBRIS_NUM]
-
-    # SpaceObjects with "eph" initial parameters: pos, v, epoch.
-    eph = read_space_objects("data/space_objects.eph", "eph")
-    for obj in eph:
-        debris.append(obj)
-
-    # SpaceObjects with "osc" initial parameteres: 6 orbital
-    # elements and epoch.
-    osc = read_space_objects("data/space_objects.osc", "osc")
-    for obj in osc:
-        debris.append(obj)
-
-    agent = Agent()
-    env = Environment(iss, debris)
-
-    simulator = Simulator(agent, env)
-    simulator.run(visualize=visualize, num_iter=num_iter, step=step)
-    return
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])
