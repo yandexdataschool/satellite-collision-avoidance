@@ -126,14 +126,17 @@ class Simulator:
             start_time -- pk.epoch, start epoch of simulation.
         """
         self.is_end = False
+
         self.agent = agent
         self.env = environment
+
         if not start_time:
             self.start_time = pk.epoch_from_string(
                 time.strftime("%Y-%m-%d %T"))
         else:
             self.start_time = start_time
         self.curr_time = self.start_time
+
 
         self.vis = Visualizer()
         self.logger = logging.getLogger('simulator.Simulator')
@@ -145,13 +148,14 @@ class Simulator:
             self.vis.run()
 
         while iteration != num_iter:
-            s = self.env.get_state(self.curr_time)
+            self.env.propagate_forward(self.curr_time)
             self.is_end = self.env.update_total_collision_risk_for_iteration()
 
             if self.is_end:
                 break
 
             if self.curr_time.mjd2000 >= self.env.next_action.mjd2000:
+                s = self.env.get_state()
                 action = self.agent.get_action(s)
                 r = self.env.get_reward()
                 self.env.act(action)

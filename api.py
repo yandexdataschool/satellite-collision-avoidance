@@ -13,7 +13,7 @@ import numpy as np
 
 
 def euclidean_distance(xyz_main, xyz_other, rev_sort=True):
-    """ Return array of (reverse sorted) Euclidean distances between main object and other
+    """ Return array of (reverse sorted) Euclidean distances between main object and other.
     Args:
         xyz_main: np.array shape (1, 3) - coordinates of main object
         xyz_other: np.array shape (n_objects, 3) - coordinates of other object
@@ -55,7 +55,7 @@ class Agent:
                     {'st': np.array shape (1, 6)},  satellite xyz and dVx, dVy, dVz coordinates.
                     {'db': np.array shape (n_items, 6)},  debris xyz and dVx, dVy, dVz coordinates.
                 'trajectory_deviation_coef' -- float.
-                epoch -- pk.epoch, at which time to return environment state.
+                'epoch' -- pk.epoch, at which time environment state is calculated.
         Returns:
             np.array([dVx, dVy, dVz, pk.epoch, time_to_req])  - vector of deltas for
                 protected object, maneuver time and time to request the next action.
@@ -85,6 +85,26 @@ class Environment:
         # TODO choose true distance
         self.crit_conv_dist = 100
 
+    def propagate_forward(self, epoch):
+        """
+        Args:
+            epoch -- pk.epoch, to which time to propagate environment state.
+        """
+        st_pos, st_v = self.protected.position(epoch)
+        st = np.hstack((np.array(st_pos), np.array(st_v)))
+        st = np.reshape(st, (1, -1))
+        n_items = len(self.debris)
+        db = np.zeros((n_items, 6))
+        for i in range(n_items):
+            pos, v = self.debris[i].position(epoch)
+            db[i] = np.hstack((np.array(pos), np.array(v)))
+        db = np.reshape(db, (1, -1))
+
+        coord = dict(st=st, db=db)
+        self.state = dict(
+            coord=coord, trajectory_deviation_coef=0.0, epoch=epoch)
+        return
+
     def get_reward(self):
         """ Provide total reward from the environment state.
         ---
@@ -96,7 +116,7 @@ class Environment:
         # whole reward
         # TODO - add constants to all reward components
         r = (
-            + self.protected.fuel
+            + self.protected.get_fuel()
             + traj_reward
             # collision_danger
             + self.collision_risk_reward
@@ -135,27 +155,8 @@ class Environment:
         self.protected.maneuver(action[:4])
         return
 
-    def get_state(self, epoch):
-        """ Provides environment state as dictionary
-            and is_end flag.
-        Args:
-            epoch -- pk.epoch, at which time to return environment state.
-        ---
-        output: bool, dict()
-        """
-        st_pos, st_v = self.protected.position(epoch)
-        st = np.hstack((np.array(st_pos), np.array(st_v)))
-        st = np.reshape(st, (1, -1))
-        n_items = len(self.debris)
-        db = np.zeros((n_items, 6))
-        for i in range(n_items):
-            pos, v = self.debris[i].position(epoch)
-            db[i] = np.hstack((np.array(pos), np.array(v)))
-        db = np.reshape(db, (1, -1))
-
-        coord = dict(st=st, db=db)
-        self.state = dict(
-            coord=coord, trajectory_deviation_coef=0.0, epoch=epoch)
+    def get_state(self):
+        """ Provides environment state. """
         return self.state
 
     def check_collision(self, collision_distance=100):
@@ -217,24 +218,25 @@ class SpaceObject:
 
             elements = tle.osculating_elements(t0)
             self.satellite = pk.planet.keplerian(
-                t0, elements, mu_central_body, mu_self, radius, safe_radius)
+                t0, elements, mu_central_body, mu_self, radius, safe_radius, name)
         elif param_type == "eph":
             self.satellite = pk.planet.keplerian(params["epoch"],
                                                  params["pos"], params["vel"],
                                                  params["mu_central_body"],
                                                  params["mu_self"],
                                                  params["radius"],
-                                                 params["safe_radius"])
+                                                 params["safe_radius"],
+                                                 name)
         elif param_type == "osc":
             self.satellite = pk.planet.keplerian(params["epoch"],
                                                  params["elements"],
                                                  params["mu_central_body"],
                                                  params["mu_self"],
                                                  params["radius"],
-                                                 params["safe_radius"])
+                                                 params["safe_radius"],
+                                                 name)
         else:
             raise ValueError("Unknown initial parameteres type")
-        self.satellite.name = name
 
     def maneuver(self, action):
         """ Make manoeuvre for the object.
@@ -246,10 +248,13 @@ class SpaceObject:
         t_man = pk.epoch(action[3], "mjd2000")
         pos, vel = self.position(t_man)
         new_vel = list(np.array(vel) + dV)
+
         mu_central_body, mu_self = self.satellite.mu_central_body, self.satellite.mu_self
         radius, safe_radius = self.satellite.radius, self.satellite.safe_radius
+        name = self.get_name()
+
         self.satellite = pk.planet.keplerian(t_man, list(pos), new_vel, mu_central_body,
-                                             mu_self, radius, safe_radius)
+                                             mu_self, radius, safe_radius, name)
         self.fuel -= fuel_consumption(dV)
         return
 
@@ -262,3 +267,6 @@ class SpaceObject:
 
     def get_name(self):
         return self.satellite.name
+
+    def get_fuel(self):
+        return self.fuel
