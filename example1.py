@@ -25,10 +25,10 @@ def main(args):
     num_iter, step = args.num_iter, args.step
 
     # SpaceObjects with TLE initial parameters.
-    sattelites = read_space_objects("data/stations.tle", "tle")
+    satellites = read_space_objects("data/stations.tle", "tle")
     # ISS - first row in the file, our protected object. Other satellites -
     # space debris.
-    iss, debris = sattelites[0], sattelites[1: 1 + DEBRIS_NUM]
+    iss, debris = satellites[0], satellites[1: 1 + DEBRIS_NUM]
 
     # SpaceObjects with "eph" initial parameters: pos, v, epoch.
     eph = read_space_objects("data/space_objects.eph", "eph")
