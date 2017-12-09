@@ -41,7 +41,7 @@ def fuel_consumption(dV):
 class Agent:
     """ Agent implements an agent to communicate with space Environment.
         Agent can make actions to the space environment by taking it's state
-        and reward after the last action.
+        after the last action.
     """
 
     def __init__(self):
@@ -52,9 +52,10 @@ class Agent:
         Args:
             state -- dict where keys:
                 'coord' -- dict where:
-                    {'st': np.array shape (1, 6)},  satellite xyz and dVx, dVy, dVz coordinates
-                    {'db': np.array shape (n_items, 6)},  debris xyz and dVx, dVy, dVz coordinates
-                'trajectory_deviation_coef' -- float
+                    {'st': np.array shape (1, 6)},  satellite xyz and dVx, dVy, dVz coordinates.
+                    {'db': np.array shape (n_items, 6)},  debris xyz and dVx, dVy, dVz coordinates.
+                'trajectory_deviation_coef' -- float.
+                epoch -- pk.epoch, at which time to return environment state.
         Returns:
             np.array([dVx, dVy, dVz, pk.epoch, time_to_req])  - vector of deltas for
                 protected object, maneuver time and time to request the next action.
@@ -236,7 +237,11 @@ class SpaceObject:
         self.satellite.name = name
 
     def maneuver(self, action):
-        """ Make manoeuvre for the object. """
+        """ Make manoeuvre for the object.
+        Args:
+            action -- np.array([dVx, dVy, dVz, pk.epoch]), vector
+                of deltas for protected object and maneuver time.
+         """
         dV = action[:3]
         t_man = pk.epoch(action[3], "mjd2000")
         pos, vel = self.position(t_man)
