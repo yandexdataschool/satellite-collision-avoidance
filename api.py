@@ -13,7 +13,7 @@ import numpy as np
 
 
 def euclidean_distance(xyz_main, xyz_other, rev_sort=True):
-    """ Return array of (reverse sorted) Euclidean distances between main object and other.
+    """ Returns array of (reverse sorted) Euclidean distances between main object and other.
     Args:
         xyz_main: np.array shape (1, 3) - coordinates of main object
         xyz_other: np.array shape (n_objects, 3) - coordinates of other object
@@ -36,6 +36,38 @@ def fuel_consumption(dV):
     output: float.
     """
     return np.linalg.norm(dV)
+
+
+def sum_collision_probability(p):
+    return 1 - np.prod(1 - p)
+
+
+def danger_db_and_collision_prob(st, db, treshould):
+    """ Returns danger debris indices and collision probability
+    Args:
+        st -- np.array shape(1, 3), satellite coordinates
+        db -- np.array shape(n_denris, 3), debris coordinates
+        treshould -- float, danger distance
+    ---
+    output: dict {danger_debris: collision_probability}
+    """
+    # getting danger debris
+    # TODO - normal distribution
+    crit_dist = euclidean_distance(st, db, rev_sort=False)
+    danger_debris = np.where(crit_dist < treshould)
+
+    collision_prob = dict()
+    r = treshould
+    for debris in danger_debris:
+        r = self.crit_conv_dist
+        d = crit_dist[debris]
+        coll_prob = (
+            (4 * r + d) * ((2 * r - d) ** 2) / (16 * r**3)
+        )
+        coll_prob = sum_collision_probability(coll_prob)
+        collision_prob[debris] = coll_prob
+
+    return collision_prob
 
 
 class Agent:
@@ -79,12 +111,15 @@ class Environment:
         """
         self.protected = protected
         self.debris = debris
-        self.collision_risk_reward = 0
         self.next_action = pk.epoch(0)
         self.state = dict()
         # critical convergence distance
         # TODO choose true distance
         self.crit_conv_dist = 100
+        n_debris = debris.shape[0]
+        self.collision_probability = dict(zip(range(n_debris, [0] * n_debris)))
+        self.whole_collision_probability = 0
+        self.collision_risk_reward = 0
 
     def propagate_forward(self, epoch):
         """
@@ -104,6 +139,9 @@ class Environment:
         coord = dict(st=st, db=db)
         self.state = dict(
             coord=coord, trajectory_deviation_coef=0.0, epoch=epoch)
+        # TODO - check reward update and add ++reward?
+        self.update_total_collision_risk_for_iteration()
+
         return
 
     def get_reward(self):
@@ -126,22 +164,14 @@ class Environment:
 
     def update_total_collision_risk_for_iteration(self):
         """ Update the risk of collision on the iteration. """
-        # collision probabitity (for uniform distribution)
-        # critical distances
-        crit_dist = euclidean_distance(
-            self.state['coord']['st'][:, :3],
-            self.state['coord']['db'][:, :3],
-            rev_sort=False
-        )
-        crit_dist = crit_dist[crit_dist < self.crit_conv_dist]
-        r = self.crit_conv_dist
-        d = crit_dist
-        coll_prob = (
-            (4 * r + d) * ((2 * r - d) ** 2) / (16 * r**3)
-        )
-        coll_prob = (1 - np.prod(1 - coll_prob))
-        self.collision_risk_reward = coll_prob
-
+        current_collision_probability = danger_db_and_collision_prob(
+            st[:, :3], db[:, :3], self.crit_conv_dist)
+        for d in current_collision_probability.keys():
+            self.collision_probability[d] = max(
+                self.collision_probability[d], current_collision_probability[d])
+        self.whole_collision_probability = sum_collision_probability(
+            self.collision_probability.values())
+        self.collision_risk_reward = self.whole_collision_probability
         self.is_end = self.check_collision()
         return self.is_end
 
@@ -163,7 +193,7 @@ class Environment:
         """ Provides environment state. """
         return self.state
 
-    def check_collision(self, collision_distance=100):
+    def check_collision(self, collision_distance=50):
         """ Return True if collision with protected object appears. """
         # distance satellite and nearest debris objuect
         min_distance = euclidean_distance(

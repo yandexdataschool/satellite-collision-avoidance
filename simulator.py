@@ -137,7 +137,6 @@ class Simulator:
             self.start_time = start_time
         self.curr_time = self.start_time
 
-
         self.vis = Visualizer()
         self.logger = logging.getLogger('simulator.Simulator')
 
@@ -176,7 +175,8 @@ class Simulator:
                 self.curr_time.mjd2000 + step, "mjd2000")
 
             iteration += 1
-
+        # TODO - whole reward
+        # TODO - probability of collision
         print("Simulation ended. Collision: {}".format(self.is_end))
 
     def log_protected_position(self):
