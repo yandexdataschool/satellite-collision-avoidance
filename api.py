@@ -61,8 +61,9 @@ class Agent:
                 protected object, maneuver time and time to request the next action.
         """
         dVx, dVy, dVz = 0, 0, 0
+        epoch = s.get("epoch").mjd2000
         time_to_req = 1
-        action = np.array([dVx, dVy, dVz, s.get("epoch").mjd2000, time_to_req])
+        action = np.array([dVx, dVy, dVz, epoch, time_to_req])
         return action
 
 
@@ -154,6 +155,9 @@ class Environment:
             "epoch").mjd2000 + action[4], "mjd2000")
         self.protected.maneuver(action[:4])
         return
+
+    def get_next_action(self):
+        return self.next_action
 
     def get_state(self):
         """ Provides environment state. """

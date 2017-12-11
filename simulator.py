@@ -154,7 +154,7 @@ class Simulator:
             if self.is_end:
                 break
 
-            if self.curr_time.mjd2000 >= self.env.next_action.mjd2000:
+            if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
                 s = self.env.get_state()
                 action = self.agent.get_action(s)
                 r = self.env.get_reward()
