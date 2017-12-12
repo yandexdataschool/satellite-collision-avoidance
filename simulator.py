@@ -147,7 +147,8 @@ class Simulator:
             self.vis.run()
 
         while iteration != num_iter:
-            self.env.propagate_forward(self.curr_time)
+            self.env.propagate_forward(
+                self.curr_time.mjd2000 - step, self.curr_time.mjd2000)
             self.is_end = self.env.update_total_collision_risk_for_iteration()
 
             if self.is_end:

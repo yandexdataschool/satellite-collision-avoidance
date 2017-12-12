@@ -11,6 +11,8 @@
 import pykep as pk
 import numpy as np
 
+PROPAGATION_STEP = 0.00001  # about 1 second
+
 
 def euclidean_distance(xyz_main, xyz_other, rev_sort=True):
     """ Returns array of (reverse sorted) Euclidean distances between main object and other.
@@ -121,26 +123,28 @@ class Environment:
         self.whole_collision_probability = 0
         self.collision_risk_reward = 0
 
-    def propagate_forward(self, epoch):
+    def propagate_forward(self, start, end, prop_step=PROPAGATION_STEP):
         """
         Args:
-            epoch -- pk.epoch, to which time to propagate environment state.
+            start, end -- float, start and end time for propagation as mjd2000.
         """
-        st_pos, st_v = self.protected.position(epoch)
-        st = np.hstack((np.array(st_pos), np.array(st_v)))
-        st = np.reshape(st, (1, -1))
-        n_items = len(self.debris)
-        db = np.zeros((n_items, 6))
-        for i in range(n_items):
-            pos, v = self.debris[i].position(epoch)
-            db[i] = np.hstack((np.array(pos), np.array(v)))
-        db = np.reshape(db, (1, -1))
+        for t in range(start, end + prop_step, prop_step):
+            epoch = pk.epoch(t, "mjd2000")
+            st_pos, st_v = self.protected.position(epoch)
+            st = np.hstack((np.array(st_pos), np.array(st_v)))
+            st = np.reshape(st, (1, -1))
+            n_items = len(self.debris)
+            db = np.zeros((n_items, 6))
+            for i in range(n_items):
+                pos, v = self.debris[i].position(epoch)
+                db[i] = np.hstack((np.array(pos), np.array(v)))
+            db = np.reshape(db, (1, -1))
 
-        coord = dict(st=st, db=db)
-        self.state = dict(
-            coord=coord, trajectory_deviation_coef=0.0, epoch=epoch)
-        # TODO - check reward update and add ++reward?
-        self.update_total_collision_risk_for_iteration()
+            coord = dict(st=st, db=db)
+            self.state = dict(
+                coord=coord, trajectory_deviation_coef=0.0, epoch=epoch)
+            # TODO - check reward update and add ++reward?
+            self.update_total_collision_risk_for_iteration()
 
         return
 
