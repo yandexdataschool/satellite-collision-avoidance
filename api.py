@@ -130,7 +130,7 @@ class Environment:
         Args:
             start, end -- float, start and end time for propagation as mjd2000.
         """
-        for t in range(start, end + prop_step, prop_step):
+        for t in np.arange(start, end + prop_step, prop_step):
             epoch = pk.epoch(t, "mjd2000")
             st_pos, st_v = self.protected.position(epoch)
             st = np.hstack((np.array(st_pos), np.array(st_v)))
@@ -146,7 +146,7 @@ class Environment:
             self.state = dict(
                 coord=coord, trajectory_deviation_coef=0.0, epoch=epoch)
             # TODO - check reward update and add ++reward?
-            self.update_total_collision_risk_for_iteration()
+            self.update_total_collision_risk()
 
         return
 
@@ -168,8 +168,8 @@ class Environment:
         )
         return r
 
-    def update_total_collision_risk_for_iteration(self):
-        """ Update the risk of collision on the iteration. """
+    def update_total_collision_risk(self):
+        """ Update the risk of collision on the propagation step. """
         current_collision_probability = danger_db_and_collision_prob(
             self.state['coord']['st'][:, :3], self.state['coord']['db'][:, :3], self.crit_conv_dist)
         for d in current_collision_probability.keys():
