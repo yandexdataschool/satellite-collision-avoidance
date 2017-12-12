@@ -39,7 +39,7 @@ def fuel_consumption(dV):
 
 
 def sum_collision_probability(p):
-    return 1 - np.prod(1 - p)
+    return (1 - np.prod(1 - p))
 
 
 def danger_db_and_collision_prob(st, db, treshould):
@@ -54,17 +54,19 @@ def danger_db_and_collision_prob(st, db, treshould):
     # getting danger debris
     # TODO - normal distribution
     crit_dist = euclidean_distance(st, db, rev_sort=False)
-    danger_debris = np.where(crit_dist < treshould)
+    danger_debris = np.where(crit_dist < treshould)[0]
 
     collision_prob = dict()
     r = treshould
+    # print (type(danger_debris))
+    # if danger_debris:
     for debris in danger_debris:
-        r = self.crit_conv_dist
         d = crit_dist[debris]
         coll_prob = (
             (4 * r + d) * ((2 * r - d) ** 2) / (16 * r**3)
         )
         coll_prob = sum_collision_probability(coll_prob)
+        print (coll_prob)
         collision_prob[debris] = coll_prob
 
     return collision_prob
@@ -116,8 +118,8 @@ class Environment:
         # critical convergence distance
         # TODO choose true distance
         self.crit_conv_dist = 100
-        n_debris = debris.shape[0]
-        self.collision_probability = dict(zip(range(n_debris, [0] * n_debris)))
+        n_debris = len(debris)
+        self.collision_probability = dict(zip(range(n_debris),np.zeros(n_debris)))
         self.whole_collision_probability = 0
         self.collision_risk_reward = 0
 
@@ -165,12 +167,12 @@ class Environment:
     def update_total_collision_risk_for_iteration(self):
         """ Update the risk of collision on the iteration. """
         current_collision_probability = danger_db_and_collision_prob(
-            st[:, :3], db[:, :3], self.crit_conv_dist)
+            self.state['coord']['st'][:, :3], self.state['coord']['db'][:, :3], self.crit_conv_dist)
         for d in current_collision_probability.keys():
             self.collision_probability[d] = max(
                 self.collision_probability[d], current_collision_probability[d])
         self.whole_collision_probability = sum_collision_probability(
-            self.collision_probability.values())
+            (np.array(list(self.collision_probability.values()))))
         self.collision_risk_reward = self.whole_collision_probability
         self.is_end = self.check_collision()
         return self.is_end
