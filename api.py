@@ -65,19 +65,19 @@ def collision_prob_normal(xyz_0, xyz_1, sigma):
     return probability
 
 
-def danger_db_and_collision_prob(st, db, treshould, sigma):
+def danger_debr_and_collision_prob(st, debr, threshold, sigma):
     """ Returns danger debris indices and collision probability
     Args:
         st -- np.array shape(1, 3), satellite coordinates
-        db -- np.array shape(n_denris, 3), debris coordinates
-        treshould -- float, danger distance
+        debr -- np.array shape(n_denris, 3), debris coordinates
+        threshold -- float, danger distance
         sigma -- float, standard deviation
     ---
     output: dict {danger_debris: collision_probability}
     """
     # getting danger debris
-    crit_dist = euclidean_distance(st, db, rev_sort=False)
-    danger_debris = np.where(crit_dist < treshould)[0]
+    crit_dist = euclidean_distance(st, debr, rev_sort=False)
+    danger_debris = np.where(crit_dist < threshold)[0]
     # collision probability for any danger debris
     coll_prob = dict()
 
@@ -102,7 +102,7 @@ class Agent:
             state -- dict where keys:
                 'coord' -- dict where:
                     {'st': np.array shape (1, 6)},  satellite xyz and dVx, dVy, dVz coordinates.
-                    {'db': np.array shape (n_items, 6)},  debris xyz and dVx, dVy, dVz coordinates.
+                    {'debr': np.array shape (n_items, 6)},  debris xyz and dVx, dVy, dVz coordinates.
                 'trajectory_deviation_coef' -- float.
                 'epoch' -- pk.epoch, at which time environment state is calculated.
         Returns:
@@ -151,13 +151,13 @@ class Environment:
             st = np.hstack((np.array(st_pos), np.array(st_v)))
             st = np.reshape(st, (1, -1))
             n_items = len(self.debris)
-            db = np.zeros((n_items, 6))
+            debr = np.zeros((n_items, 6))
             for i in range(n_items):
                 pos, v = self.debris[i].position(epoch)
-                db[i] = np.hstack((np.array(pos), np.array(v)))
-            db = np.reshape(db, (1, -1))
+                debr[i] = np.hstack((np.array(pos), np.array(v)))
+            debr = np.reshape(debr, (1, -1))
 
-            coord = dict(st=st, db=db)
+            coord = dict(st=st, debr=debr)
             self.state = dict(
                 coord=coord, trajectory_deviation_coef=0.0, epoch=epoch)
             # TODO - check reward update and add ++reward?
@@ -185,8 +185,8 @@ class Environment:
 
     def update_total_collision_risk(self):
         """ Update the risk of collision on the propagation step. """
-        current_collision_probability = danger_db_and_collision_prob(
-            self.state['coord']['st'][:, :3], self.state['coord']['db'][:, :3], self.crit_conv_dist, self.sigma)
+        current_collision_probability = danger_debr_and_collision_prob(
+            self.state['coord']['st'][:, :3], self.state['coord']['debr'][:, :3], self.crit_conv_dist, self.sigma)
         for d in current_collision_probability.keys():
             self.collision_probability[d] = max(
                 self.collision_probability[d], current_collision_probability[d])
