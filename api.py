@@ -68,7 +68,7 @@ def danger_db_and_collision_prob(st, db, treshould):
             (4 * r + d) * ((2 * r - d) ** 2) / (16 * r**3)
         )
         coll_prob = sum_collision_probability(coll_prob)
-        print (coll_prob)
+        print(coll_prob)
         collision_prob[debris] = coll_prob
 
     return collision_prob
@@ -121,7 +121,8 @@ class Environment:
         # TODO choose true distance
         self.crit_conv_dist = 100
         n_debris = len(debris)
-        self.collision_probability = dict(zip(range(n_debris),np.zeros(n_debris)))
+        self.collision_probability = dict(
+            zip(range(n_debris), np.zeros(n_debris)))
         self.whole_collision_probability = 0
         self.collision_risk_reward = 0
 
@@ -178,8 +179,7 @@ class Environment:
         self.whole_collision_probability = sum_collision_probability(
             (np.array(list(self.collision_probability.values()))))
         self.collision_risk_reward = self.whole_collision_probability
-        self.is_end = self.check_collision()
-        return self.is_end
+        return
 
     def act(self, action):
         """ Change velocity for protected object.
@@ -198,17 +198,6 @@ class Environment:
     def get_state(self):
         """ Provides environment state. """
         return self.state
-
-    def check_collision(self, collision_distance=50):
-        """ Return True if collision with protected object appears. """
-        # distance satellite and nearest debris objuect
-        min_distance = euclidean_distance(
-            self.state['coord']['st'][:, :3],
-            self.state['coord']['db'][:, :3],
-        )[0]
-        if min_distance <= collision_distance:
-            return True
-        return False
 
 
 class SpaceObject:
