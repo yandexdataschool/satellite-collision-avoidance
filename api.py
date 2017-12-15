@@ -10,6 +10,7 @@
 
 import pykep as pk
 import numpy as np
+from scipy.stats import norm
 
 PROPAGATION_STEP = 0.00001  # about 1 second
 
@@ -44,34 +45,46 @@ def sum_collision_probability(p):
     return (1 - np.prod(1 - p))
 
 
-def danger_db_and_collision_prob(st, db, treshould):
+def collision_prob_normal(xyz_0, xyz_1, sigma):
+    """ Returns probability of collision between two objects
+        which coordinates are distributed normally
+    Args:
+        xyz_1, xyz_2 -- np.array([x, y, z]), objects coordinates
+        sigma -- float, standard deviation
+    ---
+    output: float, probability
+
+    """
+    # TODO - truncated normal distribution?
+    # TODO - multivariate normal distribution?
+    probability = 1
+    for c0, c1 in zip(xyz_0, xyz_1):
+        av = (c0 + c1) / 2.
+        integtal = norm.cdf(av, loc=min(c0, c1), scale=sigma)
+        probability *= (1 - integtal) / integtal
+    return probability
+
+
+def danger_db_and_collision_prob(st, db, treshould, sigma):
     """ Returns danger debris indices and collision probability
     Args:
         st -- np.array shape(1, 3), satellite coordinates
         db -- np.array shape(n_denris, 3), debris coordinates
         treshould -- float, danger distance
+        sigma -- float, standard deviation
     ---
     output: dict {danger_debris: collision_probability}
     """
     # getting danger debris
-    # TODO - normal distribution
     crit_dist = euclidean_distance(st, db, rev_sort=False)
     danger_debris = np.where(crit_dist < treshould)[0]
+    # collision probability for any danger debris
+    coll_prob = dict()
 
-    collision_prob = dict()
-    r = treshould
-    # print (type(danger_debris))
-    # if danger_debris:
     for debris in danger_debris:
-        d = crit_dist[debris]
-        coll_prob = (
-            (4 * r + d) * ((2 * r - d) ** 2) / (16 * r**3)
-        )
-        coll_prob = sum_collision_probability(coll_prob)
-        print(coll_prob)
-        collision_prob[debris] = coll_prob
+        coll_prob[debris] = collision_prob_normal(st, debris, sigma)
 
-    return collision_prob
+    return coll_prob
 
 
 class Agent:
@@ -125,6 +138,7 @@ class Environment:
             zip(range(n_debris), np.zeros(n_debris)))
         self.whole_collision_probability = 0
         self.collision_risk_reward = 0
+        self.sigma = 10
 
     def propagate_forward(self, start, end, prop_step=PROPAGATION_STEP):
         """
@@ -172,7 +186,7 @@ class Environment:
     def update_total_collision_risk(self):
         """ Update the risk of collision on the propagation step. """
         current_collision_probability = danger_db_and_collision_prob(
-            self.state['coord']['st'][:, :3], self.state['coord']['db'][:, :3], self.crit_conv_dist)
+            self.state['coord']['st'][:, :3], self.state['coord']['db'][:, :3], self.crit_conv_dist, self.sigma)
         for d in current_collision_probability.keys():
             self.collision_probability[d] = max(
                 self.collision_probability[d], current_collision_probability[d])
