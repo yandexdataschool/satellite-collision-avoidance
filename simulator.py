@@ -157,7 +157,8 @@ class Simulator:
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
                 s = self.env.get_state()
                 action = self.agent.get_action(s)
-                r = self.env.get_reward()
+                # r = self.env.get_reward()
+                r = self.env.reward
                 self.env.act(action)
 
                 self.log_ra(iteration, r, action)
@@ -188,8 +189,8 @@ class Simulator:
             self.logger.info(strf_position(obj, self.curr_time))
 
     def log_iteration(self, iteration):
-        self.logger.debug("Iter #{} \tEpoch: {}\tCollision: {}\t Collision Risk Reward: {}".format(
-            iteration,  self.curr_time, self.is_end, self.env.collision_risk_reward))
+        self.logger.debug("Iter #{} \tEpoch: {}\tCollision: {}\t Collision Probability: {}".format(
+            iteration,  self.curr_time, self.is_end, self.env.whole_collision_probability))
 
     def log_ra(self, iteration, reward, action):
         self.logger.info("Iter: {}\tReward: {}\t action: {}".format(

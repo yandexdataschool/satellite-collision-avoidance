@@ -137,7 +137,7 @@ class Environment:
         self.collision_probability = dict(
             zip(range(n_debris), np.zeros(n_debris)))
         self.whole_collision_probability = 0
-        self.collision_risk_reward = 0
+        self.reward = 0
         self.sigma = 10
 
     def propagate_forward(self, start, end, prop_step=PROPAGATION_STEP):
@@ -165,8 +165,9 @@ class Environment:
 
         return
 
-    def get_reward(self):
+    def get_reward(self, collision_probabilities):
         """ Provide total reward from the environment state.
+        collision_probabilities: list of probabilities
         ---
         output: float
         """
@@ -178,8 +179,7 @@ class Environment:
         r = (
             + self.protected.get_fuel()
             + traj_reward
-            # collision_danger
-            + self.collision_risk_reward
+            + sum(collision_probabilities)
         )
         return r
 
@@ -192,7 +192,8 @@ class Environment:
                 self.collision_probability[d], current_collision_probability[d])
         self.whole_collision_probability = sum_collision_probability(
             (np.array(list(self.collision_probability.values()))))
-        self.collision_risk_reward = self.whole_collision_probability
+        self.reward += self.get_reward(
+            current_collision_probability.values())
         return
 
     def act(self, action):
