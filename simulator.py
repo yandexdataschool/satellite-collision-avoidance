@@ -149,10 +149,6 @@ class Simulator:
         while iteration != num_iter:
             self.env.propagate_forward(
                 self.curr_time.mjd2000 - step, self.curr_time.mjd2000)
-            self.is_end = self.env.update_total_collision_risk()
-
-            if self.is_end:
-                break
 
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
                 s = self.env.get_state()
@@ -190,7 +186,7 @@ class Simulator:
 
     def log_iteration(self, iteration):
         self.logger.debug("Iter #{} \tEpoch: {}\tCollision: {}\t Collision Probability: {}".format(
-            iteration,  self.curr_time, self.is_end, self.env.whole_collision_probability))
+            iteration,  self.curr_time, self.is_end, self.env.whole_coll_prob))
 
     def log_ra(self, iteration, reward, action):
         self.logger.info("Iter: {}\tReward: {}\t action: {}".format(

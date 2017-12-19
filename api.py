@@ -41,8 +41,8 @@ def fuel_consumption(dV):
     return np.linalg.norm(dV)
 
 
-def sum_collision_probability(p):
-    return (1 - np.prod(1 - p))
+def sum_coll_prob(p):
+    return (1 - np.prod(1 - np.array(p)))
 
 
 def collision_prob_normal(xyz_0, xyz_1, sigma):
@@ -73,7 +73,7 @@ def danger_debr_and_collision_prob(st, debr, threshold, sigma):
         threshold -- float, danger distance
         sigma -- float, standard deviation
     ---
-    output: dict {danger_debris: collision_probability}
+    output: dict {danger_debris: coll_prob}
     """
     # getting danger debris
     crit_dist = euclidean_distance(st, debr, rev_sort=False)
@@ -81,8 +81,8 @@ def danger_debr_and_collision_prob(st, debr, threshold, sigma):
     # collision probability for any danger debris
     coll_prob = dict()
 
-    for debris in danger_debris:
-        coll_prob[debris] = collision_prob_normal(st, debris, sigma)
+    for d in danger_debris:
+        coll_prob[d] = collision_prob_normal(st[0], debr[d], sigma)
 
     return coll_prob
 
@@ -132,13 +132,16 @@ class Environment:
         self.state = dict()
         # critical convergence distance
         # TODO choose true distance
-        self.crit_conv_dist = 100
+        self.crit_conv_dist = 10000
         n_debris = len(debris)
-        self.collision_probability = dict(
-            zip(range(n_debris), np.zeros(n_debris)))
-        self.whole_collision_probability = 0
+        # coll_prob = collision probability
+        self.coll_prob = dict(
+            zip(range(n_debris), np.zeros(n_debris))
+        )
+        self.buffer_coll_prob = dict()
+        self.whole_coll_prob = 0
         self.reward = 0
-        self.sigma = 10
+        self.sigma = 100
 
     def propagate_forward(self, start, end, prop_step=PROPAGATION_STEP):
         """
@@ -161,7 +164,10 @@ class Environment:
             self.state = dict(
                 coord=coord, trajectory_deviation_coef=0.0, epoch=epoch)
             # TODO - check reward update and add ++reward?
-            self.update_total_collision_risk()
+            p = self.update_collision_probability()
+            self.reward += self.get_reward(p)
+            print(self.reward)
+            print(self.whole_coll_prob)
 
         return
 
@@ -179,22 +185,37 @@ class Environment:
         r = (
             + self.protected.get_fuel()
             + traj_reward
-            + sum(collision_probabilities)
-        )
+            + np.sum(collision_probabilities))
         return r
 
-    def update_total_collision_risk(self):
-        """ Update the risk of collision on the propagation step. """
-        current_collision_probability = danger_debr_and_collision_prob(
-            self.state['coord']['st'][:, :3], self.state['coord']['debr'][:, :3], self.crit_conv_dist, self.sigma)
-        for d in current_collision_probability.keys():
-            self.collision_probability[d] = max(
-                self.collision_probability[d], current_collision_probability[d])
-        self.whole_collision_probability = sum_collision_probability(
-            (np.array(list(self.collision_probability.values()))))
-        self.reward += self.get_reward(
-            current_collision_probability.values())
-        return
+    def update_collision_probability(self):
+        """ Update the probability of collision on the propagation step. 
+        ---
+        output -- np.array(current collision probabilities)
+        """
+        # TODO - log probability
+        current_coll_prob = danger_debr_and_collision_prob(
+            self.state['coord']['st'][:, :3],
+            self.state['coord']['debr'][:, :3],
+            self.crit_conv_dist, self.sigma)
+        for d in range(len(self.debris)):
+            if (d in current_coll_prob.keys()) and (d in self.buffer_coll_prob.keys()):
+                # convergence continues
+                # update probability buffer
+                self.buffer_coll_prob[d] = max(
+                    current_coll_prob[d], self.buffer_coll_prob[d])
+            elif (d in current_coll_prob.keys()):
+                # convergence begins
+                # add probability to buffer
+                self.buffer_coll_prob[d] = current_coll_prob[d]
+            elif (d in self.buffer_coll_prob.keys()):
+                # convergence discontinued
+                # update environment coll_prob and whole_coll_prob
+                # via buffer
+                p = [self.coll_prob[d], self.buffer_coll_prob[d]]
+                self.coll_prob[d] = sum_coll_prob(p)
+                self.whole_coll_prob = sum_coll_prob(coll_prob.values())
+        return list(current_coll_prob.values())
 
     def act(self, action):
         """ Change velocity for protected object.
