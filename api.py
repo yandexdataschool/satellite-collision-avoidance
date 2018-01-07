@@ -166,6 +166,7 @@ class Environment:
             # TODO - check reward update and add ++reward?
             p = self.update_collision_probability()
             self.reward += self.get_reward(p)
+            # TODO - remove prints
             print(self.reward)
             print(self.whole_coll_prob)
 
@@ -199,16 +200,16 @@ class Environment:
             self.state['coord']['debr'][:, :3],
             self.crit_conv_dist, self.sigma)
         for d in range(len(self.debris)):
-            if (d in current_coll_prob.keys()) and (d in self.buffer_coll_prob.keys()):
+            if (d in current_coll_prob) and (d in self.buffer_coll_prob):
                 # convergence continues
                 # update probability buffer
                 self.buffer_coll_prob[d] = max(
                     current_coll_prob[d], self.buffer_coll_prob[d])
-            elif (d in current_coll_prob.keys()):
+            elif (d in current_coll_prob):
                 # convergence begins
                 # add probability to buffer
                 self.buffer_coll_prob[d] = current_coll_prob[d]
-            elif (d in self.buffer_coll_prob.keys()):
+            elif (d in self.buffer_coll_prob):
                 # convergence discontinued
                 # update environment coll_prob and whole_coll_prob
                 # via buffer
