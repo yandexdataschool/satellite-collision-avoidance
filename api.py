@@ -57,7 +57,7 @@ def collision_prob_normal(xyz_0, xyz_1, sigma):
     """
     # TODO - truncated normal distribution?
     # TODO - multivariate normal distribution?
-    probability = 1
+    probability = 1.
     for c0, c1 in zip(xyz_0, xyz_1):
         av = (c0 + c1) / 2.
         integtal = norm.cdf(av, loc=min(c0, c1), scale=sigma)
@@ -132,7 +132,7 @@ class Environment:
         self.state = dict()
         # critical convergence distance
         # TODO choose true distance
-        self.crit_conv_dist = 10000
+        self.crit_conv_dist = 3500000
         n_debris = len(debris)
         # coll_prob = collision probability
         self.coll_prob = dict(
@@ -141,7 +141,7 @@ class Environment:
         self.buffer_coll_prob = dict()
         self.whole_coll_prob = 0
         self.reward = 0
-        self.sigma = 100
+        self.sigma = 1000000
 
     def propagate_forward(self, start, end, prop_step=PROPAGATION_STEP):
         """
@@ -152,13 +152,13 @@ class Environment:
             epoch = pk.epoch(t, "mjd2000")
             st_pos, st_v = self.protected.position(epoch)
             st = np.hstack((np.array(st_pos), np.array(st_v)))
-            st = np.reshape(st, (1, -1))
+            st = np.reshape(st, (-1, 6))
             n_items = len(self.debris)
             debr = np.zeros((n_items, 6))
             for i in range(n_items):
                 pos, v = self.debris[i].position(epoch)
                 debr[i] = np.hstack((np.array(pos), np.array(v)))
-            debr = np.reshape(debr, (1, -1))
+            debr = np.reshape(debr, (-1, 6))
 
             coord = dict(st=st, debr=debr)
             self.state = dict(
@@ -166,9 +166,6 @@ class Environment:
             # TODO - check reward update and add ++reward?
             p = self.update_collision_probability()
             self.reward += self.get_reward(p)
-            # TODO - remove prints
-            print(self.reward)
-            print(self.whole_coll_prob)
 
         return
 
@@ -215,7 +212,9 @@ class Environment:
                 # via buffer
                 p = [self.coll_prob[d], self.buffer_coll_prob[d]]
                 self.coll_prob[d] = sum_coll_prob(p)
-                self.whole_coll_prob = sum_coll_prob(coll_prob.values())
+                self.whole_coll_prob = sum_coll_prob(
+                    list(self.coll_prob.values()))
+                del self.buffer_coll_prob[d]
         return list(current_coll_prob.values())
 
     def act(self, action):

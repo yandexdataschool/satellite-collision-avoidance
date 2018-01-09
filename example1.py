@@ -40,7 +40,6 @@ def main(args):
     osc = read_space_objects("data/space_objects.osc", "osc")
     for obj in osc:
         debris.append(obj)
-
     agent = Agent()
     env = Environment(iss, debris)
 
