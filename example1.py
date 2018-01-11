@@ -24,6 +24,9 @@ def main(args):
     visualize = args.visualize.lower() == "true"
     num_iter, step = args.num_iter, args.step
 
+    # TODO - remove
+    # num_iter = 100
+
     # SpaceObjects with TLE initial parameters.
     satellites = read_space_objects("data/stations.tle", "tle")
     # ISS - first row in the file, our protected object. Other satellites -

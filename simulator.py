@@ -172,9 +172,25 @@ class Simulator:
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + step, "mjd2000")
 
+            # TODO - remove prints
+            # print("\niteration:", iteration)
+            # print("prob:", self.env.coll_prob)
+            # print("buff:", self.env.buffer_coll_prob)
+            # print("whole:", self.env.whole_coll_prob)
+
             iteration += 1
+
+        self.env.clean_prob_buffer()
+        self.log_protected_position()
+
+        # print("\nafter buffer cleaning:")
+        # print("prob:", self.env.coll_prob)
+        # print("buff:", self.env.buffer_coll_prob)
+        # print("whole:", self.env.whole_coll_prob)
+
         # TODO - whole reward
         # TODO - probability of collision
+
         print("Simulation ended. Collision: {}".format(self.is_end))
 
     def log_protected_position(self):

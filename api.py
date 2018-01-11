@@ -217,6 +217,13 @@ class Environment:
                 del self.buffer_coll_prob[d]
         return list(current_coll_prob.values())
 
+    def clean_prob_buffer(self):
+        for d in self.buffer_coll_prob:
+            p = [self.coll_prob[d], self.buffer_coll_prob[d]]
+            self.coll_prob[d] = sum_coll_prob(p)
+        self.whole_coll_prob = sum_coll_prob(
+            list(self.coll_prob.values()))
+
     def act(self, action):
         """ Change velocity for protected object.
         Args:
