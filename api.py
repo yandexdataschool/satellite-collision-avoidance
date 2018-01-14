@@ -96,7 +96,7 @@ class Agent:
     def __init__(self):
         """"""
 
-    def get_action(self, s):
+    def get_action(self, state):
         """ Provides action  for protected object.
         Args:
             state -- dict where keys:
@@ -110,7 +110,7 @@ class Agent:
                 protected object, maneuver time and time to request the next action.
         """
         dVx, dVy, dVz = 0, 0, 0
-        epoch = s.get("epoch").mjd2000
+        epoch = state["epoch"].mjd2000
         time_to_req = 1
         action = np.array([dVx, dVy, dVz, epoch, time_to_req])
         return action
@@ -121,15 +121,16 @@ class Environment:
         satellites and debris, in it.
     """
 
-    def __init__(self, protected, debris):
+    def __init__(self, protected, debris, start_time):
         """
             protected -- SpaceObject, protected space object in Environment.
             debris -- [SpaceObject], list of other space objects.
+            start -- pk.epoch, initial time of the environment.
         """
         self.protected = protected
         self.debris = debris
         self.next_action = pk.epoch(0)
-        self.state = dict()
+        self.state = dict(epoch=start_time)
         # critical convergence distance
         # TODO choose true distance
         self.crit_conv_dist = 3500000
@@ -143,12 +144,16 @@ class Environment:
         self.reward = 0
         self.sigma = 1000000
 
-    def propagate_forward(self, start, end, prop_step=PROPAGATION_STEP):
+    def propagate_forward(self, end_time):
         """
         Args:
-            start, end -- float, start and end time for propagation as mjd2000.
+            end -- float, end time for propagation as mjd2000.
         """
-        for t in np.arange(start, end + prop_step, prop_step):
+        start_time = self.state["epoch"].mjd2000
+        if end_time < start_time:
+            return
+        num = np.floor((end_time - start_time) / PROPAGATION_STEP)
+        for t in np.linspace(start_time, end_time, num):
             epoch = pk.epoch(t, "mjd2000")
             st_pos, st_v = self.protected.position(epoch)
             st = np.hstack((np.array(st_pos), np.array(st_v)))
@@ -230,8 +235,8 @@ class Environment:
             action -- np.array([dVx, dVy, dVz, pk.epoch, time_to_req]), vector of deltas for
             protected object, maneuver time and time to request the next action.
         """
-        self.next_action = pk.epoch(self.state.get(
-            "epoch").mjd2000 + action[4], "mjd2000")
+        self.next_action = pk.epoch(
+            self.state["epoch"].mjd2000 + action[4], "mjd2000")
         self.protected.maneuver(action[:4])
         return
 

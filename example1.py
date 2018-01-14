@@ -4,10 +4,14 @@
 
 import argparse
 import sys
+import time
 
 from simulator import Simulator, read_space_objects
 from api import Agent, Environment
 
+import pykep as pk
+
+# Number of TLE satellites to read from file.
 DEBRIS_NUM = 3
 
 
@@ -44,7 +48,9 @@ def main(args):
     for obj in osc:
         debris.append(obj)
     agent = Agent()
-    env = Environment(iss, debris)
+    start_time = pk.epoch_from_string(
+        time.strftime("%Y-%m-%d %T"))
+    env = Environment(iss, debris, start_time)
 
     simulator = Simulator(agent, env)
     simulator.run(visualize=visualize, num_iter=num_iter, step=step)

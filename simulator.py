@@ -119,7 +119,7 @@ class Simulator:
     and starts agent-environment collaboration.
     """
 
-    def __init__(self, agent, environment, start_time=None):
+    def __init__(self, agent, environment):
         """
             agent -- Agent(), agent, to do actions in environment.
             environment -- Environment(), the initial space environment.
@@ -129,12 +129,7 @@ class Simulator:
 
         self.agent = agent
         self.env = environment
-
-        if not start_time:
-            self.start_time = pk.epoch_from_string(
-                time.strftime("%Y-%m-%d %T"))
-        else:
-            self.start_time = start_time
+        self.start_time = self.env.state["epoch"]
         self.curr_time = self.start_time
 
         self.vis = Visualizer()
@@ -147,13 +142,11 @@ class Simulator:
             self.vis.run()
 
         while iteration != num_iter:
-            self.env.propagate_forward(
-                self.curr_time.mjd2000 - step, self.curr_time.mjd2000)
+            self.env.propagate_forward(self.curr_time.mjd2000)
 
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
                 s = self.env.get_state()
                 action = self.agent.get_action(s)
-                # r = self.env.get_reward()
                 r = self.env.reward
                 self.env.act(action)
 
