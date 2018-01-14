@@ -12,9 +12,8 @@ import pykep as pk
 
 import numpy as np
 from scipy.stats import norm
-from math import floor
 
-PROPAGATION_STEP = 0.00001  # about 1 second
+PROPAGATION_STEP = 0.001  # about 1 second
 
 
 def euclidean_distance(xyz_main, xyz_other, rev_sort=True):
@@ -158,8 +157,8 @@ class Environment:
         # Take the minimal possible propagation step.
         prop_step = min(PROPAGATION_STEP, end_time - curr_time)
         start_time = self.state["epoch"].mjd2000 + prop_step
-        num = floor((end_time - start_time) / prop_step)
 
+        num = max(1, (end_time - start_time) // prop_step)
         for t in np.linspace(start_time, end_time, num):
             epoch = pk.epoch(t, "mjd2000")
             st_pos, st_v = self.protected.position(epoch)
@@ -199,7 +198,7 @@ class Environment:
         return r
 
     def update_collision_probability(self):
-        """ Update the probability of collision on the propagation step. 
+        """ Update the probability of collision on the propagation step.
         ---
         output -- np.array(current collision probabilities)
         """
