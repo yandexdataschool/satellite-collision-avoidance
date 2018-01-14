@@ -9,8 +9,10 @@
 # simulation has been started.
 
 import pykep as pk
+
 import numpy as np
 from scipy.stats import norm
+from math import floor
 
 PROPAGATION_STEP = 0.00001  # about 1 second
 
@@ -149,10 +151,15 @@ class Environment:
         Args:
             end -- float, end time for propagation as mjd2000.
         """
-        start_time = self.state["epoch"].mjd2000
-        if end_time < start_time:
+        curr_time = self.state["epoch"].mjd2000
+        if end_time <= curr_time:
             return
-        num = np.floor((end_time - start_time) / PROPAGATION_STEP)
+
+        # Take the minimal possible propagation step.
+        prop_step = min(PROPAGATION_STEP, end_time - curr_time)
+        start_time = self.state["epoch"].mjd2000 + prop_step
+        num = floor((end_time - start_time) / prop_step)
+
         for t in np.linspace(start_time, end_time, num):
             epoch = pk.epoch(t, "mjd2000")
             st_pos, st_v = self.protected.position(epoch)
