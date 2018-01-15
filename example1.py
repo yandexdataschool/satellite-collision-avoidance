@@ -29,7 +29,7 @@ def main(args):
     num_iter, step = args.num_iter, args.step
 
     # TODO - remove
-    # num_iter = 100
+    # num_iter = 20
 
     # SpaceObjects with TLE initial parameters.
     satellites = read_space_objects("data/stations.tle", "tle")

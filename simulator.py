@@ -135,7 +135,7 @@ class Simulator:
         self.vis = Visualizer()
         self.logger = logging.getLogger('simulator.Simulator')
 
-    def run(self, visualize=True, num_iter=None, step=0.001):
+    def run(self, visualize=True, num_iter=None, step=0.001, print_out=False):
         iteration = 0
 
         if visualize:
@@ -165,21 +165,24 @@ class Simulator:
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + step, "mjd2000")
 
-            # TODO - remove prints
-            # print("\niteration:", iteration)
-            # print("prob:", self.env.coll_prob)
-            # print("buff:", self.env.buffer_coll_prob)
-            # print("whole:", self.env.whole_coll_prob)
+            if print_out:
+                print("\niteration:", iteration)
+                print("prob:", self.env.coll_prob)
+                print("buff:", self.env.buffer_coll_prob)
+                print("whole prob:", self.env.whole_coll_prob)
+                print("reward:", self.env.reward)
 
             iteration += 1
 
         self.env.clean_prob_buffer()
         self.log_protected_position()
 
-        # print("\nafter buffer cleaning:")
-        # print("prob:", self.env.coll_prob)
-        # print("buff:", self.env.buffer_coll_prob)
-        # print("whole:", self.env.whole_coll_prob)
+        if print_out:
+            print("\nafter buffer cleaning:")
+            print("prob:", self.env.coll_prob)
+            print("buff:", self.env.buffer_coll_prob)
+            print("whole prob:", self.env.whole_coll_prob)
+            print("reward:", self.env.reward)
 
         # TODO - whole reward
         # TODO - probability of collision

@@ -71,19 +71,17 @@ def danger_debr_and_collision_prob(st, debr, threshold, sigma):
     Args:
         st -- np.array shape(1, 3), satellite coordinates
         debr -- np.array shape(n_denris, 3), debris coordinates
-        threshold -- float, danger distance
+        threshold -- float, danger probability
         sigma -- float, standard deviation
     ---
     output: dict {danger_debris: coll_prob}
     """
-    # getting danger debris
-    crit_dist = euclidean_distance(st, debr, rev_sort=False)
-    danger_debris = np.where(crit_dist < threshold)[0]
     # collision probability for any danger debris
     coll_prob = dict()
-
-    for d in danger_debris:
-        coll_prob[d] = collision_prob_normal(st[0], debr[d], sigma)
+    for d in range(debr.shape[0]):
+        p = collision_prob_normal(st[0], debr[d], sigma)
+        if (p >= threshold):
+            coll_prob[d] = p
 
     return coll_prob
 
@@ -134,16 +132,17 @@ class Environment:
         self.state = dict(epoch=start_time)
         # critical convergence distance
         # TODO choose true distance
-        self.crit_conv_dist = 3500000
+        self.crit_prob = 10e-5
+        self.sigma = 2000000
         n_debris = len(debris)
         # coll_prob = collision probability
         self.coll_prob = dict(
-            zip(range(n_debris), np.zeros(n_debris))
-        )
+            zip(range(n_debris), np.zeros(n_debris)))
         self.buffer_coll_prob = dict()
+
         self.whole_coll_prob = 0
+        self.whole_trajectory_deviation = 0
         self.reward = 0
-        self.sigma = 1000000
 
     def propagate_forward(self, end_time):
         """
@@ -172,29 +171,36 @@ class Environment:
             debr = np.reshape(debr, (-1, 6))
 
             coord = dict(st=st, debr=debr)
+            trajectory_deviation_coef = 0.0
+            self.whole_trajectory_deviation += trajectory_deviation_coef
             self.state = dict(
-                coord=coord, trajectory_deviation_coef=0.0, epoch=epoch)
-            # TODO - check reward update and add ++reward?
-            p = self.update_collision_probability()
-            self.reward += self.get_reward(p)
+                coord=coord, trajectory_deviation_coef=trajectory_deviation_coef, epoch=epoch)
+            self.update_collision_probability()
+            self.reward = self.get_reward()
 
         return
 
-    def get_reward(self, collision_probabilities):
+    def get_reward(self, coll_prob_w=0.6, traj_w=0.2, fuel_w=0.2):
         """ Provide total reward from the environment state.
-        collision_probabilities: list of probabilities
+        Args: weights of reward components
         ---
         output: float
         """
-        # trajectory reward
-        traj_reward = -self.state['trajectory_deviation_coef']
+        # reward components
+        coll_prob = sum_coll_prob(
+            [self.whole_coll_prob, sum_coll_prob(list(self.buffer_coll_prob.values()))])
+        ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
+        # collision probability reward - some kind of ELU function
+        # of collision probability
+        coll_prob_r = -(ELU((coll_prob - 10e-4) * 10000) + 1)
+        traj_r = -self.whole_trajectory_deviation
+        fuel_r = self.protected.get_fuel()
 
         # whole reward
-        # TODO - add constants to all reward components
-        r = (
-            + self.protected.get_fuel()
-            + traj_reward
-            + np.sum(collision_probabilities))
+        # TODO - add weights to all reward components
+        r = (coll_prob_w * coll_prob_r
+             + traj_w * traj_r
+             + fuel_w * fuel_r)
         return r
 
     def update_collision_probability(self):
@@ -202,11 +208,11 @@ class Environment:
         ---
         output -- np.array(current collision probabilities)
         """
-        # TODO - log probability
+        # TODO - log probability?
         current_coll_prob = danger_debr_and_collision_prob(
             self.state['coord']['st'][:, :3],
             self.state['coord']['debr'][:, :3],
-            self.crit_conv_dist, self.sigma)
+            self.crit_prob, self.sigma)
         for d in range(len(self.debris)):
             if (d in current_coll_prob) and (d in self.buffer_coll_prob):
                 # convergence continues
