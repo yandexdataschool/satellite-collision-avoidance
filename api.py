@@ -14,19 +14,20 @@ import numpy as np
 from scipy.stats import norm
 
 PROPAGATION_STEP = 0.001  # about 1 second
+epsilon = 0.000001  # constant => 0
 
 
-def euclidean_distance(xyz_main, xyz_other, rev_sort=True):
+def euclidean_distance(r_main, r_other, rev_sort=True):
     """ Returns array of (reverse sorted) Euclidean distances between main object and other.
     Args:
-        xyz_main: np.array shape (1, 3) - coordinates of main object
-        xyz_other: np.array shape (n_objects, 3) - coordinates of other object
+        r_main: np.array shape (1, 3) - xyz coordinates of main object
+        r_other: np.array shape (n_objects, 3) - xyz coordinates of other object
     Returns:
         np.array shape (n_objects)
     """
     # distances array
     distances = np.sum(
-        (xyz_main - xyz_other) ** 2,
+        (r_main - r_other) ** 2,
         axis=1) ** 0.5
     if rev_sort:
         distances = np.sort(distances)[::-1]
@@ -43,44 +44,108 @@ def fuel_consumption(dV):
 
 
 def sum_coll_prob(p):
-    return (1 - np.prod(1 - np.array(p)))
+    result = (1 - np.prod(1 - np.array(p)))
+    TestProbability(result)
+    return result
 
 
-def collision_prob_normal(xyz_0, xyz_1, sigma):
-    """ Returns probability of collision between two objects
-        which coordinates are distributed normally
+def rV2ocs(r0, r1, V0, V1):
+    """ Cartesian coordinate system to orbital coordinate system
     Args:
-        xyz_1, xyz_2 -- np.array([x, y, z]), objects coordinates
+        r0, r1 -- np.array([x,y,z]), coordinates
+        V0, V1 -- np.array([Vx,Vy,Vz]), velocities
+    ---
+    output floats: dr, dn, db
+    """
+    dr_vec = r0 - r1
+    # orbital coordinate system
+    i_r = dr_vec / np.linalg.norm(dr_vec)
+    i_b = dr_vec * V0
+    i_b = -i_b / np.linalg.norm(i_b)
+    i_n = i_r * i_b
+    i_n = -i_n / np.linalg.norm(i_n)
+
+    dr = np.dot(dr_vec, i_r)
+    dn = np.dot(dr_vec, i_n)
+    db = np.dot(dr_vec, i_b)
+
+    return dr, dn, db
+
+
+def TestProbability(p):
+    if ((not isinstance(p, float)) & (not isinstance(p, int))):
+        raise Exception("incorrect probability type: " +
+                        str(p) + " " + str(type(p)))
+    if ((p > 1) | (p < 0)):
+        raise Exception("incorrect probability value: " + str(p))
+    return
+
+
+def coll_prob_estimation(r0, r1, V0=np.zeros(3), V1=np.zeros(3), d0=1, d1=1,
+                         sigma=1., approach="Hutor"):
+    """ Returns probability of collision between two objects
+    Args:
+        r0, r1 -- np.array([x, y, z]), objects coordinates
+        V0, V1 -- np.array([Vx,Vy,Vz]), velocities
+        d0, d1 -- objects size (meters)
         sigma -- float, standard deviation
+        approach -- string name of approach
+            "Hutor" - Hutorovski approach
+                suited for near circular orbits and for convergence at a large angle
+            "normal" - assumption of coordinates are distributed normally
+                common empirical approach
     ---
     output: float, probability
-
     """
-    # TODO - truncated normal distribution?
-    # TODO - multivariate normal distribution?
     probability = 1.
-    for c0, c1 in zip(xyz_0, xyz_1):
-        av = (c0 + c1) / 2.
-        integtal = norm.cdf(av, loc=min(c0, c1), scale=sigma)
-        probability *= (1 - integtal) / integtal
+
+    if (approach == "Hutor"):
+        # V test
+        if (np.array_equal(V0, np.zeros(3)) | np.array_equal(V1, np.zeros(3))):
+            raise Exception("velocities are required for Hutorovski approach")
+        # cosine of angle between velocities
+        cos_vel_angle = (np.dot(V0, V1)
+                         / (np.linalg.norm(V0) * np.linalg.norm(V1)))
+        dr, dn, db = rV2ocs(r0, r1, V0, V1)
+        A = (dr**2 / (4 * sigma**2)
+             + dn**2 / (2 * sigma**2)
+             + db**2 / (2 * sigma**2))
+        k = ((d0 + d1)**2
+             / (sigma * (11 + 5 * sigma * cos_vel_angle**2)))
+        probability = k * np.exp(-A)
+    elif (approach == "normal"):
+        # TODO - truncated normal distribution?
+        # TODO - multivariate normal distribution?
+        for c0, c1 in zip(r0, r1):
+            av = (c0 + c1) / 2.
+            integtal = norm.cdf(av, loc=min(c0, c1), scale=sigma)
+            probability *= (1 - integtal) / integtal
+    else:
+        raise Exception("unknown probability estimation approach:" + approach)
+    TestProbability(probability)
     return probability
 
 
-def danger_debr_and_collision_prob(st, debr, threshold, sigma):
+def danger_debr_and_collision_prob(st_rV, debr_rV, st_d, debr_d, sigma, threshold_p):
     """ Returns danger debris indices and collision probability
     Args:
-        st -- np.array shape(1, 3), satellite coordinates
-        debr -- np.array shape(n_denris, 3), debris coordinates
-        threshold -- float, danger probability
+        st_r -- np.array shape(1, 6), satellite position and velocity
+        debr_r -- np.array shape(n_denris, 6), debris position and velocities
+        st_d --  satellite size
+        debr_d -- np.array shape(n_denris, 6), debris sizes
+        threshold_p -- float, danger probability
         sigma -- float, standard deviation
     ---
     output: dict {danger_debris: coll_prob}
     """
     # collision probability for any danger debris
+
     coll_prob = dict()
-    for d in range(debr.shape[0]):
-        p = collision_prob_normal(st[0], debr[d], sigma)
-        if (p >= threshold):
+    for d in range(debr_rV.shape[0]):
+        p = coll_prob_estimation(
+            st_rV[0, :3], debr_rV[d, :3], st_rV[0, 3:], debr_rV[d, 3:], st_d, debr_d[d], sigma)
+        TestProbability(p)
+        if (p >= threshold_p):
             coll_prob[d] = p
 
     return coll_prob
@@ -100,8 +165,8 @@ class Agent:
         Args:
             state -- dict where keys:
                 'coord' -- dict where:
-                    {'st': np.array shape (1, 6)},  satellite xyz and dVx, dVy, dVz coordinates.
-                    {'debr': np.array shape (n_items, 6)},  debris xyz and dVx, dVy, dVz coordinates.
+                    {'st': np.array shape (1, 6)},  satellite r and Vx, Vy, Vz coordinates.
+                    {'debr': np.array shape (n_items, 6)},  debris r and Vx, Vy, Vz coordinates.
                 'trajectory_deviation_coef' -- float.
                 'epoch' -- pk.epoch, at which time environment state is calculated.
         Returns:
@@ -130,17 +195,21 @@ class Environment:
         self.debris = debris
         self.next_action = pk.epoch(0)
         self.state = dict(epoch=start_time)
+        n_debris = len(debris)
+        # satellite size
+        self.st_d = 1.
+        # debris sizes
+        self.debr_d = np.ones(n_debris)
         # critical convergence distance
         # TODO choose true distance
         self.crit_prob = 10e-5
         self.sigma = 2000000
-        n_debris = len(debris)
         # coll_prob = collision probability
         self.coll_prob = dict(
             zip(range(n_debris), np.zeros(n_debris)))
-        self.buffer_coll_prob = dict()
+        self.collision_probability_in_current_conjunction = dict()
 
-        self.whole_coll_prob = 0
+        self.total_collision_probability_prior_to_current_conjunction = 0
         self.whole_trajectory_deviation = 0
         self.reward = 0
 
@@ -188,7 +257,7 @@ class Environment:
         """
         # reward components
         coll_prob = sum_coll_prob(
-            [self.whole_coll_prob, sum_coll_prob(list(self.buffer_coll_prob.values()))])
+            [self.total_collision_probability_prior_to_current_conjunction, sum_coll_prob(list(self.collision_probability_in_current_conjunction.values()))])
         ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
         # collision probability reward - some kind of ELU function
         # of collision probability
@@ -210,35 +279,40 @@ class Environment:
         """
         # TODO - log probability?
         current_coll_prob = danger_debr_and_collision_prob(
-            self.state['coord']['st'][:, :3],
-            self.state['coord']['debr'][:, :3],
-            self.crit_prob, self.sigma)
+            self.state['coord']['st'],
+            self.state['coord']['debr'],
+            self.st_d, self.debr_d,
+            self.sigma, self.crit_prob)
+
         for d in range(len(self.debris)):
-            if (d in current_coll_prob) and (d in self.buffer_coll_prob):
+            if (d in current_coll_prob) and (d in self.collision_probability_in_current_conjunction):
                 # convergence continues
                 # update probability buffer
-                self.buffer_coll_prob[d] = max(
-                    current_coll_prob[d], self.buffer_coll_prob[d])
+                self.collision_probability_in_current_conjunction[d] = max(
+                    current_coll_prob[d], self.collision_probability_in_current_conjunction[d])
             elif (d in current_coll_prob):
                 # convergence begins
                 # add probability to buffer
-                self.buffer_coll_prob[d] = current_coll_prob[d]
-            elif (d in self.buffer_coll_prob):
+                self.collision_probability_in_current_conjunction[
+                    d] = current_coll_prob[d]
+            elif (d in self.collision_probability_in_current_conjunction):
                 # convergence discontinued
-                # update environment coll_prob and whole_coll_prob
+                # update environment coll_prob and total_collision_probability_prior_to_current_conjunction
                 # via buffer
-                p = [self.coll_prob[d], self.buffer_coll_prob[d]]
+                p = [self.coll_prob[d],
+                     self.collision_probability_in_current_conjunction[d]]
                 self.coll_prob[d] = sum_coll_prob(p)
-                self.whole_coll_prob = sum_coll_prob(
+                self.total_collision_probability_prior_to_current_conjunction = sum_coll_prob(
                     list(self.coll_prob.values()))
-                del self.buffer_coll_prob[d]
+                del self.collision_probability_in_current_conjunction[d]
         return list(current_coll_prob.values())
 
     def clean_prob_buffer(self):
-        for d in self.buffer_coll_prob:
-            p = [self.coll_prob[d], self.buffer_coll_prob[d]]
+        for d in self.collision_probability_in_current_conjunction:
+            p = [self.coll_prob[d],
+                 self.collision_probability_in_current_conjunction[d]]
             self.coll_prob[d] = sum_coll_prob(p)
-        self.whole_coll_prob = sum_coll_prob(
+        self.total_collision_probability_prior_to_current_conjunction = sum_coll_prob(
             list(self.coll_prob.values()))
 
     def act(self, action):

@@ -119,12 +119,14 @@ class Simulator:
     and starts agent-environment collaboration.
     """
 
-    def __init__(self, agent, environment):
+    def __init__(self, agent, environment, print_out=False):
         """
             agent -- Agent(), agent, to do actions in environment.
             environment -- Environment(), the initial space environment.
             start_time -- pk.epoch, start epoch of simulation.
+            print_out -- print out some results for each step.
         """
+        self.print_out = print_out
         self.is_end = False
 
         self.agent = agent
@@ -135,7 +137,7 @@ class Simulator:
         self.vis = Visualizer()
         self.logger = logging.getLogger('simulator.Simulator')
 
-    def run(self, visualize=True, num_iter=None, step=0.001, print_out=False):
+    def run(self, visualize=True, num_iter=None, step=0.001):
         iteration = 0
 
         if visualize:
@@ -165,11 +167,12 @@ class Simulator:
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + step, "mjd2000")
 
-            if print_out:
+            if self.print_out:
                 print("\niteration:", iteration)
                 print("prob:", self.env.coll_prob)
-                print("buff:", self.env.buffer_coll_prob)
-                print("whole prob:", self.env.whole_coll_prob)
+                print("buff:", self.env.collision_probability_in_current_conjunction)
+                print(
+                    "whole prob:", self.env.total_collision_probability_prior_to_current_conjunction)
                 print("reward:", self.env.reward)
 
             iteration += 1
@@ -177,11 +180,12 @@ class Simulator:
         self.env.clean_prob_buffer()
         self.log_protected_position()
 
-        if print_out:
+        if self.print_out:
             print("\nafter buffer cleaning:")
             print("prob:", self.env.coll_prob)
-            print("buff:", self.env.buffer_coll_prob)
-            print("whole prob:", self.env.whole_coll_prob)
+            print("buff:", self.env.collision_probability_in_current_conjunction)
+            print(
+                "whole prob:", self.env.total_collision_probability_prior_to_current_conjunction)
             print("reward:", self.env.reward)
 
         # TODO - whole reward
@@ -198,7 +202,7 @@ class Simulator:
 
     def log_iteration(self, iteration):
         self.logger.debug("Iter #{} \tEpoch: {}\tCollision: {}\t Collision Probability: {}".format(
-            iteration,  self.curr_time, self.is_end, self.env.whole_coll_prob))
+            iteration,  self.curr_time, self.is_end, self.env.total_collision_probability_prior_to_current_conjunction))
 
     def log_ra(self, iteration, reward, action):
         self.logger.info("Iter: {}\tReward: {}\t action: {}".format(

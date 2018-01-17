@@ -52,7 +52,7 @@ def main(args):
         time.strftime("%Y-%m-%d %T"))
     env = Environment(iss, debris, start_time)
 
-    simulator = Simulator(agent, env)
+    simulator = Simulator(agent, env, print_out=False)
     simulator.run(visualize=visualize, num_iter=num_iter, step=step)
     return
 
