@@ -137,13 +137,19 @@ class Simulator:
         self.vis = Visualizer()
         self.logger = logging.getLogger('simulator.Simulator')
 
-    def run(self, visualize=True, num_iter=None, step=0.001):
+    def run(self, end_time, step=0.001, visualize=True):
+        """
+        Args:
+            end_time (float): end time of simulation provided as mjd2000.
+            step (float): time step in simulation.
+            vizualize (bool): whether show the simulation or not.
+        """
         iteration = 0
 
         if visualize:
             self.vis.run()
 
-        while iteration != num_iter:
+        while self.curr_time.mjd2000 <= end_time:
             self.env.propagate_forward(self.curr_time.mjd2000)
 
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:

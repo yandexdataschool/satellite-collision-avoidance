@@ -19,17 +19,14 @@ def main(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--visualize", type=str,
                         default="True", required=False)
-    parser.add_argument("-n", "--num_iter", type=int,
-                        default=None, required=False)
+    parser.add_argument("-t", "--end_time", type=float,
+                        default=6000.01, required=False)
     parser.add_argument("-s", "--step", type=float,
                         default=0.001, required=False)
     args = parser.parse_args(args)
 
     visualize = args.visualize.lower() == "true"
-    num_iter, step = args.num_iter, args.step
-
-    # TODO - remove
-    # num_iter = 20
+    end_time, step = args.end_time, args.step
 
     # SpaceObjects with TLE initial parameters.
     satellites = read_space_objects("data/stations.tle", "tle")
@@ -48,12 +45,11 @@ def main(args):
     for obj in osc:
         debris.append(obj)
     agent = Agent()
-    start_time = pk.epoch_from_string(
-        time.strftime("%Y-%m-%d %T"))
+    start_time = pk.epoch(6000)
     env = Environment(iss, debris, start_time)
 
     simulator = Simulator(agent, env, print_out=False)
-    simulator.run(visualize=visualize, num_iter=num_iter, step=step)
+    simulator.run(end_time=end_time, step=step, visualize=visualize)
     return
 
 
