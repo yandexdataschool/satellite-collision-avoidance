@@ -13,7 +13,7 @@ import pykep as pk
 import numpy as np
 from scipy.stats import norm
 
-PROPAGATION_STEP = 0.001  # about 1 second
+MAX_PROPAGATION_STEP = 0.000001  # is equal to 0.0864 sc.
 
 
 def euclidean_distance(r_main, r_other, rev_sort=True):
@@ -38,7 +38,9 @@ def euclidean_distance(r_main, r_other, rev_sort=True):
 
 def fuel_consumption(dV):
     """ Provide the value of fuel consumption for given velocity delta.
-    dV: np.array([dVx, dVy, dVz]), vector of satellite velocity delta for maneuver.
+
+    Args:
+        dV (np.array ([dVx, dVy, dVz]) ): vector of satellite velocity delta for maneuver.
 
     output: float.
     """
@@ -66,6 +68,7 @@ def sum_coll_prob(p):
 
 def rV2ocs(r0, r1, V0, V1):
     """ Cartesian coordinate system to orbital coordinate system
+
     Args:
         r0, r1: np.array([x,y,z]), coordinates
         V0, V1: np.array([Vx,Vy,Vz]), velocities
@@ -245,20 +248,34 @@ class Environment:
         self.reward = 0
 
     def propagate_forward(self, end_time):
-        """
+        """ 
         Args:
-            end: float, end time for propagation as mjd2000.
+            end_time: float, end time for propagation as mjd2000.
+
+        Raises:
+            ValueError: if end_time is less then current time of the environment.
+            Exception: if step in propagation_grid is less then MAX_PROPAGATION_STEP.
         """
         curr_time = self.state["epoch"].mjd2000
         if end_time <= curr_time:
             return
+        elif end_time < curr_time:
+            raise ValueError(
+                "end_time should be greater or equal to current time")
 
-        # Take the minimal possible propagation step.
-        prop_step = min(PROPAGATION_STEP, end_time - curr_time)
-        start_time = self.state["epoch"].mjd2000 + prop_step
+        # Choose number of steps in linspace, s.t.
+        # restep is less then MAX_PROPAGATION_STEP.
+        number_of_time_steps_plus_one = np.ceil(
+            (end_time - curr_time) / MAX_PROPAGATION_STEP) + 1
 
-        num = max(1, (end_time - start_time) // prop_step)
-        for t in np.linspace(start_time, end_time, num):
+        propagation_grid, retstep = np.linspace(
+            curr_time, end_time, number_of_time_steps_plus_one, retstep=True)
+
+        if retstep > MAX_PROPAGATION_STEP:
+            raise Exception(
+                "Step in propagation grid should be <= MAX_PROPAGATION_STEP")
+
+        for t in propagation_grid:
             epoch = pk.epoch(t, "mjd2000")
             st_pos, st_v = self.protected.position(epoch)
             st = np.hstack((np.array(st_pos), np.array(st_v)))
