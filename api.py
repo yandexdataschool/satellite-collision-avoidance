@@ -42,7 +42,8 @@ def fuel_consumption(dV):
     Args:
         dV (np.array ([dVx, dVy, dVz]) ): vector of satellite velocity delta for maneuver.
 
-    output: float.
+    Returns:
+        float: fuel consumption.
     """
     return np.linalg.norm(dV)
 
@@ -58,7 +59,7 @@ def sum_coll_prob(p):
 
     Raises:
         ValueError: If any probability has incorrect value.
-        TypeError: If any probability has incorrect type. 
+        TypeError: If any probability has incorrect type.
 
     """
     result = (1 - np.prod(1 - np.array(p)))
@@ -67,13 +68,14 @@ def sum_coll_prob(p):
 
 
 def rV2ocs(r0, r1, V0, V1):
-    """ Cartesian coordinate system to orbital coordinate system
+    """ Convert cartesian coordinate system to orbital coordinate system.
 
     Args:
-        r0, r1: np.array([x,y,z]), coordinates
-        V0, V1: np.array([Vx,Vy,Vz]), velocities
+        r0, r1 (np.array([x,y,z])): coordinates.
+        V0, V1 (np.array([Vx,Vy,Vz])): velocities.
 
-    output floats: dr, dn, db
+    Returns:
+        floats: dr, dn, db
     """
     dr_vec = r0 - r1
     # orbital coordinate system
@@ -104,29 +106,29 @@ def coll_prob_estimation(r0, r1, V0=np.zeros(3), V1=np.zeros(3), d0=1, d1=1,
                          sigma=1., approach="Hutor"):
     """ Returns probability of collision between two objects
     Args:
-        r0, r1: np.array([x, y, z]), objects coordinates
-        V0, V1: np.array([Vx,Vy,Vz]), velocities
-        d0, d1: objects size (meters)
-        sigma: float, standard deviation
-        approach: string name of approach
-            "Hutor" - Hutorovski approach
-                suited for near circular orbits and for convergence at a large angle
+        r0, r1 (np.array([x, y, z])): objects coordinates.
+        V0, V1 (np.array([Vx,Vy,Vz])): velocities.
+        d0, d1 (float, float): objects size (meters).
+        sigma (float): standard deviation.
+        approach (str): name of approach.
+            "Hutor" - Hutorovski approach suited for near circular orbits and
+                for convergence at a large angle.
             "normal" - assumption of coordinates are distributed normally
-                common empirical approach
+                common empirical approach.
 
-    output: float, probability
+    Returns:
+        float: probability.
 
     Raises:
         ValueError: If any probability has incorrect value.
         TypeError: If any probability has incorrect type.
         ValueError: If approach="Hutor" and V0=np.zeros(3), V1=np.zeros(3).
-
     """
     probability = 1.
 
-    if (approach == "Hutor"):
+    if approach == "Hutor":
         # V test
-        if (np.array_equal(V0, np.zeros(3)) | np.array_equal(V1, np.zeros(3))):
+        if np.array_equal(V0, np.zeros(3)) | np.array_equal(V1, np.zeros(3)):
             raise Exception("velocities are required for Hutorovski approach")
         # cosine of angle between velocities
         cos_vel_angle = (np.dot(V0, V1)
@@ -138,7 +140,7 @@ def coll_prob_estimation(r0, r1, V0=np.zeros(3), V1=np.zeros(3), d0=1, d1=1,
         k = ((d0 + d1)**2
              / (sigma * (11 + 5 * sigma * cos_vel_angle**2)))
         probability = k * np.exp(-A)
-    elif (approach == "normal"):
+    elif approach == "normal":
         # TODO - truncated normal distribution?
         # TODO - multivariate normal distribution?
         for c0, c1 in zip(r0, r1):
@@ -157,10 +159,10 @@ def danger_debr_and_collision_prob(st_rV, debr_rV, st_d, debr_d, sigma, threshol
     Args:
         st_r (np.array with shape(1, 6)): satellite position and velocity.
         debr_r (np.array with shape(n_denris, 6)): debris positions and velocities.
-        st_d (float): satellite size
+        st_d (float): satellite size.
         debr_d (np.array with shape(n_denris, 6)): debris sizes
-        threshold_p (float): danger probability
-        sigma (float): standard deviation
+        threshold_p (float): danger probability.
+        sigma (float): standard deviation.
 
     Returns:
         coll_prob (dict {danger_debris: coll_prob}): danger debris indices and collision probability.
@@ -197,14 +199,14 @@ class Agent:
     def get_action(self, state):
         """ Provides action  for protected object.
         Args:
-            state: dict where keys:
-                'coord': dict where:
-                    {'st': np.array shape (1, 6)},  satellite r and Vx, Vy, Vz coordinates.
-                    {'debr': np.array shape (n_items, 6)},  debris r and Vx, Vy, Vz coordinates.
-                'trajectory_deviation_coef': float.
-                'epoch': pk.epoch, at which time environment state is calculated.
+            state (dict): environment state. 
+                {'coord' (dict):
+                    {'st' (np.array with shape (1, 6)): satellite r and Vx, Vy, Vz coordinates.
+                     'debr' (np.array with shape (n_items, 6)): debris r and Vx, Vy, Vz coordinates.}
+                'trajectory_deviation_coef' (float).
+                'epoch' (pk.epoch): at which time environment state is calculated. }
         Returns:
-            np.array([dVx, dVy, dVz, pk.epoch, time_to_req])  - vector of deltas for
+            np.array([dVx, dVy, dVz, pk.epoch, time_to_req]): vector of deltas for
                 protected object, maneuver time and time to request the next action.
         """
         dVx, dVy, dVz = 0, 0, 0
@@ -221,9 +223,10 @@ class Environment:
 
     def __init__(self, protected, debris, start_time):
         """
-            protected: SpaceObject, protected space object in Environment.
-            debris: [SpaceObject], list of other space objects.
-            start: pk.epoch, initial time of the environment.
+        Args:
+            protected (SpaceObject): protected space object in Environment.
+            debris ([SpaceObject, ]): list of other space objects.
+            start (pk.epoch): initial time of the environment.
         """
         self.protected = protected
         self.debris = debris
@@ -250,7 +253,7 @@ class Environment:
     def propagate_forward(self, end_time):
         """ 
         Args:
-            end_time: float, end time for propagation as mjd2000.
+            end_time (float): end time for propagation as mjd2000.
 
         Raises:
             ValueError: if end_time is less then current time of the environment.
@@ -299,14 +302,16 @@ class Environment:
 
     def get_reward(self, coll_prob_w=0.6, traj_w=0.2, fuel_w=0.2):
         """ Provide total reward from the environment state.
-        Args: weights of reward components
+        Args:
+            coll_prob_w, traj_w, fuel_w (float): weights of reward components.
 
-
-        output: float
+        Returns:
+            float: total reward.
         """
         # reward components
         coll_prob = sum_coll_prob(
-            [self.total_collision_probability_prior_to_current_conjunction, sum_coll_prob(list(self.collision_probability_in_current_conjunction.values()))])
+            [self.total_collision_probability_prior_to_current_conjunction,
+             sum_coll_prob(list(self.collision_probability_in_current_conjunction.values()))])
         ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
         # collision probability reward - some kind of ELU function
         # of collision probability
@@ -324,8 +329,8 @@ class Environment:
     def update_collision_probability(self):
         """ Update the probability of collision on the propagation step.
 
-
-        output: np.array(current collision probabilities)
+        Returns"
+            [float, ]: list of current collision probabilities.
         """
         # TODO - log probability?
         current_coll_prob = danger_debr_and_collision_prob(
@@ -335,17 +340,17 @@ class Environment:
             self.sigma, self.crit_prob)
 
         for d in range(len(self.debris)):
-            if (d in current_coll_prob) and (d in self.collision_probability_in_current_conjunction):
+            if d in current_coll_prob and d in self.collision_probability_in_current_conjunction:
                 # convergence continues
                 # update probability buffer
                 self.collision_probability_in_current_conjunction[d] = max(
                     current_coll_prob[d], self.collision_probability_in_current_conjunction[d])
-            elif (d in current_coll_prob):
+            elif d in current_coll_prob:
                 # convergence begins
                 # add probability to buffer
                 self.collision_probability_in_current_conjunction[
                     d] = current_coll_prob[d]
-            elif (d in self.collision_probability_in_current_conjunction):
+            elif d in self.collision_probability_in_current_conjunction:
                 # convergence discontinued
                 # update environment coll_prob and total_collision_probability_prior_to_current_conjunction
                 # via buffer
@@ -368,8 +373,8 @@ class Environment:
     def act(self, action):
         """ Change velocity for protected object.
         Args:
-            action: np.array([dVx, dVy, dVz, pk.epoch, time_to_req]), vector of deltas for
-            protected object, maneuver time and time to request the next action.
+            action (np.array([dVx, dVy, dVz, pk.epoch, time_to_req])): vector of deltas for
+                protected object, maneuver time and time to request the next action.
         """
         self.next_action = pk.epoch(
             self.state["epoch"].mjd2000 + action[4], "mjd2000")
@@ -390,34 +395,34 @@ class SpaceObject:
     def __init__(self, name, param_type, params):
         """
         Args:
-            name: str, name of satellite or a space debris.
-            param_type: str, initial parameteres type. Can be:
-                    "tle": for TLE,
-                    "eph": ephemerides, position and velocity state vectors.
-                    "osc": osculating elements, 6 orbital parameteres.
-            params: dict, dictionary of space object coordinates. Keys are:
-                "fuel": float, initial fuel capacity.
+            name (str): name of satellite or a space debris.
+            param_type (str): initial parameteres type. Could be:
+                    "tle": for TLE object,
+                    "eph": ephemerides, initialize with position and velocity state vectors,
+                    "osc": osculating elements, initialize with 6 orbital parameteres.
+            params (dict): dictionary of space object coordinates.
+                "fuel" (float): initial fuel capacity.
 
                 for "tle" type:
-                    "tle1": str, tle line1
-                    "tle2": str, tle line2
+                    "tle1" (str): tle line1.
+                     "tle2" (str): tle line2.
 
                 for "eph" type:
-                    "pos": [x, y, z], position (cartesian).
-                    "vel": [Vx, Vy, Vz], velocity (cartesian).
-                    "epoch": pykep.epoch, start time in epoch format.
-                    "mu_central_body": float, gravity parameter of the
-                                                central body (SI units, i.e. m^2/s^3).
-                    "mu_self": float, gravity parameter of the planet
-                                        (SI units, i.e. m^2/s^3).
-                    "radius": float, body radius (SI units, i.e. meters).
-                    "safe_radius": float, mimimual radius that is safe during
-                                            a fly-by of the planet (SI units, i.e. m)
+                    "pos" ([x, y, z]): position (cartesian).
+                    "vel" ([Vx, Vy, Vz]): velocity (cartesian).
+                    "epoch" (pykep.epoch): start time.
+                    "mu_central_body" (float): gravity parameter of the
+                        central body (SI units, i.e. m^2/s^3).
+                    "mu_self"(float): gravity parameter of the planet
+                        (SI units, i.e. m^2/s^3).
+                    "radius" (float): body radius (SI units, i.e. meters).
+                    "safe_radius" (float): mimimual radius that is safe during
+                        a fly-by of the planet (SI units, i.e. m).
 
                 for "osc" type:
-                    "elements": (a,e,i,W,w,M), tuple containing 6 osculating elements.
-                    "epoch": pykep.epoch, start time in epoch format.
-                    "mu_central_body", "mu_self", "radius", "safe_radius": same, as in "eph" type.
+                    "elements" (tuple): containing 6 orbital osculating elements.
+                    "epoch" (pykep.epoch): start time.
+                    "mu_central_body", "mu_self", "radius", "safe_radius" (float): same, as in "eph" type.
         """
         self.fuel = params["fuel"]
 
@@ -454,7 +459,7 @@ class SpaceObject:
     def maneuver(self, action):
         """ Make manoeuvre for the object.
         Args:
-            action: np.array([dVx, dVy, dVz, pk.epoch]), vector
+            action (np.array([dVx, dVy, dVz, pk.epoch])): vector
                 of deltas for protected object and maneuver time.
          """
         dV = action[:3]
@@ -472,8 +477,12 @@ class SpaceObject:
         return
 
     def position(self, epoch):
-        """ Provide SpaceObject position:
-            (x, y, z) and (Vx, Vy, Vz), at given epoch.
+        """ Provide SpaceObject position at given epoch:
+        Args:
+            epoch (pk.epoch): at what time to calculate position.
+        Returns
+            pos (tuple): position x, y, z.
+            vel (tuple): velocity Vx, Vy, Vz.
         """
         pos, vel = self.satellite.eph(epoch)
         return pos, vel

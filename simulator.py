@@ -21,7 +21,7 @@ PAUSE_TIME = 0.0001
 
 
 def strf_position(satellite, epoch):
-    """ Print SpaceObject position. """
+    """ Print SpaceObject position at epoch. """
     pos, vel = satellite.position(epoch)
     return "{} position: x - {:0.2f}, y - {:0.2f}, z - {:0.2f}.\
       \n{} velocity: Vx - {:0.2f}, Vy - {:0.2f}, Vz - {:0.2f}\
@@ -31,8 +31,9 @@ def strf_position(satellite, epoch):
 
 def read_space_objects(file, param_type):
     """ Create SpaceObjects from a text file.
-        param_type -- str, "tle", "oph" or "osc". Different parameter
-                      types for initializing a SpaceObject.
+    Args:
+        param_type (str): parameter types for initializing a SpaceObject.
+            Could be "tle", "oph" or "osc".
     """
     space_objects = []
     with open(file, 'r') as satellites:
@@ -121,10 +122,11 @@ class Simulator:
 
     def __init__(self, agent, environment, print_out=False):
         """
-            agent -- Agent(), agent, to do actions in environment.
-            environment -- Environment(), the initial space environment.
-            start_time -- pk.epoch, start epoch of simulation.
-            print_out -- print out some results for each step.
+        Args:
+            agent (api.Agent, agent, to do actions in environment.
+            environment (api.Environment): the initial space environment.
+            start_time (pk.epoch): start epoch of simulation.
+            print_out (bool): print out some results for each step.
         """
         self.print_out = print_out
         self.is_end = False
