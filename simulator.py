@@ -23,8 +23,8 @@ PAUSE_TIME = 0.0001
 def strf_position(satellite, epoch):
     """ Print SpaceObject position at epoch. """
     pos, vel = satellite.position(epoch)
-    return "{} position: x - {:0.2f}, y - {:0.2f}, z - {:0.2f}.\
-      \n{} velocity: Vx - {:0.2f}, Vy - {:0.2f}, Vz - {:0.2f}\
+    return "{} position: x - {:0.5f}, y - {:0.5f}, z - {:0.5f}.\
+      \n{} velocity: Vx - {:0.5f}, Vy - {:0.5f}, Vz - {:0.5f}\
       ".format(satellite.get_name(), pos[0], pos[1], pos[2],
                satellite.get_name(), vel[0], vel[1], vel[2])
 
@@ -96,7 +96,6 @@ class Visualizer:
 
     def run(self):
         plt.ion()
-        plt.show()
 
     def plot_planet(self, satellite, t, size, color):
         """ Plot a pykep.planet object. """
