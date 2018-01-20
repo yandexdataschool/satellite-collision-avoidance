@@ -1,6 +1,5 @@
-# Example 1 runs simulator with provided parameteres.
-# We use data from https://www.celestrak.com/NORAD/elements/stations.txt
-# to provide ISS - protected object and other stellites as debris.
+# Collision runs simulator with two objects, having collision
+# at time 6600.
 
 import argparse
 import sys
@@ -19,7 +18,7 @@ def main(args):
     parser.add_argument("-t", "--end_time", type=float,
                         default=6600.1, required=False)
     parser.add_argument("-s", "--step", type=float,
-                        default=0.1, required=False)
+                        default=0.001, required=False)
     args = parser.parse_args(args)
 
     visualize = args.visualize.lower() == "true"
