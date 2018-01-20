@@ -16,9 +16,9 @@ def main(args):
     parser.add_argument("-v", "--visualize", type=str,
                         default="True", required=False)
     parser.add_argument("-t", "--end_time", type=float,
-                        default=6600.1, required=False)
+                        default=6600.05, required=False)
     parser.add_argument("-s", "--step", type=float,
-                        default=0.001, required=False)
+                        default=0.01, required=False)
     args = parser.parse_args(args)
 
     visualize = args.visualize.lower() == "true"
@@ -29,7 +29,7 @@ def main(args):
     debris = [osc[1]]
 
     agent = Agent()
-    start_time = pk.epoch(6599.9)
+    start_time = pk.epoch(6599.95)
     env = Environment(protected, debris, start_time)
 
     simulator = Simulator(agent, env, print_out=False)
