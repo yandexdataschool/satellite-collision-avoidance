@@ -211,7 +211,7 @@ class Agent:
         """
         dVx, dVy, dVz = 0, 0, 0
         epoch = state["epoch"].mjd2000
-        time_to_req = 1
+        time_to_req = 0.01
         action = np.array([dVx, dVy, dVz, epoch, time_to_req])
         return action
 
