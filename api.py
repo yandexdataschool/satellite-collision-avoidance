@@ -103,7 +103,7 @@ def TestProbability(p):
 
 
 def coll_prob_estimation(r0, r1, V0=np.zeros(3), V1=np.zeros(3), d0=1, d1=1,
-                         sigma=1., approach="Hutor"):
+                         sigma=1., approach="normal"):
     """ Returns probability of collision between two objects
     Args:
         r0, r1 (np.array([x, y, z])): objects coordinates.
@@ -174,14 +174,14 @@ def danger_debr_and_collision_prob(st_rV, debr_rV, st_d, debr_d, sigma, threshol
 
     """
     TestProbability(threshold_p)
-    if (sigma <= 0):
+    if sigma <= 0:
         raise ValueError("sigma should be more than 0")
 
     coll_prob = dict()
     for d in range(debr_rV.shape[0]):
         p = coll_prob_estimation(
             st_rV[0, :3], debr_rV[d, :3], st_rV[0, 3:], debr_rV[d, 3:], st_d, debr_d[d], sigma)
-        if (p >= threshold_p):
+        if p >= threshold_p:
             coll_prob[d] = p
 
     return coll_prob
@@ -295,7 +295,6 @@ class Environment:
             self.whole_trajectory_deviation += trajectory_deviation_coef
             self.state = dict(
                 coord=coord, trajectory_deviation_coef=trajectory_deviation_coef, epoch=epoch)
-
             self.update_collision_probability()
             self.reward = self.get_reward()
 
