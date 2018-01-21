@@ -9,16 +9,18 @@ from api import Agent, Environment
 
 import pykep as pk
 
-
+START_TIME = 6599.95
+SIMULATION_STEP = 0.01
+END_TIME = 6600.05
 
 def main(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--visualize", type=str,
                         default="True", required=False)
     parser.add_argument("-t", "--end_time", type=float,
-                        default=6600.05, required=False)
+                        default=END_TIME, required=False)
     parser.add_argument("-s", "--step", type=float,
-                        default=0.01, required=False)
+                        default=SIMULATION_STEP, required=False)
     args = parser.parse_args(args)
 
     visualize = args.visualize.lower() == "true"
@@ -29,7 +31,7 @@ def main(args):
     debris = [osc[1]]
 
     agent = Agent()
-    start_time = pk.epoch(6599.95)
+    start_time = pk.epoch(START_TIME, "mjd2000")
     env = Environment(protected, debris, start_time)
 
     simulator = Simulator(agent, env, print_out=False)
