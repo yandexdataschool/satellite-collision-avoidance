@@ -128,7 +128,6 @@ class Simulator:
             print_out (bool): print out some results for each step.
         """
         self.print_out = print_out
-        self.is_end = False
 
         self.agent = agent
         self.env = environment
@@ -198,7 +197,8 @@ class Simulator:
         # TODO - whole reward
         # TODO - probability of collision
 
-        print("Simulation ended. Collision: {}".format(self.is_end))
+        print("Simulation ended. Collision propbability: {}".format(
+            self.env.total_collision_probability_prior_to_current_conjunction))
 
     def log_protected_position(self):
         self.logger.info(strf_position(self.env.protected, self.curr_time))
@@ -208,8 +208,8 @@ class Simulator:
             self.logger.info(strf_position(obj, self.curr_time))
 
     def log_iteration(self, iteration):
-        self.logger.debug("Iter #{} \tEpoch: {}\tCollision: {}\t Collision Probability: {}".format(
-            iteration,  self.curr_time, self.is_end, self.env.total_collision_probability_prior_to_current_conjunction))
+        self.logger.debug("Iter #{} \tEpoch: {}\t Collision Probability: {}".format(
+            iteration,  self.curr_time, self.env.total_collision_probability_prior_to_current_conjunction))
 
     def log_ra(self, iteration, reward, action):
         self.logger.info("Iter: {}\tReward: {}\t action: {}".format(
