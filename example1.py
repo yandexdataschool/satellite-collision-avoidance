@@ -10,6 +10,10 @@ from api import Agent, Environment
 
 import pykep as pk
 
+
+START_TIME = 6000
+SIMULATION_STEP = 0.001
+END_TIME = 6000.01
 # Number of TLE satellites to read from file.
 DEBRIS_NUM = 3
 
@@ -18,14 +22,16 @@ def main(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--visualize", type=str,
                         default="True", required=False)
-    parser.add_argument("-t", "--end_time", type=float,
-                        default=6000.01, required=False)
+    parser.add_argument("-start", "--start_time", type=float,
+                        default=START_TIME, required=False)
+    parser.add_argument("-end", "--end_time", type=float,
+                        default=END_TIME, required=False)
     parser.add_argument("-s", "--step", type=float,
-                        default=0.001, required=False)
+                        default=SIMULATION_STEP, required=False)
     args = parser.parse_args(args)
 
     visualize = args.visualize.lower() == "true"
-    end_time, step = args.end_time, args.step
+    start_time, end_time, step = args.start_time, args.end_time, args.step
 
     # SpaceObjects with TLE initial parameters.
     satellites = read_space_objects("data/stations.tle", "tle")
@@ -44,7 +50,7 @@ def main(args):
     for obj in osc:
         debris.append(obj)
     agent = Agent()
-    start_time = pk.epoch(6000)
+    start_time = pk.epoch(start_time, "mjd2000")
     env = Environment(iss, debris, start_time)
 
     simulator = Simulator(agent, env, print_out=False)
