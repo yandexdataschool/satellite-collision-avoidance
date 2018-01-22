@@ -4,7 +4,6 @@
 
 import argparse
 import sys
-import time
 
 from simulator import Simulator, read_space_objects
 from api import Agent, Environment

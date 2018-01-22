@@ -296,6 +296,7 @@ class Environment:
             self.whole_trajectory_deviation += trajectory_deviation_coef
             self.state = dict(
                 coord=coord, trajectory_deviation_coef=trajectory_deviation_coef, epoch=epoch)
+
             self.update_collision_probability()
             self.reward = self.get_reward()
 
