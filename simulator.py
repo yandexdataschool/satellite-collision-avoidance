@@ -142,7 +142,7 @@ class Simulator:
         Args:
             end_time (float): end time of simulation provided as mjd2000.
             step (float): time step in simulation.
-            vizualize (bool): whether show the simulation or not.
+            visualize (bool): whether show the simulation or not.
         """
         iteration = 0
 
