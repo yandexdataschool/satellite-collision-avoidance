@@ -103,7 +103,7 @@ def TestProbability(p):
 
 
 def coll_prob_estimation(r0, r1, V0=np.zeros(3), V1=np.zeros(3), d0=1, d1=1,
-                         sigma=1., approach="Hutor"):
+                         sigma=1., approach="normal"):
     """ Returns probability of collision between two objects
     Args:
         r0, r1 (np.array([x, y, z])): objects coordinates.
@@ -241,12 +241,13 @@ class Environment:
         # TODO choose true distance
         self.crit_prob = 10e-5
         self.sigma = 2000000
-        # coll_prob = collision probability
-        self.coll_prob = dict(
-            zip(range(n_debris), np.zeros(n_debris)))
         self.collision_probability_in_current_conjunction = dict()
+        self.collision_probability_prior_to_current_conjunction_dict = dict(
+            zip(range(n_debris), np.zeros(n_debris)))
 
-        self.total_collision_probability_prior_to_current_conjunction = 0
+        self.total_collision_probability_dict = dict(
+            zip(range(n_debris), np.zeros(n_debris)))
+        self.total_collision_probability = 0
         self.whole_trajectory_deviation = 0
         self.reward = 0
 
@@ -309,9 +310,7 @@ class Environment:
             float: total reward.
         """
         # reward components
-        coll_prob = sum_coll_prob(
-            [self.total_collision_probability_prior_to_current_conjunction,
-             sum_coll_prob(list(self.collision_probability_in_current_conjunction.values()))])
+        coll_prob = self.total_collision_probability
         ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
         # collision probability reward - some kind of ELU function
         # of collision probability
@@ -333,42 +332,40 @@ class Environment:
             [float, ]: list of current collision probabilities.
         """
         # TODO - log probability?
-        current_coll_prob = danger_debr_and_collision_prob(
+        new_collision_probability_in_current_conjunction = danger_debr_and_collision_prob(
             self.state['coord']['st'],
             self.state['coord']['debr'],
             self.st_d, self.debr_d,
             self.sigma, self.crit_prob)
 
         for d in range(len(self.debris)):
-            if d in current_coll_prob and d in self.collision_probability_in_current_conjunction:
-                # convergence continues
-                # update probability buffer
-                self.collision_probability_in_current_conjunction[d] = max(
-                    current_coll_prob[d], self.collision_probability_in_current_conjunction[d])
-            elif d in current_coll_prob:
-                # convergence begins
-                # add probability to buffer
-                self.collision_probability_in_current_conjunction[
-                    d] = current_coll_prob[d]
+            if d in new_collision_probability_in_current_conjunction:
+                if d in self.collision_probability_in_current_conjunction:
+                    # convergence continues
+                    # update collision_probability_in_current_conjunction
+                    self.collision_probability_in_current_conjunction[d] = max(
+                        new_collision_probability_in_current_conjunction[d], self.collision_probability_in_current_conjunction[d])
+                else:
+                    # convergence begins
+                    # add probability to buffer
+                    self.collision_probability_in_current_conjunction[
+                        d] = new_collision_probability_in_current_conjunction[d]
+
+                self.total_collision_probability_dict[d] = sum_coll_prob(
+                    [self.collision_probability_in_current_conjunction[d],
+                     self.collision_probability_prior_to_current_conjunction_dict[d]])
+
             elif d in self.collision_probability_in_current_conjunction:
                 # convergence discontinued
-                # update environment coll_prob and total_collision_probability_prior_to_current_conjunction
-                # via buffer
-                p = [self.coll_prob[d],
-                     self.collision_probability_in_current_conjunction[d]]
-                self.coll_prob[d] = sum_coll_prob(p)
-                self.total_collision_probability_prior_to_current_conjunction = sum_coll_prob(
-                    list(self.coll_prob.values()))
+                # clean buffer
+                self.collision_probability_prior_to_current_conjunction_dict[
+                    d] = self.total_collision_probability_dict[d]
                 del self.collision_probability_in_current_conjunction[d]
-        return list(current_coll_prob.values())
 
-    def clean_prob_buffer(self):
-        for d in self.collision_probability_in_current_conjunction:
-            p = [self.coll_prob[d],
-                 self.collision_probability_in_current_conjunction[d]]
-            self.coll_prob[d] = sum_coll_prob(p)
-        self.total_collision_probability_prior_to_current_conjunction = sum_coll_prob(
-            list(self.coll_prob.values()))
+        self.total_collision_probability = sum_coll_prob(
+            list(self.total_collision_probability_dict.values()))
+
+        return
 
     def act(self, action):
         """ Change velocity for protected object.

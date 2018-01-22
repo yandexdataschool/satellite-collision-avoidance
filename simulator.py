@@ -177,29 +177,25 @@ class Simulator:
 
             if self.print_out:
                 print("\niteration:", iteration)
-                print("prob:", self.env.coll_prob)
-                print("buff:", self.env.collision_probability_in_current_conjunction)
-                print(
-                    "whole prob:", self.env.total_collision_probability_prior_to_current_conjunction)
+                print("coll prob in current conjunct:",
+                      self.env.collision_probability_in_current_conjunction)
+                print("coll prob prior current conjunct:",
+                      self.env.collision_probability_prior_to_current_conjunction_dict)
+                print("total coll prob dict:",
+                      self.env.total_collision_probability_dict)
+                print("total coll prob:",
+                      self.env.total_collision_probability)
                 print("reward:", self.env.reward)
 
             iteration += 1
 
-        self.env.clean_prob_buffer()
         self.log_protected_position()
-
-        if self.print_out:
-            print("\nafter buffer cleaning:")
-            print("prob:", self.env.coll_prob)
-            print("buff:", self.env.collision_probability_in_current_conjunction)
-            print(
-                "whole prob:", self.env.total_collision_probability_prior_to_current_conjunction)
-            print("reward:", self.env.reward)
 
         # TODO - whole reward
         # TODO - probability of collision
 
-        print("Simulation ended. Collision: {}".format(self.is_end))
+        print("Simulation ended.\nCollision probability: {}.\nReward: {}.".format(
+            self.env.total_collision_probability, self.env.reward))
 
     def log_protected_position(self):
         self.logger.info(strf_position(self.env.protected, self.curr_time))
@@ -209,8 +205,8 @@ class Simulator:
             self.logger.info(strf_position(obj, self.curr_time))
 
     def log_iteration(self, iteration):
-        self.logger.debug("Iter #{} \tEpoch: {}\tCollision: {}\t Collision Probability: {}".format(
-            iteration,  self.curr_time, self.is_end, self.env.total_collision_probability_prior_to_current_conjunction))
+        self.logger.debug("Iter #{} \tEpoch: {}\tCollision Probability: {}".format(
+            iteration,  self.curr_time, self.env.total_collision_probability))
 
     def log_ra(self, iteration, reward, action):
         self.logger.info("Iter: {}\tReward: {}\t action: {}".format(
