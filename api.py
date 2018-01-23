@@ -240,7 +240,7 @@ class Environment:
         # critical convergence distance
         # TODO choose true distance
         self.crit_prob = 10e-5
-        self.sigma = 2000000
+        self.sigma = 1000
         self.collision_probability_in_current_conjunction = dict()
         self.collision_probability_prior_to_current_conjunction_dict = dict(
             zip(range(n_debris), np.zeros(n_debris)))
@@ -282,14 +282,12 @@ class Environment:
         for t in propagation_grid:
             epoch = pk.epoch(t, "mjd2000")
             st_pos, st_v = self.protected.position(epoch)
-            st = np.hstack((np.array(st_pos), np.array(st_v)))
-            st = np.reshape(st, (-1, 6))
+            st = np.hstack((np.array(st_pos), np.array(st_v)))[np.newaxis, ...]
             n_items = len(self.debris)
             debr = np.zeros((n_items, 6))
             for i in range(n_items):
                 pos, v = self.debris[i].position(epoch)
-                debr[i] = np.hstack((np.array(pos), np.array(v)))
-            debr = np.reshape(debr, (-1, 6))
+                debr[i] = np.array(pos + v)
 
             coord = dict(st=st, debr=debr)
             trajectory_deviation_coef = 0.0

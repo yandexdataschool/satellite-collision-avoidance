@@ -13,6 +13,7 @@ START_TIME = 6599.95
 SIMULATION_STEP = 0.01
 END_TIME = 6600.05
 
+
 def main(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--visualize", type=str,
