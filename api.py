@@ -48,22 +48,21 @@ def fuel_consumption(dV):
     return np.linalg.norm(dV)
 
 
-def sum_coll_prob(p):
+def sum_coll_prob(p, axis=0):
     """Summation of probabilities.
 
     Agrs:
-        p (list or np.array or tuple or set): probabilities.
+        p (np.array): probabilities.
 
     Returns:
-        result (float): probabilities sum.
+        result (float or np.array): probabilities sum.
 
     Raises:
         ValueError: If any probability has incorrect value.
         TypeError: If any probability has incorrect type.
 
     """
-    result = (1 - np.prod(1 - np.array(p)))
-    TestProbability(result)
+    result = (1 - np.prod(1 - p, axis=axis))
     return result
 
 
@@ -165,7 +164,7 @@ def danger_debr_and_collision_prob(st_rV, debr_rV, st_d, debr_d, sigma, threshol
         sigma (float): standard deviation.
 
     Returns:
-        coll_prob (dict {danger_debris: coll_prob}): danger debris indices and collision probability.
+        coll_prob (np.array): collision probability for each debris.
 
     Raises:
         ValueError: If any probability has incorrect value.
@@ -175,9 +174,9 @@ def danger_debr_and_collision_prob(st_rV, debr_rV, st_d, debr_d, sigma, threshol
     """
     TestProbability(threshold_p)
     if sigma <= 0:
-        raise ValueError("sigma should be more than 0")
+        raise ValueError("sigma must be greater than 0")
 
-    coll_prob = dict()
+    coll_prob = np.zeros(debr_rV.shape[0])
     for d in range(debr_rV.shape[0]):
         p = coll_prob_estimation(
             st_rV[0, :3], debr_rV[d, :3], st_rV[0, 3:], debr_rV[d, 3:], st_d, debr_d[d], sigma)
@@ -232,21 +231,21 @@ class Environment:
         self.debris = debris
         self.next_action = pk.epoch(0)
         self.state = dict(epoch=start_time)
-        n_debris = len(debris)
+        self.n_debris = len(debris)
         # satellite size
         self.st_d = 1.
         # debris sizes
-        self.debr_d = np.ones(n_debris)
+        self.debr_d = np.ones(self.n_debris)
         # critical convergence distance
         # TODO choose true distance
         self.crit_prob = 10e-5
-        self.sigma = 1000
-        self.collision_probability_in_current_conjunction = dict()
-        self.collision_probability_prior_to_current_conjunction_dict = dict(
-            zip(range(n_debris), np.zeros(n_debris)))
+        self.sigma = 50000
+        self.collision_probability_in_current_conjunction = np.zeros(
+            self.n_debris)
+        self.collision_probability_prior_to_current_conjunction = np.zeros(
+            self.n_debris)
 
-        self.total_collision_probability_dict = dict(
-            zip(range(n_debris), np.zeros(n_debris)))
+        self.total_collision_probability_array = np.zeros(self.n_debris)
         self.total_collision_probability = 0
         self.whole_trajectory_deviation = 0
         self.reward = 0
@@ -326,8 +325,6 @@ class Environment:
     def update_collision_probability(self):
         """ Update the probability of collision on the propagation step.
 
-        Returns"
-            [float, ]: list of current collision probabilities.
         """
         # TODO - log probability?
         new_collision_probability_in_current_conjunction = danger_debr_and_collision_prob(
@@ -336,32 +333,29 @@ class Environment:
             self.st_d, self.debr_d,
             self.sigma, self.crit_prob)
 
-        for d in range(len(self.debris)):
-            if d in new_collision_probability_in_current_conjunction:
-                if d in self.collision_probability_in_current_conjunction:
-                    # convergence continues
-                    # update collision_probability_in_current_conjunction
-                    self.collision_probability_in_current_conjunction[d] = max(
-                        new_collision_probability_in_current_conjunction[d], self.collision_probability_in_current_conjunction[d])
-                else:
-                    # convergence begins
-                    # add probability to buffer
-                    self.collision_probability_in_current_conjunction[
-                        d] = new_collision_probability_in_current_conjunction[d]
+        new_danger_debr = np.where(
+            new_collision_probability_in_current_conjunction > 0)[0]
+        cur_danger_debr = np.where(
+            self.collision_probability_in_current_conjunction > 0)[0]
+        new_not_danger_debr = np.setdiff1d(cur_danger_debr, new_danger_debr)
 
-                self.total_collision_probability_dict[d] = sum_coll_prob(
-                    [self.collision_probability_in_current_conjunction[d],
-                     self.collision_probability_prior_to_current_conjunction_dict[d]])
+        self.collision_probability_in_current_conjunction[new_danger_debr] = np.maximum(
+            new_collision_probability_in_current_conjunction[new_danger_debr],
+            self.collision_probability_in_current_conjunction[new_danger_debr])
 
-            elif d in self.collision_probability_in_current_conjunction:
-                # convergence discontinued
-                # clean buffer
-                self.collision_probability_prior_to_current_conjunction_dict[
-                    d] = self.total_collision_probability_dict[d]
-                del self.collision_probability_in_current_conjunction[d]
+        self.collision_probability_prior_to_current_conjunction[new_not_danger_debr] = sum_coll_prob(
+            np.vstack([
+                self.collision_probability_prior_to_current_conjunction[
+                    new_not_danger_debr],
+                self.collision_probability_in_current_conjunction[new_not_danger_debr]]))
+        self.collision_probability_in_current_conjunction[
+            new_not_danger_debr] = 0.
 
+        self.total_collision_probability_array = sum_coll_prob(np.vstack([
+            self.collision_probability_in_current_conjunction,
+            self.collision_probability_prior_to_current_conjunction]))
         self.total_collision_probability = sum_coll_prob(
-            list(self.total_collision_probability_dict.values()))
+            self.total_collision_probability_array)
 
         return
 
