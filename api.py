@@ -57,10 +57,6 @@ def sum_coll_prob(p, axis=0):
     Returns:
         result (float or np.array): probabilities sum.
 
-    Raises:
-        ValueError: If any probability has incorrect value.
-        TypeError: If any probability has incorrect type.
-
     """
     result = (1 - np.prod(1 - p, axis=axis))
     return result
@@ -75,6 +71,7 @@ def rV2ocs(r0, r1, V0, V1):
 
     Returns:
         floats: dr, dn, db
+
     """
     dr_vec = r0 - r1
     # orbital coordinate system
