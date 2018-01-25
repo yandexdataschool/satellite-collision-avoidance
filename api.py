@@ -100,7 +100,8 @@ def TestProbability(p):
 
 def coll_prob_estimation(r0, r1, V0=np.zeros(3), V1=np.zeros(3), d0=1, d1=1,
                          sigma=1., approach="normal"):
-    """ Returns probability of collision between two objects
+    """ Returns probability of collision between two objects.
+
     Args:
         r0, r1 (np.array([x, y, z])): objects coordinates.
         V0, V1 (np.array([Vx,Vy,Vz])): velocities.
@@ -119,6 +120,7 @@ def coll_prob_estimation(r0, r1, V0=np.zeros(3), V1=np.zeros(3), d0=1, d1=1,
         ValueError: If any probability has incorrect value.
         TypeError: If any probability has incorrect type.
         ValueError: If approach="Hutor" and V0=np.zeros(3), V1=np.zeros(3).
+
     """
     probability = 1.
 
@@ -172,38 +174,41 @@ def danger_debr_and_collision_prob(st_rV, debr_rV, st_d, debr_d, sigma, threshol
     TestProbability(threshold_p)
     if sigma <= 0:
         raise ValueError("sigma must be greater than 0")
-
     coll_prob = np.zeros(debr_rV.shape[0])
     for d in range(debr_rV.shape[0]):
         p = coll_prob_estimation(
             st_rV[0, :3], debr_rV[d, :3], st_rV[0, 3:], debr_rV[d, 3:], st_d, debr_d[d], sigma)
         if p >= threshold_p:
             coll_prob[d] = p
-
     return coll_prob
 
 
 class Agent:
     """ Agent implements an agent to communicate with space Environment.
+
         Agent can make actions to the space environment by taking it's state
         after the last action.
+
     """
 
     def __init__(self):
         """"""
 
     def get_action(self, state):
-        """ Provides action  for protected object.
+        """ Provides action for protected object.
+
         Args:
-            state (dict): environment state. 
+            state (dict): environment state
                 {'coord' (dict):
                     {'st' (np.array with shape (1, 6)): satellite r and Vx, Vy, Vz coordinates.
                      'debr' (np.array with shape (n_items, 6)): debris r and Vx, Vy, Vz coordinates.}
                 'trajectory_deviation_coef' (float).
-                'epoch' (pk.epoch): at which time environment state is calculated. }
+                'epoch' (pk.epoch): at which time environment state is calculated.}.
+
         Returns:
-            np.array([dVx, dVy, dVz, pk.epoch, time_to_req]): vector of deltas for
+            action (np.array([dVx, dVy, dVz, pk.epoch, time_to_req])): vector of deltas for
                 protected object, maneuver time and time to request the next action.
+
         """
         dVx, dVy, dVz = 0, 0, 0
         epoch = state["epoch"].mjd2000
@@ -213,9 +218,7 @@ class Agent:
 
 
 class Environment:
-    """ Environment provides the space environment with space objects:
-        satellites and debris, in it.
-    """
+    """ Environment provides the space environment with space objects: satellites and debris, in it."""
 
     def __init__(self, protected, debris, start_time):
         """
@@ -223,38 +226,38 @@ class Environment:
             protected (SpaceObject): protected space object in Environment.
             debris ([SpaceObject, ]): list of other space objects.
             start (pk.epoch): initial time of the environment.
+
         """
         self.protected = protected
         self.debris = debris
         self.next_action = pk.epoch(0)
         self.state = dict(epoch=start_time)
         self.n_debris = len(debris)
-        # satellite size
-        self.st_d = 1.
-        # debris sizes
-        self.debr_d = np.ones(self.n_debris)
-        # critical convergence distance
-        # TODO choose true distance
-        self.crit_prob = 10e-5
-        self.sigma = 50000
+        self.st_d = 1.  #: Satellite size
+        self.debr_d = np.ones(self.n_debris)  #: Debris sizes
+        self.crit_prob = 10e-5  #: Critical convergence distance
+        # TODO choose true sigma
+        self.sigma = 50000  #: Coordinates uncertainly
         self.collision_probability_in_current_conjunction = np.zeros(
             self.n_debris)
         self.collision_probability_prior_to_current_conjunction = np.zeros(
             self.n_debris)
 
         self.total_collision_probability_array = np.zeros(self.n_debris)
-        self.total_collision_probability = 0
-        self.whole_trajectory_deviation = 0
-        self.reward = 0
+        self.total_collision_probability = 0.
+        self.whole_trajectory_deviation = 0.
+        self.reward = 0.
 
     def propagate_forward(self, end_time):
-        """ 
+        """ Forward step.
+
         Args:
             end_time (float): end time for propagation as mjd2000.
 
         Raises:
             ValueError: if end_time is less then current time of the environment.
             Exception: if step in propagation_grid is less then MAX_PROPAGATION_STEP.
+
         """
         curr_time = self.state["epoch"].mjd2000
         if end_time <= curr_time:
