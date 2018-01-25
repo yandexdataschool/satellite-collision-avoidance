@@ -295,28 +295,30 @@ class Environment:
 
         return
 
-    def get_reward(self, coll_prob_w=0.6, traj_w=0.2, fuel_w=0.2):
+    def get_reward(self, coll_prob_C=10000., traj_C=1., fuel_C=1.,
+                   danger_prob=10e-4):
         """ Provide total reward from the environment state.
+
         Args:
-            coll_prob_w, traj_w, fuel_w (float): weights of reward components.
+            coll_prob_C, traj_C, fuel_C (float): constants for the singnificance regulation of reward components.
+            danger_prob (float): the threshold below which the probability is negligible.
 
         Returns:
-            float: total reward.
+            r (float): total reward.
+
         """
         # reward components
         coll_prob = self.total_collision_probability
         ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
         # collision probability reward - some kind of ELU function
         # of collision probability
-        coll_prob_r = -(ELU((coll_prob - 10e-4) * 10000) + 1)
-        traj_r = -self.whole_trajectory_deviation
-        fuel_r = self.protected.get_fuel()
+        coll_prob_r = -(ELU((coll_prob - danger_prob) * coll_prob_C) + 1)
+        traj_r = - traj_C * self.whole_trajectory_deviation
+        fuel_r = fuel_C * self.protected.get_fuel()
 
         # whole reward
         # TODO - add weights to all reward components
-        r = (coll_prob_w * coll_prob_r
-             + traj_w * traj_r
-             + fuel_w * fuel_r)
+        r = (coll_prob_r + traj_r + fuel_r)
         return r
 
     def update_collision_probability(self):
