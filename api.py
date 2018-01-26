@@ -48,22 +48,17 @@ def fuel_consumption(dV):
     return np.linalg.norm(dV)
 
 
-def sum_coll_prob(p):
+def sum_coll_prob(p, axis=0):
     """Summation of probabilities.
 
     Agrs:
-        p (list or np.array or tuple or set): probabilities.
+        p (np.array): probabilities.
 
     Returns:
-        result (float): probabilities sum.
-
-    Raises:
-        ValueError: If any probability has incorrect value.
-        TypeError: If any probability has incorrect type.
+        result (float or np.array): probabilities sum.
 
     """
-    result = (1 - np.prod(1 - np.array(p)))
-    TestProbability(result)
+    result = (1 - np.prod(1 - p, axis=axis))
     return result
 
 
@@ -76,6 +71,7 @@ def rV2ocs(r0, r1, V0, V1):
 
     Returns:
         floats: dr, dn, db
+
     """
     dr_vec = r0 - r1
     # orbital coordinate system
@@ -104,7 +100,8 @@ def TestProbability(p):
 
 def coll_prob_estimation(r0, r1, V0=np.zeros(3), V1=np.zeros(3), d0=1, d1=1,
                          sigma=1., approach="normal"):
-    """ Returns probability of collision between two objects
+    """ Returns probability of collision between two objects.
+
     Args:
         r0, r1 (np.array([x, y, z])): objects coordinates.
         V0, V1 (np.array([Vx,Vy,Vz])): velocities.
@@ -123,6 +120,7 @@ def coll_prob_estimation(r0, r1, V0=np.zeros(3), V1=np.zeros(3), d0=1, d1=1,
         ValueError: If any probability has incorrect value.
         TypeError: If any probability has incorrect type.
         ValueError: If approach="Hutor" and V0=np.zeros(3), V1=np.zeros(3).
+
     """
     probability = 1.
 
@@ -165,7 +163,7 @@ def danger_debr_and_collision_prob(st_rV, debr_rV, st_d, debr_d, sigma, threshol
         sigma (float): standard deviation.
 
     Returns:
-        coll_prob (dict {danger_debris: coll_prob}): danger debris indices and collision probability.
+        coll_prob (np.array): collision probability for each debris.
 
     Raises:
         ValueError: If any probability has incorrect value.
@@ -175,39 +173,42 @@ def danger_debr_and_collision_prob(st_rV, debr_rV, st_d, debr_d, sigma, threshol
     """
     TestProbability(threshold_p)
     if sigma <= 0:
-        raise ValueError("sigma should be more than 0")
-
-    coll_prob = dict()
+        raise ValueError("sigma must be greater than 0")
+    coll_prob = np.zeros(debr_rV.shape[0])
     for d in range(debr_rV.shape[0]):
         p = coll_prob_estimation(
             st_rV[0, :3], debr_rV[d, :3], st_rV[0, 3:], debr_rV[d, 3:], st_d, debr_d[d], sigma)
         if p >= threshold_p:
             coll_prob[d] = p
-
     return coll_prob
 
 
 class Agent:
     """ Agent implements an agent to communicate with space Environment.
+
         Agent can make actions to the space environment by taking it's state
         after the last action.
+
     """
 
     def __init__(self):
         """"""
 
     def get_action(self, state):
-        """ Provides action  for protected object.
+        """ Provides action for protected object.
+
         Args:
-            state (dict): environment state. 
+            state (dict): environment state
                 {'coord' (dict):
                     {'st' (np.array with shape (1, 6)): satellite r and Vx, Vy, Vz coordinates.
                      'debr' (np.array with shape (n_items, 6)): debris r and Vx, Vy, Vz coordinates.}
                 'trajectory_deviation_coef' (float).
-                'epoch' (pk.epoch): at which time environment state is calculated. }
+                'epoch' (pk.epoch): at which time environment state is calculated.}.
+
         Returns:
-            np.array([dVx, dVy, dVz, pk.epoch, time_to_req]): vector of deltas for
+            action (np.array([dVx, dVy, dVz, pk.epoch, time_to_req])): vector of deltas for
                 protected object, maneuver time and time to request the next action.
+
         """
         dVx, dVy, dVz = 0, 0, 0
         epoch = state["epoch"].mjd2000
@@ -217,9 +218,7 @@ class Agent:
 
 
 class Environment:
-    """ Environment provides the space environment with space objects:
-        satellites and debris, in it.
-    """
+    """ Environment provides the space environment with space objects: satellites and debris, in it."""
 
     def __init__(self, protected, debris, start_time):
         """
@@ -227,38 +226,38 @@ class Environment:
             protected (SpaceObject): protected space object in Environment.
             debris ([SpaceObject, ]): list of other space objects.
             start (pk.epoch): initial time of the environment.
+
         """
         self.protected = protected
         self.debris = debris
         self.next_action = pk.epoch(0)
         self.state = dict(epoch=start_time)
-        n_debris = len(debris)
-        # satellite size
-        self.st_d = 1.
-        # debris sizes
-        self.debr_d = np.ones(n_debris)
-        # critical convergence distance
-        # TODO choose true distance
-        self.crit_prob = 10e-5
-        self.sigma = 2000000
-        self.collision_probability_in_current_conjunction = dict()
-        self.collision_probability_prior_to_current_conjunction_dict = dict(
-            zip(range(n_debris), np.zeros(n_debris)))
+        self.n_debris = len(debris)
+        self.st_d = 1.  #: Satellite size
+        self.debr_d = np.ones(self.n_debris)  #: Debris sizes
+        self.crit_prob = 10e-5  #: Critical convergence distance
+        # TODO choose true sigma
+        self.sigma = 50000  #: Coordinates uncertainly
+        self.collision_probability_in_current_conjunction = np.zeros(
+            self.n_debris)
+        self.collision_probability_prior_to_current_conjunction = np.zeros(
+            self.n_debris)
 
-        self.total_collision_probability_dict = dict(
-            zip(range(n_debris), np.zeros(n_debris)))
-        self.total_collision_probability = 0
-        self.whole_trajectory_deviation = 0
-        self.reward = 0
+        self.total_collision_probability_array = np.zeros(self.n_debris)
+        self.total_collision_probability = 0.
+        self.whole_trajectory_deviation = 0.
+        self.reward = 0.
 
     def propagate_forward(self, end_time):
-        """ 
+        """ Forward step.
+
         Args:
             end_time (float): end time for propagation as mjd2000.
 
         Raises:
             ValueError: if end_time is less then current time of the environment.
             Exception: if step in propagation_grid is less then MAX_PROPAGATION_STEP.
+
         """
         curr_time = self.state["epoch"].mjd2000
         if end_time <= curr_time:
@@ -282,14 +281,12 @@ class Environment:
         for t in propagation_grid:
             epoch = pk.epoch(t, "mjd2000")
             st_pos, st_v = self.protected.position(epoch)
-            st = np.hstack((np.array(st_pos), np.array(st_v)))
-            st = np.reshape(st, (-1, 6))
+            st = np.hstack((np.array(st_pos), np.array(st_v)))[np.newaxis, ...]
             n_items = len(self.debris)
             debr = np.zeros((n_items, 6))
             for i in range(n_items):
                 pos, v = self.debris[i].position(epoch)
-                debr[i] = np.hstack((np.array(pos), np.array(v)))
-            debr = np.reshape(debr, (-1, 6))
+                debr[i] = np.array(pos + v)
 
             coord = dict(st=st, debr=debr)
             trajectory_deviation_coef = 0.0
@@ -301,35 +298,35 @@ class Environment:
 
         return
 
-    def get_reward(self, coll_prob_w=0.6, traj_w=0.2, fuel_w=0.2):
+    def get_reward(self, coll_prob_C=10000., traj_C=1., fuel_C=1.,
+                   danger_prob=10e-4):
         """ Provide total reward from the environment state.
+
         Args:
-            coll_prob_w, traj_w, fuel_w (float): weights of reward components.
+            coll_prob_C, traj_C, fuel_C (float): constants for the singnificance regulation of reward components.
+            danger_prob (float): the threshold below which the probability is negligible.
 
         Returns:
-            float: total reward.
+            r (float): total reward.
+
         """
         # reward components
         coll_prob = self.total_collision_probability
         ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
         # collision probability reward - some kind of ELU function
         # of collision probability
-        coll_prob_r = -(ELU((coll_prob - 10e-4) * 10000) + 1)
-        traj_r = -self.whole_trajectory_deviation
-        fuel_r = self.protected.get_fuel()
+        coll_prob_r = -(ELU((coll_prob - danger_prob) * coll_prob_C) + 1)
+        traj_r = - traj_C * self.whole_trajectory_deviation
+        fuel_r = fuel_C * self.protected.get_fuel()
 
         # whole reward
         # TODO - add weights to all reward components
-        r = (coll_prob_w * coll_prob_r
-             + traj_w * traj_r
-             + fuel_w * fuel_r)
+        r = (coll_prob_r + traj_r + fuel_r)
         return r
 
     def update_collision_probability(self):
         """ Update the probability of collision on the propagation step.
 
-        Returns"
-            [float, ]: list of current collision probabilities.
         """
         # TODO - log probability?
         new_collision_probability_in_current_conjunction = danger_debr_and_collision_prob(
@@ -338,32 +335,29 @@ class Environment:
             self.st_d, self.debr_d,
             self.sigma, self.crit_prob)
 
-        for d in range(len(self.debris)):
-            if d in new_collision_probability_in_current_conjunction:
-                if d in self.collision_probability_in_current_conjunction:
-                    # convergence continues
-                    # update collision_probability_in_current_conjunction
-                    self.collision_probability_in_current_conjunction[d] = max(
-                        new_collision_probability_in_current_conjunction[d], self.collision_probability_in_current_conjunction[d])
-                else:
-                    # convergence begins
-                    # add probability to buffer
-                    self.collision_probability_in_current_conjunction[
-                        d] = new_collision_probability_in_current_conjunction[d]
+        new_danger_debr = np.where(
+            new_collision_probability_in_current_conjunction > 0)[0]
+        cur_danger_debr = np.where(
+            self.collision_probability_in_current_conjunction > 0)[0]
+        new_not_danger_debr = np.setdiff1d(cur_danger_debr, new_danger_debr)
 
-                self.total_collision_probability_dict[d] = sum_coll_prob(
-                    [self.collision_probability_in_current_conjunction[d],
-                     self.collision_probability_prior_to_current_conjunction_dict[d]])
+        self.collision_probability_in_current_conjunction[new_danger_debr] = np.maximum(
+            new_collision_probability_in_current_conjunction[new_danger_debr],
+            self.collision_probability_in_current_conjunction[new_danger_debr])
 
-            elif d in self.collision_probability_in_current_conjunction:
-                # convergence discontinued
-                # clean buffer
-                self.collision_probability_prior_to_current_conjunction_dict[
-                    d] = self.total_collision_probability_dict[d]
-                del self.collision_probability_in_current_conjunction[d]
+        self.collision_probability_prior_to_current_conjunction[new_not_danger_debr] = sum_coll_prob(
+            np.vstack([
+                self.collision_probability_prior_to_current_conjunction[
+                    new_not_danger_debr],
+                self.collision_probability_in_current_conjunction[new_not_danger_debr]]))
+        self.collision_probability_in_current_conjunction[
+            new_not_danger_debr] = 0.
 
+        self.total_collision_probability_array = sum_coll_prob(np.vstack([
+            self.collision_probability_in_current_conjunction,
+            self.collision_probability_prior_to_current_conjunction]))
         self.total_collision_probability = sum_coll_prob(
-            list(self.total_collision_probability_dict.values()))
+            self.total_collision_probability_array)
 
         return
 

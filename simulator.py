@@ -174,13 +174,14 @@ class Simulator:
                 self.curr_time.mjd2000 + step, "mjd2000")
 
             if self.print_out:
+
                 print("\niteration:", iteration)
                 print("coll prob in current conjunct:",
                       self.env.collision_probability_in_current_conjunction)
                 print("coll prob prior current conjunct:",
-                      self.env.collision_probability_prior_to_current_conjunction_dict)
+                      self.env.collision_probability_prior_to_current_conjunction)
                 print("total coll prob dict:",
-                      self.env.total_collision_probability_dict)
+                      self.env.total_collision_probability_array)
                 print("total coll prob:",
                       self.env.total_collision_probability)
                 print("reward:", self.env.reward)
