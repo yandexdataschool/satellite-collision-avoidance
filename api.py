@@ -33,7 +33,7 @@ def euclidean_distance(r_main, r_other, rev_sort=True):
         axis=1) ** 0.5
     if rev_sort:
         distances = np.sort(distances)[::-1]
-    return distances
+    return distances    
 
 
 def fuel_consumption(dV):
@@ -244,9 +244,9 @@ class Environment:
             self.n_debris)
 
         self.total_collision_probability_array = np.zeros(self.n_debris)
-        self.total_collision_probability = 0.
-        self.whole_trajectory_deviation = 0.
-        self.reward = 0.
+        self.total_collision_probability = 0
+        self.whole_trajectory_deviation = 0
+        self.reward = 0
 
     def propagate_forward(self, end_time):
         """ Forward step.
