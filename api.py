@@ -14,6 +14,7 @@ import numpy as np
 from scipy.stats import norm
 
 MAX_PROPAGATION_STEP = 0.000001  # is equal to 0.0864 sc.
+MAX_FUEL_CONSUMPTION = 10
 
 
 def euclidean_distance(r_main, r_other, rev_sort=True):
@@ -204,7 +205,8 @@ class Agent:
                     {'st' (np.array with shape (1, 6)): satellite r and Vx, Vy, Vz coordinates.
                      'debr' (np.array with shape (n_items, 6)): debris r and Vx, Vy, Vz coordinates.}
                 'trajectory_deviation_coef' (float).
-                'epoch' (pk.epoch): at which time environment state is calculated. }
+                'epoch' (pk.epoch): at which time environment state is calculated. 
+                'fuel' (float): current remaining fuel in protected SpaceObject. }
         Returns:
             np.array([dVx, dVy, dVz, pk.epoch, time_to_req]): vector of deltas for
                 protected object, maneuver time and time to request the next action.
@@ -461,6 +463,10 @@ class SpaceObject:
                 of deltas for protected object and maneuver time.
          """
         dV = action[:3]
+        fuel_cons = fuel_consumption(dV)
+        if fuel_cons > self.fuel or fuel_cons > MAX_FUEL_CONSUMPTION:
+            return
+
         t_man = pk.epoch(action[3], "mjd2000")
         pos, vel = self.position(t_man)
         new_vel = list(np.array(vel) + dV)
@@ -471,7 +477,7 @@ class SpaceObject:
 
         self.satellite = pk.planet.keplerian(t_man, list(pos), new_vel, mu_central_body,
                                              mu_self, radius, safe_radius, name)
-        self.fuel -= fuel_consumption(dV)
+        self.fuel -= fuel_cons
         return
 
     def position(self, epoch):
