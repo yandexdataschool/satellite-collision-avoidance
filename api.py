@@ -231,7 +231,7 @@ class Environment:
         self.protected = protected
         self.debris = debris
         self.next_action = pk.epoch(0)
-        self.state = dict(epoch=start_time)
+        self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
         n_debris = len(debris)
         # satellite size
         self.st_d = 1.
@@ -295,7 +295,8 @@ class Environment:
             trajectory_deviation_coef = 0.0
             self.whole_trajectory_deviation += trajectory_deviation_coef
             self.state = dict(
-                coord=coord, trajectory_deviation_coef=trajectory_deviation_coef, epoch=epoch)
+                coord=coord, trajectory_deviation_coef=trajectory_deviation_coef,
+                epoch=epoch, fuel=self.protected.get_fuel())
             self.update_collision_probability()
             self.reward = self.get_reward()
 
