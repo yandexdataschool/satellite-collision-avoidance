@@ -370,8 +370,10 @@ class Environment:
                 protected object, maneuver time and time to request the next action.
         """
         self.next_action = pk.epoch(
-            self.state["epoch"].mjd2000 + action[4], "mjd2000")
-        self.protected.maneuver(action[:4])
+            self.state["epoch"].mjd2000 + float(action[4]), "mjd2000")
+        success, fuel_cons = self.protected.maneuver(action[:4])
+        if success:
+            self.state["fuel"] -= fuel_cons
         return
 
     def get_next_action(self):
@@ -454,13 +456,17 @@ class SpaceObject:
         Args:
             action (np.array([dVx, dVy, dVz, pk.epoch])): vector
                 of deltas for protected object and maneuver time.
+
+        Returns:
+            (bool): True if action is successfully made by satellite.
+            fuel_cons (float): fuel consumption of the provided action.
          """
         dV = action[:3]
         fuel_cons = fuel_consumption(dV)
         if fuel_cons > self.fuel or fuel_cons > MAX_FUEL_CONSUMPTION:
-            return
+            return False, 0
 
-        t_man = pk.epoch(action[3], "mjd2000")
+        t_man = pk.epoch(float(action[3]), "mjd2000")
         pos, vel = self.position(t_man)
         new_vel = list(np.array(vel) + dV)
 
@@ -471,7 +477,7 @@ class SpaceObject:
         self.satellite = pk.planet.keplerian(t_man, list(pos), new_vel, mu_central_body,
                                              mu_self, radius, safe_radius, name)
         self.fuel -= fuel_cons
-        return
+        return True, fuel_cons
 
     def position(self, epoch):
         """ Provide SpaceObject position at given epoch:
