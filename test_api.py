@@ -35,6 +35,19 @@ class TestBasicFunctions(unittest.TestCase):
 
 class TestEnvironment(unittest.TestCase):
 
+    def setUp(self):
+        self.start_time = pk.epoch(1, "mjd2000")
+        osculating_elements = (7800, 0.001, 1, 0, 0, 0)
+        mu_central_body, mu_self, radius, safe_radius = 0.1, 0.1, 0.1, 0.1
+        fuel = 10
+        params = dict(elements=osculating_elements, epoch=self.start_time,
+                      mu_central_body=mu_central_body,
+                      mu_self=mu_self,
+                      radius=radius,
+                      safe_radius=safe_radius,
+                      fuel=fuel)
+        self.protected = SpaceObject("protected", "osc", params)
+
     def test_propagate_forward(self):
         self.assertTrue(True)
 
@@ -42,18 +55,7 @@ class TestEnvironment(unittest.TestCase):
         self.assertTrue(True)
 
     def test_act_normal(self):
-        start_time = pk.epoch(1, "mjd2000")
-        osculating_elements = (7800, 0.001, 1, 0, 0, 0)
-        mu_central_body, mu_self, radius, safe_radius = 0.1, 0.1, 0.1, 0.1
-        fuel = 10
-        params = dict(elements=osculating_elements, epoch=start_time,
-                      mu_central_body=mu_central_body,
-                      mu_self=mu_self,
-                      radius=radius,
-                      safe_radius=safe_radius,
-                      fuel=fuel)
-        protected = SpaceObject("protected", "osc", params)
-        env = Environment(protected, [], start_time)
+        env = Environment(self.protected, [], self.start_time)
 
         action = np.array([1, 1, 1, 2, 2])
         dV = action[:3]
@@ -67,7 +69,7 @@ class TestEnvironment(unittest.TestCase):
         new_osculating_elements = (0.03322700875329275, 186259.18646581616, 0.7798493139874857,
                                    6.270834870874244, 5.67768891107007, -137721.8773532762)
         self.assertEqual(new_osculating_elements,
-                         env.protected.osculating_elements(epoch))
+                         env.protected.satellite.osculating_elements(epoch))
         self.assertEqual(env.protected.get_fuel(), prev_fuel - fuel_cons)
 
 
