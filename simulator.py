@@ -21,7 +21,7 @@ PAUSE_TIME = 0.0001
 
 
 def strf_position(satellite, epoch):
-    """ Print SpaceObject position. """
+    """ Print SpaceObject position at epoch. """
     pos, vel = satellite.position(epoch)
     return "{} position: x - {:0.2f}, y - {:0.2f}, z - {:0.2f}.\
       \n{} velocity: Vx - {:0.2f}, Vy - {:0.2f}, Vz - {:0.2f}\
@@ -31,8 +31,9 @@ def strf_position(satellite, epoch):
 
 def read_space_objects(file, param_type):
     """ Create SpaceObjects from a text file.
-        param_type -- str, "tle", "oph" or "osc". Different parameter
-                      types for initializing a SpaceObject.
+    Args:
+        param_type (str): parameter types for initializing a SpaceObject.
+            Could be "tle", "oph" or "osc".
     """
     space_objects = []
     with open(file, 'r') as satellites:
@@ -119,41 +120,44 @@ class Simulator:
     and starts agent-environment collaboration.
     """
 
-    def __init__(self, agent, environment, start_time=None):
+    def __init__(self, agent, environment, print_out=False):
         """
-            agent -- Agent(), agent, to do actions in environment.
-            environment -- Environment(), the initial space environment.
-            start_time -- pk.epoch, start epoch of simulation.
+        Args:
+            agent (api.Agent, agent, to do actions in environment.
+            environment (api.Environment): the initial space environment.
+            start_time (pk.epoch): start epoch of simulation.
+            print_out (bool): print out some results for each step.
         """
+        self.print_out = print_out
         self.is_end = False
+
         self.agent = agent
         self.env = environment
-        if not start_time:
-            self.start_time = pk.epoch_from_string(
-                time.strftime("%Y-%m-%d %T"))
-        else:
-            self.start_time = start_time
+        self.start_time = self.env.state["epoch"]
         self.curr_time = self.start_time
 
         self.vis = Visualizer()
         self.logger = logging.getLogger('simulator.Simulator')
 
-    def run(self, visualize=True, num_iter=None, step=0.001):
+    def run(self, end_time, step=0.001, visualize=True):
+        """
+        Args:
+            end_time (float): end time of simulation provided as mjd2000.
+            step (float): time step in simulation.
+            vizualize (bool): whether show the simulation or not.
+        """
         iteration = 0
 
         if visualize:
             self.vis.run()
 
-        while iteration != num_iter:
-            s = self.env.get_state(self.curr_time)
-            self.is_end = self.env.update_total_collision_risk_for_iteration()
+        while self.curr_time.mjd2000 <= end_time:
+            self.env.propagate_forward(self.curr_time.mjd2000)
 
-            if self.is_end:
-                break
-
-            if self.curr_time.mjd2000 >= self.env.next_action.mjd2000:
+            if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
+                s = self.env.get_state()
                 action = self.agent.get_action(s)
-                r = self.env.get_reward()
+                r = self.env.reward
                 self.env.act(action)
 
                 self.log_ra(iteration, r, action)
@@ -171,9 +175,27 @@ class Simulator:
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + step, "mjd2000")
 
+            if self.print_out:
+                print("\niteration:", iteration)
+                print("coll prob in current conjunct:",
+                      self.env.collision_probability_in_current_conjunction)
+                print("coll prob prior current conjunct:",
+                      self.env.collision_probability_prior_to_current_conjunction_dict)
+                print("total coll prob dict:",
+                      self.env.total_collision_probability_dict)
+                print("total coll prob:",
+                      self.env.total_collision_probability)
+                print("reward:", self.env.reward)
+
             iteration += 1
 
-        print("Simulation ended. Collision: {}".format(self.is_end))
+        self.log_protected_position()
+
+        # TODO - whole reward
+        # TODO - probability of collision
+
+        print("Simulation ended.\nCollision probability: {}.\nReward: {}.".format(
+            self.env.total_collision_probability, self.env.reward))
 
     def log_protected_position(self):
         self.logger.info(strf_position(self.env.protected, self.curr_time))
@@ -183,8 +205,8 @@ class Simulator:
             self.logger.info(strf_position(obj, self.curr_time))
 
     def log_iteration(self, iteration):
-        self.logger.debug("Iter #{} \tEpoch: {}\tCollision: {}\t Collision Risk Reward: {}".format(
-            iteration,  self.curr_time, self.is_end, self.env.collision_risk_reward))
+        self.logger.debug("Iter #{} \tEpoch: {}\tCollision Probability: {}".format(
+            iteration,  self.curr_time, self.env.total_collision_probability))
 
     def log_ra(self, iteration, reward, action):
         self.logger.info("Iter: {}\tReward: {}\t action: {}".format(
