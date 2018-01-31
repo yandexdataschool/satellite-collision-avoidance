@@ -5,10 +5,7 @@ import pykep as pk
 import numpy as np
 
 from api import Environment, SpaceObject
-
 from api import fuel_consumption
-
-# will be used in maneuver testing.
 from api import MAX_PROPAGATION_STEP, MAX_FUEL_CONSUMPTION
 
 
