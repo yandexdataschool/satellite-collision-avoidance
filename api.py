@@ -271,8 +271,8 @@ class Environment:
 
         # Choose number of steps in linspace, s.t.
         # restep is less then MAX_PROPAGATION_STEP.
-        number_of_time_steps_plus_one = np.ceil(
-            (end_time - curr_time) / MAX_PROPAGATION_STEP) + 1
+        number_of_time_steps_plus_one = int(np.ceil(
+            (end_time - curr_time) / MAX_PROPAGATION_STEP) + 1)
 
         propagation_grid, retstep = np.linspace(
             curr_time, end_time, number_of_time_steps_plus_one, retstep=True)
