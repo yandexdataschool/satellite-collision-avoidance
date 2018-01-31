@@ -11,6 +11,7 @@
 import pykep as pk
 
 import numpy as np
+import pandas as pd
 from scipy.stats import norm
 
 MAX_PROPAGATION_STEP = 0.000001  # is equal to 0.0864 sc.
@@ -185,15 +186,26 @@ def danger_debr_and_collision_prob(st_rV, debr_rV, st_d, debr_d, sigma, threshol
 
 
 class Agent:
+
     """ Agent implements an agent to communicate with space Environment.
 
-        Agent can make actions to the space environment by taking it's state
-        after the last action.
+    Agent can make actions to the space environment by taking it's state
+    after the last action.
 
     """
 
-    def __init__(self):
-        """"""
+    def __init__(self, table_path="actions_table.csv", max_dV=10):
+        """
+        Args:
+            table_path (str): path to table of actions (.csv).
+
+        Raises:
+            ValueError: 
+
+        """
+        self.table = pd.read_csv(table_path, index_col=0).values
+        if np.any(np.sum(self.table[:, 1:], axis=1) > max_dV):
+            raise ValueError("sum dV is greater that max dV")
 
     def get_action(self, state):
         """ Provides action for protected object.
@@ -215,6 +227,12 @@ class Agent:
         epoch = state["epoch"].mjd2000
         time_to_req = 0.01
         action = np.array([dVx, dVy, dVz, epoch, time_to_req])
+        if self.table.size:
+            if (epoch >= self.table[0, 0]):
+                action = np.hstack(
+                    [self.table[0, 1:], epoch, 0])
+                self.table = np.delete(self.table, 0, axis=0)
+
         return action
 
 
