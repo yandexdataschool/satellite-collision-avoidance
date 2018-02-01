@@ -134,11 +134,15 @@ def coll_prob_estimation(r0, r1, V0=np.zeros(3), V1=np.zeros(3), d0=1, d1=1,
         cos_vel_angle = (np.dot(V0, V1)
                          / (np.linalg.norm(V0) * np.linalg.norm(V1)))
         dr, dn, db = rV2ocs(r0, r1, V0, V1)
-        A = (dr**2 / (4 * sigma**2)
-             + dn**2 / (2 * sigma**2)
-             + db**2 / (2 * sigma**2))
-        k = ((d0 + d1)**2
-             / (sigma * (11 + 5 * sigma * cos_vel_angle**2)))
+        A = (
+            dr**2 / (4 * sigma**2)
+            + dn**2 / (2 * sigma**2)
+            + db**2 / (2 * sigma**2)
+        )
+        k = (
+            (d0 + d1)**2
+            / (sigma * (11 + 5 * sigma * cos_vel_angle**2))
+        )
         probability = k * np.exp(-A)
     elif approach == "normal":
         # TODO - truncated normal distribution?
@@ -179,7 +183,10 @@ def danger_debr_and_collision_prob(st_rV, debr_rV, st_d, debr_d, sigma, threshol
     coll_prob = np.zeros(debr_rV.shape[0])
     for d in range(debr_rV.shape[0]):
         p = coll_prob_estimation(
-            st_rV[0, :3], debr_rV[d, :3], st_rV[0, 3:], debr_rV[d, 3:], st_d, debr_d[d], sigma)
+            st_rV[0, :3], debr_rV[d, :3],
+            st_rV[0, 3:], debr_rV[d, 3:],
+            st_d, debr_d[d], sigma
+        )
         if p >= threshold_p:
             coll_prob[d] = p
     return coll_prob
@@ -200,7 +207,7 @@ class Agent:
             table_path (str): path to table of actions (.csv).
 
         Raises:
-            ValueError: 
+            ValueError:
 
         """
         self.table = pd.read_csv(table_path, index_col=0).values
@@ -263,9 +270,9 @@ class Environment:
             self.n_debris)
 
         self.total_collision_probability_array = np.zeros(self.n_debris)
-        self.total_collision_probability = 0
-        self.whole_trajectory_deviation = 0
-        self.reward = 0
+        self.total_collision_probability = 0.
+        self.whole_trajectory_deviation = 0.
+        self.reward = 0.
 
     def propagate_forward(self, end_time):
         """ Forward step.
@@ -312,7 +319,8 @@ class Environment:
             self.whole_trajectory_deviation += trajectory_deviation_coef
             self.state = dict(
                 coord=coord, trajectory_deviation_coef=trajectory_deviation_coef,
-                epoch=epoch, fuel=self.protected.get_fuel())
+                epoch=epoch, fuel=self.protected.get_fuel()
+            )
             self.update_collision_probability()
             self.reward = self.get_reward()
 
@@ -353,7 +361,8 @@ class Environment:
             self.state['coord']['st'],
             self.state['coord']['debr'],
             self.st_d, self.debr_d,
-            self.sigma, self.crit_prob)
+            self.sigma, self.crit_prob
+        )
 
         new_danger_debr = np.where(
             new_collision_probability_in_current_conjunction > 0)[0]
@@ -369,15 +378,20 @@ class Environment:
             np.vstack([
                 self.collision_probability_prior_to_current_conjunction[
                     new_not_danger_debr],
-                self.collision_probability_in_current_conjunction[new_not_danger_debr]]))
+                self.collision_probability_in_current_conjunction[
+                    new_not_danger_debr]
+            ])
+        )
         self.collision_probability_in_current_conjunction[
             new_not_danger_debr] = 0.
 
         self.total_collision_probability_array = sum_coll_prob(np.vstack([
             self.collision_probability_in_current_conjunction,
-            self.collision_probability_prior_to_current_conjunction]))
+            self.collision_probability_prior_to_current_conjunction])
+        )
         self.total_collision_probability = sum_coll_prob(
-            self.total_collision_probability_array)
+            self.total_collision_probability_array
+        )
 
         return
 

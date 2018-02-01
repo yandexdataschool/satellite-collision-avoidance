@@ -44,9 +44,11 @@ def read_space_objects(file, param_type):
             if param_type == "tle":
                 tle_line1 = satellites.readline().strip()
                 tle_line2 = satellites.readline().strip()
-                params = dict(tle_line1=tle_line1,
-                              tle_line2=tle_line2,
-                              fuel=1)
+                params = dict(
+                    tle_line1=tle_line1,
+                    tle_line2=tle_line2,
+                    fuel=1,
+                )
             elif param_type == "eph":
                 epoch = pk.epoch(
                     float(satellites.readline().strip()), "mjd2000")
@@ -57,12 +59,14 @@ def read_space_objects(file, param_type):
                 mu_central_body, mu_self, radius, safe_radius = [
                     float(x) for x in satellites.readline().strip().split(",")]
                 fuel = float(satellites.readline().strip())
-                params = dict(pos=pos, vel=vel, epoch=epoch,
-                              mu_central_body=mu_central_body,
-                              mu_self=mu_self,
-                              radius=radius,
-                              safe_radius=safe_radius,
-                              fuel=fuel)
+                params = dict(
+                    pos=pos, vel=vel, epoch=epoch,
+                    mu_central_body=mu_central_body,
+                    mu_self=mu_self,
+                    radius=radius,
+                    safe_radius=safe_radius,
+                    fuel=fuel,
+                )
 
             elif param_type == "osc":
                 epoch = pk.epoch(
@@ -72,12 +76,14 @@ def read_space_objects(file, param_type):
                 mu_central_body, mu_self, radius, safe_radius = [
                     float(x) for x in satellites.readline().strip().split(",")]
                 fuel = float(satellites.readline().strip())
-                params = dict(elements=elements, epoch=epoch,
-                              mu_central_body=mu_central_body,
-                              mu_self=mu_self,
-                              radius=radius,
-                              safe_radius=safe_radius,
-                              fuel=fuel)
+                params = dict(
+                    elements=elements, epoch=epoch,
+                    mu_central_body=mu_central_body,
+                    mu_self=mu_self,
+                    radius=radius,
+                    safe_radius=safe_radius,
+                    fuel=fuel,
+                )
 
             satellite = SpaceObject(name, param_type, params)
             space_objects.append(satellite)
