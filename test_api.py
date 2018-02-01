@@ -28,18 +28,18 @@ class TestBasicFunctions(unittest.TestCase):
         params["elements"] = debris_osculating_elements
         self.debris = [SpaceObject("Debris 1", "osc", params)]
 
-    # def test_sum_coll_prob(self):
-    #     p = np.array([
-    #         [0.1, 0.2, 0.3],
-    #         [0.4, 0.3, 0.2]
-    #     ])
-    #     axises = [0, 1]
-    #     wants = [
-    #         np.array([0.46,  0.44,  0.44]),
-    #         np.array([0.496,  0.664]),
-    #     ]
-    #     for axis, want in zip(axises, wants):
-    #         self.assertTrue(np.allclose(sum_coll_prob(p, axis=axis), want))
+    def test_sum_coll_prob(self):
+        p = np.array([
+            [0.1, 0.2, 0.3],
+            [0.4, 0.3, 0.2],
+        ])
+        axises = [0, 1]
+        wants = [
+            np.array([0.46,  0.44,  0.44]),
+            np.array([0.496,  0.664]),
+        ]
+        for axis, want in zip(axises, wants):
+            self.assertTrue(np.allclose(sum_coll_prob(p, axis=axis), want))
 
     def test_rV2ocs(self):
         r0, V0 = self.protected.position(self.start_time)
@@ -76,6 +76,7 @@ class TestEnvironment(unittest.TestCase):
             self.start_time.mjd2000 + MAX_PROPAGATION_STEP,
             self.start_time.mjd2000 + MAX_PROPAGATION_STEP * 1.5,
         ]
+
         for end_time in end_times:
             env.propagate_forward(end_time)
             self.assertEqual(env.state["epoch"].mjd2000, end_time)
