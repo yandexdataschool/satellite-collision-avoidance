@@ -16,12 +16,14 @@ class TestBasicFunctions(unittest.TestCase):
         osculating_elements = (7800, 0.001, 1, 0, 0, 0)
         mu_central_body, mu_self, radius, safe_radius = 0.1, 0.1, 0.1, 0.1
         fuel = 10
-        params = dict(elements=osculating_elements, epoch=self.start_time,
-                      mu_central_body=mu_central_body,
-                      mu_self=mu_self,
-                      radius=radius,
-                      safe_radius=safe_radius,
-                      fuel=fuel)
+        params = dict(
+            elements=osculating_elements, epoch=self.start_time,
+            mu_central_body=mu_central_body,
+            mu_self=mu_self,
+            radius=radius,
+            safe_radius=safe_radius,
+            fuel=fuel,
+        )
         self.protected = SpaceObject("protected", "osc", params)
 
         debris_osculating_elements = (7800, 0.001, 90, 0, 0, 0)
@@ -41,16 +43,12 @@ class TestBasicFunctions(unittest.TestCase):
         for axis, want in zip(axises, wants):
             self.assertTrue(np.allclose(sum_coll_prob(p, axis=axis), want))
 
-    def test_rV2ocs(self):
-        r0, V0 = self.protected.position(self.start_time)
-        r1, V1 = self.debris[0].position(self.start_time)
-        self.assertTrue(True)
-
     def test_coll_prob_estimation(self):
         # TODO: implement test after new approach will be added.
         self.assertTrue(True)
 
     def test_danger_debr_and_collision_prob(self):
+        # TODO: implement test after new approach will be added.
         self.assertTrue(True)
 
 
@@ -61,12 +59,14 @@ class TestEnvironment(unittest.TestCase):
         osculating_elements = (7800, 0.001, 1, 0, 0, 0)
         mu_central_body, mu_self, radius, safe_radius = 0.1, 0.1, 0.1, 0.1
         fuel = 10
-        params = dict(elements=osculating_elements, epoch=self.start_time,
-                      mu_central_body=mu_central_body,
-                      mu_self=mu_self,
-                      radius=radius,
-                      safe_radius=safe_radius,
-                      fuel=fuel)
+        params = dict(
+            elements=osculating_elements, epoch=self.start_time,
+            mu_central_body=mu_central_body,
+            mu_self=mu_self,
+            radius=radius,
+            safe_radius=safe_radius,
+            fuel=fuel,
+        )
         self.protected = SpaceObject("protected", "osc", params)
 
     def test_propagate_forward(self):
@@ -83,6 +83,10 @@ class TestEnvironment(unittest.TestCase):
             env = Environment(self.protected, [], self.start_time)
 
     def test_update_collision_probability(self):
+        # TODO: implement test after new approach will be added.
+        self.assertTrue(True)
+
+    def get_reward(self):
         # TODO: implement test after new approach will be added.
         self.assertTrue(True)
 
@@ -125,12 +129,14 @@ class TestSpaceObject(unittest.TestCase):
         osculating_elements = (7800, 0.001, 1, 0, 0, 0)
         mu_central_body, mu_self, radius, safe_radius = 0.1, 0.1, 0.1, 0.1
         fuel = 10
-        self.params = dict(elements=osculating_elements, epoch=self.start_time,
-                           mu_central_body=mu_central_body,
-                           mu_self=mu_self,
-                           radius=radius,
-                           safe_radius=safe_radius,
-                           fuel=fuel)
+        self.params = dict(
+            elements=osculating_elements, epoch=self.start_time,
+            mu_central_body=mu_central_body,
+            mu_self=mu_self,
+            radius=radius,
+            safe_radius=safe_radius,
+            fuel=fuel,
+        )
 
     def test_maneuver(self):
         satellite = SpaceObject("satellite", "osc", self.params)
