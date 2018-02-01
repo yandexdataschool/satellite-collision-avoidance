@@ -23,8 +23,8 @@ PAUSE_TIME = 0.0001
 def strf_position(satellite, epoch):
     """ Print SpaceObject position at epoch. """
     pos, vel = satellite.position(epoch)
-    return "{} position: x - {:0.2f}, y - {:0.2f}, z - {:0.2f}.\
-      \n{} velocity: Vx - {:0.2f}, Vy - {:0.2f}, Vz - {:0.2f}\
+    return "{} position: x - {:0.5f}, y - {:0.5f}, z - {:0.5f}.\
+      \n{} velocity: Vx - {:0.5f}, Vy - {:0.5f}, Vz - {:0.5f}\
       ".format(satellite.get_name(), pos[0], pos[1], pos[2],
                satellite.get_name(), vel[0], vel[1], vel[2])
 
@@ -44,9 +44,11 @@ def read_space_objects(file, param_type):
             if param_type == "tle":
                 tle_line1 = satellites.readline().strip()
                 tle_line2 = satellites.readline().strip()
-                params = dict(tle_line1=tle_line1,
-                              tle_line2=tle_line2,
-                              fuel=1)
+                params = dict(
+                    tle_line1=tle_line1,
+                    tle_line2=tle_line2,
+                    fuel=1,
+                )
             elif param_type == "eph":
                 epoch = pk.epoch(
                     float(satellites.readline().strip()), "mjd2000")
@@ -57,12 +59,14 @@ def read_space_objects(file, param_type):
                 mu_central_body, mu_self, radius, safe_radius = [
                     float(x) for x in satellites.readline().strip().split(",")]
                 fuel = float(satellites.readline().strip())
-                params = dict(pos=pos, vel=vel, epoch=epoch,
-                              mu_central_body=mu_central_body,
-                              mu_self=mu_self,
-                              radius=radius,
-                              safe_radius=safe_radius,
-                              fuel=fuel)
+                params = dict(
+                    pos=pos, vel=vel, epoch=epoch,
+                    mu_central_body=mu_central_body,
+                    mu_self=mu_self,
+                    radius=radius,
+                    safe_radius=safe_radius,
+                    fuel=fuel,
+                )
 
             elif param_type == "osc":
                 epoch = pk.epoch(
@@ -72,12 +76,14 @@ def read_space_objects(file, param_type):
                 mu_central_body, mu_self, radius, safe_radius = [
                     float(x) for x in satellites.readline().strip().split(",")]
                 fuel = float(satellites.readline().strip())
-                params = dict(elements=elements, epoch=epoch,
-                              mu_central_body=mu_central_body,
-                              mu_self=mu_self,
-                              radius=radius,
-                              safe_radius=safe_radius,
-                              fuel=fuel)
+                params = dict(
+                    elements=elements, epoch=epoch,
+                    mu_central_body=mu_central_body,
+                    mu_self=mu_self,
+                    radius=radius,
+                    safe_radius=safe_radius,
+                    fuel=fuel,
+                )
 
             satellite = SpaceObject(name, param_type, params)
             space_objects.append(satellite)
@@ -96,7 +102,6 @@ class Visualizer:
 
     def run(self):
         plt.ion()
-        plt.show()
 
     def plot_planet(self, satellite, t, size, color):
         """ Plot a pykep.planet object. """
@@ -129,7 +134,6 @@ class Simulator:
             print_out (bool): print out some results for each step.
         """
         self.print_out = print_out
-        self.is_end = False
 
         self.agent = agent
         self.env = environment
@@ -144,7 +148,7 @@ class Simulator:
         Args:
             end_time (float): end time of simulation provided as mjd2000.
             step (float): time step in simulation.
-            vizualize (bool): whether show the simulation or not.
+            visualize (bool): whether show the simulation or not.
         """
         iteration = 0
 
@@ -176,13 +180,14 @@ class Simulator:
                 self.curr_time.mjd2000 + step, "mjd2000")
 
             if self.print_out:
+
                 print("\niteration:", iteration)
                 print("coll prob in current conjunct:",
                       self.env.collision_probability_in_current_conjunction)
                 print("coll prob prior current conjunct:",
-                      self.env.collision_probability_prior_to_current_conjunction_dict)
+                      self.env.collision_probability_prior_to_current_conjunction)
                 print("total coll prob dict:",
-                      self.env.total_collision_probability_dict)
+                      self.env.total_collision_probability_array)
                 print("total coll prob:",
                       self.env.total_collision_probability)
                 print("reward:", self.env.reward)
