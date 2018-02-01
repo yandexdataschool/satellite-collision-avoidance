@@ -201,18 +201,8 @@ class Agent:
 
     """
 
-    def __init__(self, table_path="actions_table.csv", max_dV=10):
-        """
-        Args:
-            table_path (str): path to table of actions (.csv).
-
-        Raises:
-            ValueError:
-
-        """
-        self.table = pd.read_csv(table_path, index_col=0).values
-        if np.any(np.sum(self.table[:, 1:], axis=1) > max_dV):
-            raise ValueError("sum dV is greater that max dV")
+    def __init__(self):
+        """"""
 
     def get_action(self, state):
         """ Provides action for protected object.
@@ -234,11 +224,6 @@ class Agent:
         epoch = state["epoch"].mjd2000
         time_to_req = 0.01
         action = np.array([dVx, dVy, dVz, epoch, time_to_req])
-        if self.table.size:
-            if (epoch >= self.table[0, 0]):
-                action = np.hstack(
-                    [self.table[0, 1:], epoch, 0])
-                self.table = np.delete(self.table, 0, axis=0)
 
         return action
 
