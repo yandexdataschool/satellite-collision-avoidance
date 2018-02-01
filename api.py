@@ -271,7 +271,7 @@ class Environment:
 
         """
         curr_time = self.state["epoch"].mjd2000
-        if end_time <= curr_time:
+        if end_time == curr_time:
             return
         elif end_time < curr_time:
             raise ValueError(
