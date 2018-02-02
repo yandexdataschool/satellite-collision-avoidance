@@ -9,9 +9,9 @@
 # simulation has been started.
 
 import pykep as pk
-from pykep.planet import tle, keplerian
 
 import numpy as np
+import pandas as pd
 from scipy.stats import norm
 
 MAX_PROPAGATION_STEP = 0.000001  # is equal to 0.0864 sc.
@@ -222,7 +222,7 @@ class Agent:
         """
         dVx, dVy, dVz = 0, 0, 0
         epoch = state["epoch"].mjd2000
-        time_to_req = 0.001
+        time_to_req = 0.01
         action = np.array([dVx, dVy, dVz, epoch, time_to_req])
 
         return action
@@ -439,31 +439,32 @@ class SpaceObject:
         self.fuel = params["fuel"]
 
         if param_type == "tle":
-            satellite = tle(params["tle_line1"], params["tle_line2"])
+            tle = pk.planet.tle(
+                params["tle_line1"], params["tle_line2"])
 
-            t0 = pk.epoch(satellite.ref_mjd2000, "mjd2000")
-            mu_central_body, mu_self = satellite.mu_central_body, satellite.mu_self
-            radius, safe_radius = satellite.radius, satellite.safe_radius
+            t0 = pk.epoch(tle.ref_mjd2000, "mjd2000")
+            mu_central_body, mu_self = tle.mu_central_body, tle.mu_self
+            radius, safe_radius = tle.radius, tle.safe_radius
 
-            elements = satellite.osculating_elements(t0)
-            self.satellite = keplerian(
+            elements = tle.osculating_elements(t0)
+            self.satellite = pk.planet.keplerian(
                 t0, elements, mu_central_body, mu_self, radius, safe_radius, name)
         elif param_type == "eph":
-            self.satellite = keplerian(params["epoch"],
-                                       params["pos"], params["vel"],
-                                       params["mu_central_body"],
-                                       params["mu_self"],
-                                       params["radius"],
-                                       params["safe_radius"],
-                                       name)
+            self.satellite = pk.planet.keplerian(params["epoch"],
+                                                 params["pos"], params["vel"],
+                                                 params["mu_central_body"],
+                                                 params["mu_self"],
+                                                 params["radius"],
+                                                 params["safe_radius"],
+                                                 name)
         elif param_type == "osc":
-            self.satellite = keplerian(params["epoch"],
-                                       params["elements"],
-                                       params["mu_central_body"],
-                                       params["mu_self"],
-                                       params["radius"],
-                                       params["safe_radius"],
-                                       name)
+            self.satellite = pk.planet.keplerian(params["epoch"],
+                                                 params["elements"],
+                                                 params["mu_central_body"],
+                                                 params["mu_self"],
+                                                 params["radius"],
+                                                 params["safe_radius"],
+                                                 name)
         else:
             raise ValueError("Unknown initial parameteres type")
 
@@ -490,8 +491,8 @@ class SpaceObject:
         radius, safe_radius = self.satellite.radius, self.satellite.safe_radius
         name = self.get_name()
 
-        self.satellite = keplerian(t_man, list(pos), new_vel, mu_central_body,
-                                   mu_self, radius, safe_radius, name)
+        self.satellite = pk.planet.keplerian(t_man, list(pos), new_vel, mu_central_body,
+                                             mu_self, radius, safe_radius, name)
         self.fuel -= fuel_cons
         return True, fuel_cons
 
