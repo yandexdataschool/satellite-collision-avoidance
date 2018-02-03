@@ -480,10 +480,10 @@ class SpaceObject:
          """
         dV = action[:3]
         fuel_cons = fuel_consumption(dV)
-        if fuel_cons > self.fuel:
-            return "requested action exceeds fuel amount in the satellite.", 0
-        elif fuel_cons > MAX_FUEL_CONSUMPTION:
+        if fuel_cons > MAX_FUEL_CONSUMPTION:
             return "requested action exceeds the fuel consumption limit.", 0
+        elif fuel_cons > self.fuel:
+            return "requested action exceeds fuel amount in the satellite.", 0
 
         t_man = pk.epoch(float(action[3]), "mjd2000")
         pos, vel = self.position(t_man)

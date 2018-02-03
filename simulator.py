@@ -119,10 +119,10 @@ class Visualizer:
         plt.pause(PAUSE_TIME)
         plt.cla()
 
-    def write_iteration(self, epoch, reward, collision_prob):
+    def plot_iteration(self, epoch, reward, collision_prob):
         s = 'Epoch: {}     R: {:.7}     Coll Prob: {:.5}'.format(
             epoch, reward, collision_prob)
-        self.ax.text2D(-0.1, 1.05, s, transform=self.ax.transAxes)
+        self.ax.text2D(0, 1.1, s, transform=self.ax.transAxes)
 
 
 class Simulator:
@@ -182,7 +182,7 @@ class Simulator:
                 self.plot_debris()
                 self.vis.plot_earth()
                 self.vis.pause_and_clear()
-                self.vis.write_iteration(
+                self.vis.plot_iteration(
                     self.curr_time, self.env.reward, self.env.total_collision_probability)
 
             self.curr_time = pk.epoch(
