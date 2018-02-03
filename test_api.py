@@ -13,7 +13,7 @@ class TestBasicFunctions(unittest.TestCase):
 
     def setUp(self):
         self.start_time = pk.epoch(1, "mjd2000")
-        osculating_elements = (7800000, 0.001, 1, 0, 0, 0)
+        osculating_elements = (7800000, 0.001, 0.017453292519943295, 0, 0, 0)
         mu_central_body, mu_self, radius, safe_radius = 398600800000000, 0.1, 0.1, 0.1
         fuel = 10
         params = dict(
@@ -26,7 +26,8 @@ class TestBasicFunctions(unittest.TestCase):
         )
         self.protected = SpaceObject("protected", "osc", params)
 
-        debris_osculating_elements = (7800000, 0.001, 90, 0, 0, 0)
+        debris_osculating_elements = (
+            7800000, 0.001, 1.5707963267948966, 0, 0, 0)
         params["elements"] = debris_osculating_elements
         self.debris = [SpaceObject("Debris 1", "osc", params)]
 
@@ -56,7 +57,7 @@ class TestEnvironment(unittest.TestCase):
 
     def setUp(self):
         self.start_time = pk.epoch(1, "mjd2000")
-        osculating_elements = (7800000, 0.001, 1, 0, 0, 0)
+        osculating_elements = (7800000, 0.001, 0.017453292519943295, 0, 0, 0)
         mu_central_body, mu_self, radius, safe_radius = 398600800000000, 0.1, 0.1, 0.1
         fuel = 10
         params = dict(
@@ -102,8 +103,8 @@ class TestEnvironment(unittest.TestCase):
         want_fuel = prev_fuel - fuel_cons
         want_next_action = self.start_time.mjd2000 + time_to_req
         want_osculating_elements = (
-            7803020.0066698035, 0.0013936649034570505, 0.9999579205675558, 0.0,
-            6.182622884409689, 0.10028288507487619
+            7802223.307087888, 0.0012922495763325007, 0.017590560250921223,
+            0.0, 6.174706362516025, 0.10819939983993268
         )
 
         env.act(action)
@@ -126,7 +127,7 @@ class TestSpaceObject(unittest.TestCase):
 
     def setUp(self):
         self.start_time = pk.epoch(1, "mjd2000")
-        osculating_elements = (7800000, 0.001, 1, 0, 0, 0)
+        osculating_elements = (7800000, 0.001, 0.017453292519943295, 0, 0, 0)
         mu_central_body, mu_self, radius, safe_radius = 398600800000000, 0.1, 0.1, 0.1
         fuel = 10
         self.params = dict(
@@ -150,8 +151,8 @@ class TestSpaceObject(unittest.TestCase):
         want_fuel = prev_fuel - fuel_cons
 
         want_osculating_elements = (
-            7803020.0066698035, 0.0013936649034570505, 0.9999579205675558, 0.0,
-            6.182622884409689, 0.10028288507487619
+            7802223.307087888, 0.0012922495763325007, 0.017590560250921223,
+            0.0, 6.174706362516025, 0.10819939983993268
         )
 
         satellite.maneuver(action[:4])
@@ -167,7 +168,7 @@ class TestSpaceObject(unittest.TestCase):
             7792200, 0, 0
         )
         want_vel = (
-            0, 3866.276389113852, 6021.3687140567754
+            0.0, 7154.675252184611, 124.88532106719391
         )
 
         pos, vel = satellite.position(self.start_time)
