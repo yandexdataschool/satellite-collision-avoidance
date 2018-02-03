@@ -1,7 +1,6 @@
 # Module simulator provides simulator of space environment
 # and learning proccess of the agent.
 
-import time
 import logging
 
 import numpy as np
@@ -32,10 +31,10 @@ def draw_sphere(axis, centre, radius, wireframe_params={}):
     Returns:
        mpl_toolkits.mplot3d.art3d.Line3DCollection
     """
-    u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
-    x = radius*np.cos(u)*np.sin(v) + centre[0]
-    y = radius*np.sin(u)*np.sin(v) + centre[1]
-    z = radius*np.cos(v) + centre[2]
+    u, v = np.mgrid[0:2 * np.pi:20j, 0:np.pi:10j]
+    x = radius * np.cos(u) * np.sin(v) + centre[0]
+    y = radius * np.sin(u) * np.sin(v) + centre[1]
+    z = radius * np.cos(v) + centre[2]
     return axis.plot_wireframe(x, y, z, **wireframe_params)
 
 
@@ -71,8 +70,10 @@ def read_space_objects(file, param_type):
             elif param_type == "eph":
                 epoch = pk.epoch(
                     float(satellites.readline().strip()), "mjd2000")
+                # pos ([x, y, z]): position towards earth center (meters).
                 pos = [float(x)
                        for x in satellites.readline().strip().split(",")]
+                # vel ([Vx, Vy, Vz]): velocity (m/s).
                 vel = [float(x)
                        for x in satellites.readline().strip().split(",")]
                 mu_central_body, mu_self, radius, safe_radius = [
@@ -90,6 +91,11 @@ def read_space_objects(file, param_type):
             elif param_type == "osc":
                 epoch = pk.epoch(
                     float(satellites.readline().strip()), "mjd2000")
+                # six osculating keplerian elements (a,e,i,W,w,M) at the reference epoch:
+                # a (semi-major axis): meters,
+                # e (eccentricity): greater than 0,
+                # i (inclination), W (Longitude of the ascending node): radians,
+                # w (Argument of periapsis), M (mean anomaly): radians.
                 elements = tuple(
                     [float(x) for x in satellites.readline().strip().split(",")])
                 mu_central_body, mu_self, radius, safe_radius = [
@@ -143,7 +149,7 @@ class Visualizer:
     def plot_iteration(self, epoch, reward, collision_prob):
         s = 'Epoch: {}     R: {:.7}     Coll Prob: {:.5}'.format(
             epoch, reward, collision_prob)
-        self.ax.text2D(0, 1.1, s, transform=self.ax.transAxes)
+        self.ax.text2D(-0.2, 1.1, s, transform=self.ax.transAxes)
 
 
 class Simulator:

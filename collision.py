@@ -10,7 +10,7 @@ from api import Agent, Environment
 import pykep as pk
 
 START_TIME = 6599.95
-SIMULATION_STEP = 0.01
+SIMULATION_STEP = 0.0001
 END_TIME = 6600.05
 
 

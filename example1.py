@@ -12,7 +12,7 @@ import pykep as pk
 
 
 START_TIME = 6000
-SIMULATION_STEP = 0.001
+SIMULATION_STEP = 0.0001
 END_TIME = 6000.01
 # Number of TLE satellites to read from file.
 DEBRIS_NUM = 3
