@@ -18,6 +18,25 @@ logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
                     filemode='w', format='%(name)s:%(levelname)s\n%(message)s\n')
 
 PAUSE_TIME = 0.0001
+EARTH_RADIUS = 6.3781e6  # meters
+
+
+def draw_sphere(axis, centre, radius, wireframe_params={}):
+    """
+    Draws a wireframe sphere.
+    Args:
+       axis (matplotlib.axes._subplots.Axes3DSubplot): axis to plot on
+       centre (list-like): sphere centre. Must support [] operator
+       radius (float): sphere radius
+       wireframe_params (dict): arguments to pass to plot_wireframe
+    Returns:
+       mpl_toolkits.mplot3d.art3d.Line3DCollection
+    """
+    u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
+    x = radius*np.cos(u)*np.sin(v) + centre[0]
+    y = radius*np.sin(u)*np.sin(v) + centre[1]
+    z = radius*np.cos(v) + centre[2]
+    return axis.plot_wireframe(x, y, z, **wireframe_params)
 
 
 def strf_position(satellite, epoch):
@@ -99,6 +118,7 @@ class Visualizer:
     def __init__(self):
         self.fig = plt.figure()
         self.ax = self.fig.gca(projection='3d')
+        self.ax.set_aspect("equal")
 
     def run(self):
         plt.ion()
@@ -110,7 +130,8 @@ class Visualizer:
 
     def plot_earth(self):
         """ Add earth to the plot and legend. """
-        self.ax.scatter(0, 0, 0, color='green', label="Earth")
+        draw_sphere(self.ax, (0, 0, 0), EARTH_RADIUS, {
+            "color": "b", "lw": 0.5, "alpha": 0.2})
         plt.legend()
 
     def pause_and_clear(self):
