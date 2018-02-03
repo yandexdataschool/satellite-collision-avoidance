@@ -119,6 +119,11 @@ class Visualizer:
         plt.pause(PAUSE_TIME)
         plt.cla()
 
+    def write_iteration(self, epoch, reward, collision_prob):
+        s = 'Epoch: {}     R: {:.7}     Coll Prob: {:.5}'.format(
+            epoch, reward, collision_prob)
+        self.ax.text2D(-0.1, 1.05, s, transform=self.ax.transAxes)
+
 
 class Simulator:
     """ Simulator allows to start the simulation of provided environment,
@@ -162,9 +167,11 @@ class Simulator:
                 s = self.env.get_state()
                 action = self.agent.get_action(s)
                 r = self.env.reward
-                self.env.act(action)
+                err = self.env.act(action)
+                if err:
+                    self.log_bad_action(err, action)
 
-                self.log_ra(iteration, r, action)
+                self.log_reward_action(iteration, r, action)
 
             self.log_iteration(iteration)
             self.log_protected_position()
@@ -175,12 +182,13 @@ class Simulator:
                 self.plot_debris()
                 self.vis.plot_earth()
                 self.vis.pause_and_clear()
+                self.vis.write_iteration(
+                    self.curr_time, self.env.reward, self.env.total_collision_probability)
 
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + step, "mjd2000")
 
             if self.print_out:
-
                 print("\niteration:", iteration)
                 print("coll prob in current conjunct:",
                       self.env.collision_probability_in_current_conjunction)
@@ -210,12 +218,16 @@ class Simulator:
             self.logger.info(strf_position(obj, self.curr_time))
 
     def log_iteration(self, iteration):
-        self.logger.debug("Iter #{} \tEpoch: {}\tCollision Probability: {}".format(
+        self.logger.debug("Iter #{} \tEpoch: {} \tCollision Probability: {}".format(
             iteration,  self.curr_time, self.env.total_collision_probability))
 
-    def log_ra(self, iteration, reward, action):
-        self.logger.info("Iter: {}\tReward: {}\t action: {}".format(
-            iteration, reward, action))
+    def log_reward_action(self, iteration, reward, action):
+        self.logger.info("Iter: {} \tReward: {} \taction: (dVx:{}, dVy: {}, dVz: {}, epoch: {}, time_to_request: {})".format(
+            iteration, reward, *action))
+
+    def log_bad_action(self, message, action):
+        self.logger.warning(
+            "Unable to make action (dVx:{}, dVy:{}, dVz:{}): {}".format(action[0], action[1], action[2], message))
 
     def plot_protected(self):
         """ Plot Protected SpaceObject. """
