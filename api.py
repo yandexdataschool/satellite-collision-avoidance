@@ -218,7 +218,7 @@ class Agent:
         Returns:
             action (np.array([dVx, dVy, dVz, pk.epoch, time_to_req])):
                 vector of deltas for protected object (m/s),
-                maneuver time (mjd2000) and time step
+                maneuver time (mjd2000) and step in time
                 when to request the next action (mjd2000).
 
         """
@@ -385,8 +385,9 @@ class Environment:
     def act(self, action):
         """ Change velocity for protected object.
         Args:
-            action (np.array([dVx, dVy, dVz, pk.epoch, time_to_req])): vector of deltas for
-                protected object (m/s), maneuver time (mjd2000) and time step
+            action (np.array([dVx, dVy, dVz, pk.epoch, time_to_req])):
+                vector of velocity deltas for protected object (m/s),
+                maneuver time (mjd2000) and step in time
                 when to request the next action (mjd2000).
         """
         self.next_action = pk.epoch(
@@ -427,12 +428,11 @@ class SpaceObject:
                     "vel" ([Vx, Vy, Vz]): velocity (cartesian, m/s).
                     "epoch" (pykep.epoch): start time (mjd2000).
                     "mu_central_body" (float): gravity parameter of the
-                        central body (SI units, m^2/s^3).
-                    "mu_self"(float): gravity parameter of the planet
-                        (SI units, m^2/s^3).
-                    "radius" (float): body radius (SI units, meters).
+                        central body (m^2/s^3).
+                    "mu_self"(float): gravity parameter of the planet (m^2/s^3).
+                    "radius" (float): body radius (meters).
                     "safe_radius" (float): mimimual radius that is safe during
-                        a fly-by of the planet (SI units, meters).
+                        a fly-by of the planet (meters).
 
                 for "osc" type:
                     "elements" (tuple): containing 6 orbital osculating elements.
@@ -473,8 +473,8 @@ class SpaceObject:
     def maneuver(self, action):
         """ Make manoeuvre for the object.
         Args:
-            action (np.array([dVx, dVy, dVz, pk.epoch])): vector
-                of deltas for protected object and maneuver time (m/s).
+            action (np.array([dVx, dVy, dVz, pk.epoch])): vector of velocity
+                deltas for protected object and maneuver time (m/s).
 
         Returns:
             (string): empty string if action is successfully made by satellite,
