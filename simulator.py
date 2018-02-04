@@ -1,7 +1,6 @@
 # Module simulator provides simulator of space environment
 # and learning proccess of the agent.
 
-import time
 import logging
 
 import numpy as np
@@ -32,10 +31,10 @@ def draw_sphere(axis, centre, radius, wireframe_params={}):
     Returns:
        mpl_toolkits.mplot3d.art3d.Line3DCollection
     """
-    u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
-    x = radius*np.cos(u)*np.sin(v) + centre[0]
-    y = radius*np.sin(u)*np.sin(v) + centre[1]
-    z = radius*np.cos(v) + centre[2]
+    u, v = np.mgrid[0:2 * np.pi:20j, 0:np.pi:10j]
+    x = radius * np.cos(u) * np.sin(v) + centre[0]
+    y = radius * np.sin(u) * np.sin(v) + centre[1]
+    z = radius * np.cos(v) + centre[2]
     return axis.plot_wireframe(x, y, z, **wireframe_params)
 
 
@@ -71,8 +70,10 @@ def read_space_objects(file, param_type):
             elif param_type == "eph":
                 epoch = pk.epoch(
                     float(satellites.readline().strip()), "mjd2000")
+                # pos ([x, y, z]): position towards earth center (meters).
                 pos = [float(x)
                        for x in satellites.readline().strip().split(",")]
+                # vel ([Vx, Vy, Vz]): velocity (m/s).
                 vel = [float(x)
                        for x in satellites.readline().strip().split(",")]
                 mu_central_body, mu_self, radius, safe_radius = [
@@ -90,6 +91,11 @@ def read_space_objects(file, param_type):
             elif param_type == "osc":
                 epoch = pk.epoch(
                     float(satellites.readline().strip()), "mjd2000")
+                # six osculating keplerian elements (a,e,i,W,w,M) at the reference epoch:
+                # a (semi-major axis): meters,
+                # e (eccentricity): greater than 0,
+                # i (inclination), W (Longitude of the ascending node): radians,
+                # w (Argument of periapsis), M (mean anomaly): radians.
                 elements = tuple(
                     [float(x) for x in satellites.readline().strip().split(",")])
                 mu_central_body, mu_self, radius, safe_radius = [
@@ -140,6 +146,11 @@ class Visualizer:
         plt.pause(PAUSE_TIME)
         plt.cla()
 
+    def plot_iteration(self, epoch, reward, collision_prob):
+        s = 'Epoch: {}     R: {:.7}     Coll Prob: {:.5}'.format(
+            epoch, reward, collision_prob)
+        self.ax.text2D(-0.2, 1.1, s, transform=self.ax.transAxes)
+
 
 class Simulator:
     """ Simulator allows to start the simulation of provided environment,
@@ -176,6 +187,15 @@ class Simulator:
         if visualize:
             self.vis.run()
 
+        if self.print_out:
+            print("Simulation started.\n\nStart time: {} \t End time: {} \t Simulation step:{}\n".format(
+                self.start_time.mjd2000, end_time, step))
+            print("Protected SpaceObject:\n{}".format(
+                self.env.protected.satellite))
+            print("Debris objects:\n")
+            for spaceObject in self.env.debris:
+                print(spaceObject.satellite)
+
         while self.curr_time.mjd2000 <= end_time:
             self.env.propagate_forward(self.curr_time.mjd2000)
 
@@ -183,9 +203,11 @@ class Simulator:
                 s = self.env.get_state()
                 action = self.agent.get_action(s)
                 r = self.env.reward
-                self.env.act(action)
+                err = self.env.act(action)
+                if err:
+                    self.log_bad_action(err, action)
 
-                self.log_ra(iteration, r, action)
+                self.log_reward_action(iteration, r, action)
 
             self.log_iteration(iteration)
             self.log_protected_position()
@@ -196,12 +218,13 @@ class Simulator:
                 self.plot_debris()
                 self.vis.plot_earth()
                 self.vis.pause_and_clear()
+                self.vis.plot_iteration(
+                    self.curr_time, self.env.reward, self.env.total_collision_probability)
 
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + step, "mjd2000")
 
             if self.print_out:
-
                 print("\niteration:", iteration)
                 print("coll prob in current conjunct:",
                       self.env.collision_probability_in_current_conjunction)
@@ -231,12 +254,16 @@ class Simulator:
             self.logger.info(strf_position(obj, self.curr_time))
 
     def log_iteration(self, iteration):
-        self.logger.debug("Iter #{} \tEpoch: {}\tCollision Probability: {}".format(
+        self.logger.debug("Iter #{} \tEpoch: {} \tCollision Probability: {}".format(
             iteration,  self.curr_time, self.env.total_collision_probability))
 
-    def log_ra(self, iteration, reward, action):
-        self.logger.info("Iter: {}\tReward: {}\t action: {}".format(
-            iteration, reward, action))
+    def log_reward_action(self, iteration, reward, action):
+        self.logger.info("Iter: {} \tReward: {} \taction: (dVx:{}, dVy: {}, dVz: {}, epoch: {}, time_to_request: {})".format(
+            iteration, reward, *action))
+
+    def log_bad_action(self, message, action):
+        self.logger.warning(
+            "Unable to make action (dVx:{}, dVy:{}, dVz:{}): {}".format(action[0], action[1], action[2], message))
 
     def plot_protected(self):
         """ Plot Protected SpaceObject. """

@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-MAX_PROPAGATION_STEP = 0.000001  # is equal to 0.0864 sc.
+MAX_PROPAGATION_STEP = 0.000001  # equal to 0.0864 sc.
 MAX_FUEL_CONSUMPTION = 10
 
 
@@ -42,7 +42,7 @@ def fuel_consumption(dV):
     """ Provide the value of fuel consumption for given velocity delta.
 
     Args:
-        dV (np.array ([dVx, dVy, dVz]) ): vector of satellite velocity delta for maneuver.
+        dV (np.array ([dVx, dVy, dVz]) ): vector of satellite velocity delta for maneuver (m/s).
 
     Returns:
         float: fuel consumption.
@@ -68,8 +68,8 @@ def rV2ocs(r0, r1, V0, V1):
     """ Convert cartesian coordinate system to orbital coordinate system.
 
     Args:
-        r0, r1 (np.array([x,y,z])): coordinates.
-        V0, V1 (np.array([Vx,Vy,Vz])): velocities.
+        r0, r1 (np.array([x,y,z])): coordinates (meters).
+        V0, V1 (np.array([Vx,Vy,Vz])): velocities (m/s).
 
     Returns:
         floats: dr, dn, db
@@ -105,8 +105,8 @@ def coll_prob_estimation(r0, r1, V0=np.zeros(3), V1=np.zeros(3), d0=1, d1=1,
     """ Returns probability of collision between two objects.
 
     Args:
-        r0, r1 (np.array([x, y, z])): objects coordinates.
-        V0, V1 (np.array([Vx,Vy,Vz])): velocities.
+        r0, r1 (np.array([x, y, z])): objects coordinates (meteres).
+        V0, V1 (np.array([Vx,Vy,Vz])): velocities (m/s).
         d0, d1 (float, float): objects size (meters).
         sigma (float): standard deviation.
         approach (str): name of approach.
@@ -161,10 +161,10 @@ def danger_debr_and_collision_prob(st_rV, debr_rV, st_d, debr_d, sigma, threshol
     """Probability of collision with danger debris.
 
     Args:
-        st_r (np.array with shape(1, 6)): satellite position and velocity.
-        debr_r (np.array with shape(n_denris, 6)): debris positions and velocities.
-        st_d (float): satellite size.
-        debr_d (np.array with shape(n_denris, 6)): debris sizes
+        st_r (np.array with shape(1, 6)): satellite position (meters) and velocity (m/s).
+        debr_r (np.array with shape(n_denris, 6)): debris positions (meters) and velocities (m/s).
+        st_d (float): satellite size (meters).
+        debr_d (np.array with shape(n_denris, 6)): debris sizes (meters).
         threshold_p (float): danger probability.
         sigma (float): standard deviation.
 
@@ -210,19 +210,21 @@ class Agent:
         Args:
             state (dict): environment state
                 {'coord' (dict):
-                    {'st' (np.array with shape (1, 6)): satellite r and Vx, Vy, Vz coordinates.
-                     'debr' (np.array with shape (n_items, 6)): debris r and Vx, Vy, Vz coordinates.}
+                    {'st' (np.array with shape (1, 6)): satellite r and Vx, Vy, Vz coordinates (meters).
+                     'debr' (np.array with shape (n_items, 6)): debris r and Vx, Vy, Vz coordinates (meters).}
                 'trajectory_deviation_coef' (float).
                 'epoch' (pk.epoch): at which time environment state is calculated.
                 'fuel' (float): current remaining fuel in protected SpaceObject. }
         Returns:
-            action (np.array([dVx, dVy, dVz, pk.epoch, time_to_req])): vector of deltas for
-                protected object, maneuver time and time to request the next action.
+            action (np.array([dVx, dVy, dVz, pk.epoch, time_to_req])):
+                vector of deltas for protected object (m/s),
+                maneuver time (mjd2000) and step in time
+                when to request the next action (mjd2000).
 
         """
-        dVx, dVy, dVz = 0, 0, 0
+        dVx, dVy, dVz = 0, 0, 0  # meters
         epoch = state["epoch"].mjd2000
-        time_to_req = 0.01
+        time_to_req = 0.001  # mjd2000
         action = np.array([dVx, dVy, dVz, epoch, time_to_req])
 
         return action
@@ -241,14 +243,14 @@ class Environment:
         """
         self.protected = protected
         self.debris = debris
-        self.next_action = pk.epoch(0)
+        self.next_action = pk.epoch(0, "mjd2000")
         self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
         self.n_debris = len(debris)
-        self.st_d = 1.  #: Satellite size
-        self.debr_d = np.ones(self.n_debris)  #: Debris sizes
-        self.crit_prob = 10e-5  #: Critical convergence distance
+        self.st_d = 1.  #: Satellite size (meters)
+        self.debr_d = np.ones(self.n_debris)  #: Debris sizes (meters)
+        self.crit_prob = 10e-5  #: Critical convergence distance (meters)
         # TODO choose true sigma
-        self.sigma = 50000  #: Coordinates uncertainly
+        self.sigma = 50000  #: Coordinates uncertainly (meters)
         self.collision_probability_in_current_conjunction = np.zeros(
             self.n_debris)
         self.collision_probability_prior_to_current_conjunction = np.zeros(
@@ -383,15 +385,17 @@ class Environment:
     def act(self, action):
         """ Change velocity for protected object.
         Args:
-            action (np.array([dVx, dVy, dVz, pk.epoch, time_to_req])): vector of deltas for
-                protected object, maneuver time and time to request the next action.
+            action (np.array([dVx, dVy, dVz, pk.epoch, time_to_req])):
+                vector of velocity deltas for protected object (m/s),
+                maneuver time (mjd2000) and step in time
+                when to request the next action (mjd2000).
         """
         self.next_action = pk.epoch(
             self.state["epoch"].mjd2000 + float(action[4]), "mjd2000")
-        success, fuel_cons = self.protected.maneuver(action[:4])
-        if success:
+        error, fuel_cons = self.protected.maneuver(action[:4])
+        if not error:
             self.state["fuel"] -= fuel_cons
-        return
+        return error
 
     def get_next_action(self):
         return self.next_action
@@ -420,16 +424,15 @@ class SpaceObject:
                      "tle2" (str): tle line2.
 
                 for "eph" type:
-                    "pos" ([x, y, z]): position (cartesian).
-                    "vel" ([Vx, Vy, Vz]): velocity (cartesian).
-                    "epoch" (pykep.epoch): start time.
+                    "pos" ([x, y, z]): position (cartesian, meters).
+                    "vel" ([Vx, Vy, Vz]): velocity (cartesian, m/s).
+                    "epoch" (pykep.epoch): start time (mjd2000).
                     "mu_central_body" (float): gravity parameter of the
-                        central body (SI units, i.e. m^2/s^3).
-                    "mu_self"(float): gravity parameter of the planet
-                        (SI units, i.e. m^2/s^3).
-                    "radius" (float): body radius (SI units, i.e. meters).
+                        central body (m^2/s^3).
+                    "mu_self"(float): gravity parameter of the planet (m^2/s^3).
+                    "radius" (float): body radius (meters).
                     "safe_radius" (float): mimimual radius that is safe during
-                        a fly-by of the planet (SI units, i.e. m).
+                        a fly-by of the planet (meters).
 
                 for "osc" type:
                     "elements" (tuple): containing 6 orbital osculating elements.
@@ -468,20 +471,24 @@ class SpaceObject:
         else:
             raise ValueError("Unknown initial parameteres type")
 
+
     def maneuver(self, action):
         """ Make manoeuvre for the object.
         Args:
-            action (np.array([dVx, dVy, dVz, pk.epoch])): vector
-                of deltas for protected object and maneuver time.
+            action (np.array([dVx, dVy, dVz, pk.epoch])): vector of velocity
+                deltas for protected object and maneuver time (m/s).
 
         Returns:
-            (bool): True if action is successfully made by satellite.
+            (string): empty string if action is successfully made by satellite,
+                error message otherwise.
             fuel_cons (float): fuel consumption of the provided action.
          """
         dV = action[:3]
         fuel_cons = fuel_consumption(dV)
-        if fuel_cons > self.fuel or fuel_cons > MAX_FUEL_CONSUMPTION:
-            return False, 0
+        if fuel_cons > MAX_FUEL_CONSUMPTION:
+            return "requested action exceeds the fuel consumption limit.", 0
+        elif fuel_cons > self.fuel:
+            return "requested action exceeds fuel amount in the satellite.", 0
 
         t_man = pk.epoch(float(action[3]), "mjd2000")
         pos, vel = self.position(t_man)
@@ -494,15 +501,15 @@ class SpaceObject:
         self.satellite = pk.planet.keplerian(t_man, list(pos), new_vel, mu_central_body,
                                              mu_self, radius, safe_radius, name)
         self.fuel -= fuel_cons
-        return True, fuel_cons
+        return "", fuel_cons
 
     def position(self, epoch):
         """ Provide SpaceObject position at given epoch:
         Args:
             epoch (pk.epoch): at what time to calculate position.
         Returns
-            pos (tuple): position x, y, z.
-            vel (tuple): velocity Vx, Vy, Vz.
+            pos (tuple): position x, y, z (meters).
+            vel (tuple): velocity Vx, Vy, Vz (m/s).
         """
         pos, vel = self.satellite.eph(epoch)
         return pos, vel
