@@ -18,26 +18,6 @@ MAX_PROPAGATION_STEP = 0.000001  # is equal to 0.0864 sc.
 MAX_FUEL_CONSUMPTION = 10
 
 
-def euclidean_distance(r_main, r_other, rev_sort=True):
-    """Euclidean distances calculation.
-
-    Args:
-        r_main (np.array with shape=(1, 3)): xyz coordinates of main object.
-        r_other (np.array with shape=(n_objects, 3)): xyz coordinates of other objects.
-        rev_sort (bool): True for reverse sorted distances array, False for not sorted one.
-
-    Returns:
-        distances (np.array with shape=(n_objects)): Euclidean distances between main object and the others.
-
-    """
-    distances = np.sum(
-        (r_main - r_other) ** 2,
-        axis=1) ** 0.5
-    if rev_sort:
-        distances = np.sort(distances)[::-1]
-    return distances
-
-
 def fuel_consumption(dV):
     """ Provide the value of fuel consumption for given velocity delta.
 
@@ -100,13 +80,12 @@ def TestProbability(p):
     return
 
 
-def coll_prob_estimation(r0, r1, V0=np.zeros(3), V1=np.zeros(3), d0=1, d1=1,
+def coll_prob_estimation(rV0, rV1, d0=1, d1=1,
                          sigma=1., approach="normal"):
     """ Returns probability of collision between two objects.
 
     Args:
-        r0, r1 (np.array([x, y, z])): objects coordinates.
-        V0, V1 (np.array([Vx,Vy,Vz])): velocities.
+        rV0, rV1 (np.array([x, y, z, Vx, Vy, Vz])): objects coordinates and velocities.
         d0, d1 (float, float): objects size (meters).
         sigma (float): standard deviation.
         approach (str): name of approach.
@@ -125,6 +104,7 @@ def coll_prob_estimation(r0, r1, V0=np.zeros(3), V1=np.zeros(3), d0=1, d1=1,
 
     """
     probability = 1.
+    # TODO - remove
 
     if approach == "Hutor":
         # V test
@@ -147,7 +127,7 @@ def coll_prob_estimation(r0, r1, V0=np.zeros(3), V1=np.zeros(3), d0=1, d1=1,
     elif approach == "normal":
         # TODO - truncated normal distribution?
         # TODO - multivariate normal distribution?
-        for c0, c1 in zip(r0, r1):
+        for c0, c1 in zip(rV0[:3], rV1[:3]):
             av = (c0 + c1) / 2.
             integtal = norm.cdf(av, loc=min(c0, c1), scale=sigma)
             probability *= (1 - integtal) / integtal
@@ -157,39 +137,25 @@ def coll_prob_estimation(r0, r1, V0=np.zeros(3), V1=np.zeros(3), d0=1, d1=1,
     return probability
 
 
-def danger_debr_and_collision_prob(st_rV, debr_rV, st_d, debr_d, sigma, threshold_p):
+def get_conjunction(st_r, debr_r, threshold_d=777000):
     """Probability of collision with danger debris.
 
     Args:
-        st_r (np.array with shape(1, 6)): satellite position and velocity.
-        debr_r (np.array with shape(n_denris, 6)): debris positions and velocities.
-        st_d (float): satellite size.
-        debr_d (np.array with shape(n_denris, 6)): debris sizes
-        threshold_p (float): danger probability.
-        sigma (float): standard deviation.
+        st_r (np.array with shape(1, 3)): satellite position.
+        debr_r (np.array with shape(n_denris, 3)): debris positions.
+        threshold_d (float): distance danger threshold.
 
     Returns:
-        coll_prob (np.array): collision probability for each debris.
+        distances (np.array): Euclidean distances for the each danger debris.
+        danger_debris (np.array): danger debris indicies.
 
-    Raises:
-        ValueError: If any probability has incorrect value.
-        TypeError: If any probability has incorrect type.
-        ValueError: If sigma <= 0.
-
+    TODO:
+        * add distance units and true threshold_d.
     """
-    TestProbability(threshold_p)
-    if sigma <= 0:
-        raise ValueError("sigma must be greater than 0")
-    coll_prob = np.zeros(debr_rV.shape[0])
-    for d in range(debr_rV.shape[0]):
-        p = coll_prob_estimation(
-            st_rV[0, :3], debr_rV[d, :3],
-            st_rV[0, 3:], debr_rV[d, 3:],
-            st_d, debr_d[d], sigma
-        )
-        if p >= threshold_p:
-            coll_prob[d] = p
-    return coll_prob
+    distances = np.sum((debr_r - st_r) ** 2, axis=1) ** 0.5
+    danger_debris = np.where(distances <= threshold_d)[0]
+    distances = distances[danger_debris]
+    return distances, danger_debris
 
 
 class Agent:
@@ -249,13 +215,17 @@ class Environment:
         self.crit_prob = 10e-5  #: Critical convergence distance
         # TODO choose true sigma
         self.sigma = 50000  #: Coordinates uncertainly
-        self.collision_probability_in_current_conjunction = np.zeros(
-            self.n_debris)
+
+        self.min_distances_in_current_conjunction = np.zeros(
+            self.n_debris) - 1  # equal to -1 if not in conjunction.
+        self.state_for_min_distances_in_current_conjunction = dict()
+        self.danger_debris_in_current_conjunction = np.array([])
+
         self.collision_probability_prior_to_current_conjunction = np.zeros(
             self.n_debris)
-
         self.total_collision_probability_array = np.zeros(self.n_debris)
         self.total_collision_probability = 0.
+
         self.whole_trajectory_deviation = 0.
         self.reward = 0.
 
@@ -279,8 +249,8 @@ class Environment:
 
         # Choose number of steps in linspace, s.t.
         # restep is less then MAX_PROPAGATION_STEP.
-        number_of_time_steps_plus_one = int(np.ceil(
-            (end_time - curr_time) / MAX_PROPAGATION_STEP) + 1)
+        number_of_time_steps_plus_one = np.ceil(
+            (end_time - curr_time) / MAX_PROPAGATION_STEP) + 1
 
         propagation_grid, retstep = np.linspace(
             curr_time, end_time, number_of_time_steps_plus_one, retstep=True)
@@ -341,43 +311,75 @@ class Environment:
         """ Update the probability of collision on the propagation step.
 
         """
-        # TODO - log probability?
-        new_collision_probability_in_current_conjunction = danger_debr_and_collision_prob(
-            self.state['coord']['st'],
-            self.state['coord']['debr'],
-            self.st_d, self.debr_d,
-            self.sigma, self.crit_prob
+        new_distances_in_current_conjunction, new_danger_debr = get_conjunction(
+            self.state['coord']['st'][:, :3],
+            self.state['coord']['debr'][:, :3]
         )
+        end_cojunction_debris = np.setdiff1d(
+            self.danger_debris_in_current_conjunction,
+            new_danger_debr
+        )  # the debris for which the conjunction has now ceased.
+        new_cojunction_debris = np.setdiff1d(
+            new_danger_debr,
+            self.danger_debris_in_current_conjunction
+        )
+        self.danger_debris_in_current_conjunction = new_danger_debr
+        for_update = new_danger_debr[
+            np.where(
+                new_distances_in_current_conjunction <
+                self.min_distances_in_current_conjunction[new_danger_debr]
+            )[0]
+        ]
+        for_update = np.union1d(for_update, new_cojunction_debris)
 
-        new_danger_debr = np.where(
-            new_collision_probability_in_current_conjunction > 0)[0]
-        cur_danger_debr = np.where(
-            self.collision_probability_in_current_conjunction > 0)[0]
-        new_not_danger_debr = np.setdiff1d(cur_danger_debr, new_danger_debr)
+        # updating
+        if for_update.size:
+            self.min_distances_in_current_conjunction[
+                for_update] = new_distances_in_current_conjunction[new_danger_debr == for_update]
+            for d in for_update:
+                self.state_for_min_distances_in_current_conjunction[d] = np.vstack((
+                    self.state['coord']['st'][0, :],
+                    self.state['coord']['debr'][d, :]
+                ))
 
-        self.collision_probability_in_current_conjunction[new_danger_debr] = np.maximum(
-            new_collision_probability_in_current_conjunction[new_danger_debr],
-            self.collision_probability_in_current_conjunction[new_danger_debr])
-
-        self.collision_probability_prior_to_current_conjunction[new_not_danger_debr] = sum_coll_prob(
-            np.vstack([
-                self.collision_probability_prior_to_current_conjunction[
-                    new_not_danger_debr],
-                self.collision_probability_in_current_conjunction[
-                    new_not_danger_debr]
+        # removing end conjection dabris
+        if end_cojunction_debris.size:
+            coll_prob = np.array([
+                coll_prob_estimation(
+                    self.state_for_min_distances_in_current_conjunction[d][0],
+                    self.state_for_min_distances_in_current_conjunction[d][1],
+                )
+                for d in end_cojunction_debris
             ])
-        )
-        self.collision_probability_in_current_conjunction[
-            new_not_danger_debr] = 0.
-
-        self.total_collision_probability_array = sum_coll_prob(np.vstack([
-            self.collision_probability_in_current_conjunction,
-            self.collision_probability_prior_to_current_conjunction])
-        )
-        self.total_collision_probability = sum_coll_prob(
-            self.total_collision_probability_array
-        )
-
+            self.collision_probability_prior_to_current_conjunction[end_cojunction_debris] = sum_coll_prob(
+                np.vstack([
+                    self.collision_probability_prior_to_current_conjunction[
+                        end_cojunction_debris],
+                    coll_prob
+                ])
+            )
+            self.min_distances_in_current_conjunction[
+                end_cojunction_debris] = -1
+            for d in end_cojunction_debris:
+                del self.state_for_min_distances_in_current_conjunction[d]
+        if new_danger_debr.size:
+            cur_coll_prob = np.array([
+                coll_prob_estimation(
+                    self.state_for_min_distances_in_current_conjunction[d][0],
+                    self.state_for_min_distances_in_current_conjunction[d][1]
+                )
+                for d in new_danger_debr
+            ])
+            self.total_collision_probability_array[new_danger_debr] = sum_coll_prob(
+                np.vstack([
+                    self.collision_probability_prior_to_current_conjunction[
+                        new_danger_debr],
+                    cur_coll_prob
+                ])
+            )
+            self.total_collision_probability = sum_coll_prob(
+                self.total_collision_probability_array
+            )
         return
 
     def act(self, action):
