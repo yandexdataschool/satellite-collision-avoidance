@@ -246,11 +246,11 @@ class Environment:
         self.next_action = pk.epoch(0, "mjd2000")
         self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
         self.n_debris = len(debris)
-        self.st_d = 1.  #: Satellite size (meters).
+        self.st_d = 1.  #: Satellite size (meters)
         self.debr_d = np.ones(self.n_debris)  #: Debris sizes (meters)
-        self.crit_prob = 10e-5  #: Critical convergence distance
+        self.crit_prob = 10e-5  #: Critical convergence distance (meters)
         # TODO choose true sigma
-        self.sigma = 50000  #: Coordinates uncertainly
+        self.sigma = 50000  #: Coordinates uncertainly (meters)
         self.collision_probability_in_current_conjunction = np.zeros(
             self.n_debris)
         self.collision_probability_prior_to_current_conjunction = np.zeros(
