@@ -470,6 +470,7 @@ class SpaceObject:
         else:
             raise ValueError("Unknown initial parameteres type")
 
+
     def maneuver(self, action):
         """ Make manoeuvre for the object.
         Args:

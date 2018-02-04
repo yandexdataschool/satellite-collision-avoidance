@@ -28,9 +28,13 @@ def main(args):
                         default=END_TIME, required=False)
     parser.add_argument("-s", "--step", type=float,
                         default=SIMULATION_STEP, required=False)
+    parser.add_argument("-p", "--print_out", type=str,
+                        default="False", required=False)
+
     args = parser.parse_args(args)
 
     visualize = args.visualize.lower() == "true"
+    print_out = args.print_out.lower() == "true"
     start_time, end_time, step = args.start_time, args.end_time, args.step
 
     # SpaceObjects with TLE initial parameters.
@@ -53,7 +57,7 @@ def main(args):
     start_time = pk.epoch(start_time, "mjd2000")
     env = Environment(iss, debris, start_time)
 
-    simulator = Simulator(agent, env, print_out=False)
+    simulator = Simulator(agent, env, print_out=print_out)
     simulator.run(end_time=end_time, step=step, visualize=visualize)
     return
 

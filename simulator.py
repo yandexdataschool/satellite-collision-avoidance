@@ -187,6 +187,15 @@ class Simulator:
         if visualize:
             self.vis.run()
 
+        if self.print_out:
+            print("Simulation started.\n\nStart time: {} \t End time: {} \t Simulation step:{}\n".format(
+                self.start_time.mjd2000, end_time, step))
+            print("Protected SpaceObject:\n{}".format(
+                self.env.protected.satellite))
+            print("Debris objects:\n")
+            for spaceObject in self.env.debris:
+                print(spaceObject.satellite)
+
         while self.curr_time.mjd2000 <= end_time:
             self.env.propagate_forward(self.curr_time.mjd2000)
 
