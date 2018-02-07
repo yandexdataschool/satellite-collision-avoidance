@@ -176,7 +176,7 @@ class Simulator:
         self.vis = Visualizer()
         self.logger = logging.getLogger('simulator.Simulator')
 
-    def run(self, end_time, step=0.001, visualize=True, reward_probability_update_step=2):
+    def run(self, end_time, step=0.001, visualize=True, reward_probability_update_step=10):
         """
         Args:
             end_time (float): end time of simulation provided as mjd2000.
