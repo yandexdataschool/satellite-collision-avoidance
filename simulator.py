@@ -146,9 +146,9 @@ class Visualizer:
         plt.pause(PAUSE_TIME)
         plt.cla()
 
-    def plot_iteration(self, epoch, reward, collision_prob):
-        s = 'Epoch: {}     R: {:.7}     Coll Prob: {:.5}'.format(
-            epoch, reward, collision_prob)
+    def plot_iteration(self, epoch, last_update, reward, collision_prob):
+        s = 'Epoch: {}     Last Update: {}     R: {:.7}     Coll Prob: {:.5}'.format(
+            epoch, last_update, reward, collision_prob)
         self.ax.text2D(-0.2, 1.1, s, transform=self.ax.transAxes)
 
 
@@ -171,11 +171,12 @@ class Simulator:
         self.env = environment
         self.start_time = self.env.state["epoch"]
         self.curr_time = self.start_time
+        self.last_update = -1
 
         self.vis = Visualizer()
         self.logger = logging.getLogger('simulator.Simulator')
 
-    def run(self, end_time, step=0.001, visualize=True, reward_probability_update_step=10):
+    def run(self, end_time, step=0.001, visualize=True, reward_probability_update_step=2):
         """
         Args:
             end_time (float): end time of simulation provided as mjd2000.
@@ -183,7 +184,6 @@ class Simulator:
             visualize (bool): whether show the simulation or not.
         """
         iteration = 0
-
         if visualize:
             self.vis.run()
 
@@ -196,17 +196,17 @@ class Simulator:
             for spaceObject in self.env.debris:
                 print(spaceObject.satellite)
 
+        self.update_reward_and_probability()
+
         while self.curr_time.mjd2000 <= end_time:
             self.env.propagate_forward(self.curr_time.mjd2000)
             if iteration % reward_probability_update_step == 0:
-                self.env.update_collision_probability()
-                self.env.update_reward()
+                self.update_reward_and_probability()
 
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
                 s = self.env.get_state()
                 action = self.agent.get_action(s)
-                self.env.update_collision_probability()
-                self.env.update_reward()
+                self.update_reward_and_probability()
                 r = self.env.reward
                 err = self.env.act(action)
                 if err:
@@ -224,7 +224,7 @@ class Simulator:
                 self.vis.plot_earth()
                 self.vis.pause_and_clear()
                 self.vis.plot_iteration(
-                    self.curr_time, self.env.reward, self.env.total_collision_probability)
+                    self.curr_time, self.last_update, self.env.reward, self.env.total_collision_probability)
 
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + step, "mjd2000")
@@ -248,8 +248,7 @@ class Simulator:
 
             iteration += 1
 
-        self.env.update_collision_probability()
-        self.env.update_reward()
+        self.update_reward_and_probability()
         self.log_protected_position()
 
         # TODO - whole reward
@@ -257,6 +256,11 @@ class Simulator:
 
         print("Simulation ended.\nCollision probability: {}.\nReward: {}.".format(
             self.env.total_collision_probability, self.env.reward))
+
+    def update_reward_and_probability(self):
+        self.env.update_collision_probability()
+        self.env.update_reward()
+        self.last_update = self.env.state["epoch"]
 
     def log_protected_position(self):
         self.logger.info(strf_position(self.env.protected, self.curr_time))
