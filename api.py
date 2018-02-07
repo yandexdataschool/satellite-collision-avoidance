@@ -276,7 +276,7 @@ class Environment:
                 coord=coord, trajectory_deviation_coef=trajectory_deviation_coef,
                 epoch=epoch, fuel=self.protected.get_fuel()
             )
-            self.update_collision_probability()
+            self.update_distances_and_probabilities_prior_to_current_conjunction()
             self.reward = self.get_reward()
 
         return
@@ -294,7 +294,7 @@ class Environment:
 
         """
         # reward components
-        coll_prob = self.total_collision_probability
+        coll_prob = self.update_collision_probability()
         ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
         # collision probability reward - some kind of ELU function
         # of collision probability
@@ -308,6 +308,30 @@ class Environment:
         return r
 
     def update_collision_probability(self):
+        # if new_danger_debr.size:
+        cur_danger_debr = list(
+            self.state_for_min_distances_in_current_conjunction.keys())
+        if cur_danger_debr:
+            cur_coll_prob = np.array([
+                coll_prob_estimation(
+                    self.state_for_min_distances_in_current_conjunction[d][0],
+                    self.state_for_min_distances_in_current_conjunction[d][1]
+                )
+                for d in cur_danger_debr
+            ])
+            self.total_collision_probability_array[cur_danger_debr] = sum_coll_prob(
+                np.vstack([
+                    self.collision_probability_prior_to_current_conjunction[
+                        cur_danger_debr],
+                    cur_coll_prob
+                ])
+            )
+            self.total_collision_probability = sum_coll_prob(
+                self.total_collision_probability_array
+            )
+        return self.total_collision_probability
+
+    def update_distances_and_probabilities_prior_to_current_conjunction(self):
         """ Update the probability of collision on the propagation step.
 
         """
@@ -362,24 +386,7 @@ class Environment:
                 end_cojunction_debris] = -1
             for d in end_cojunction_debris:
                 del self.state_for_min_distances_in_current_conjunction[d]
-        if new_danger_debr.size:
-            cur_coll_prob = np.array([
-                coll_prob_estimation(
-                    self.state_for_min_distances_in_current_conjunction[d][0],
-                    self.state_for_min_distances_in_current_conjunction[d][1]
-                )
-                for d in new_danger_debr
-            ])
-            self.total_collision_probability_array[new_danger_debr] = sum_coll_prob(
-                np.vstack([
-                    self.collision_probability_prior_to_current_conjunction[
-                        new_danger_debr],
-                    cur_coll_prob
-                ])
-            )
-            self.total_collision_probability = sum_coll_prob(
-                self.total_collision_probability_array
-            )
+
         return
 
     def act(self, action):

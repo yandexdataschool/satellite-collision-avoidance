@@ -10,10 +10,10 @@ from api import Agent, Environment
 import pykep as pk
 
 START_TIME = 6599.95
-# START_TIME = 6599.999
+START_TIME = 6599.999
 SIMULATION_STEP = 0.0001
 END_TIME = 6600.05
-# END_TIME = 6600.001
+END_TIME = 6600.001
 
 
 def main(args):
