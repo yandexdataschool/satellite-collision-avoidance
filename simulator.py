@@ -147,8 +147,6 @@ class Visualizer:
         plt.cla()
 
     def plot_iteration(self, epoch, reward, collision_prob):
-        # reward = 0.2
-        # collision_prob = 0.2
         s = 'Epoch: {}     R: {:.7}     Coll Prob: {:.5}'.format(
             epoch, reward, collision_prob)
         self.ax.text2D(-0.2, 1.1, s, transform=self.ax.transAxes)
@@ -177,7 +175,7 @@ class Simulator:
         self.vis = Visualizer()
         self.logger = logging.getLogger('simulator.Simulator')
 
-    def run(self, end_time, step=0.001, visualize=True):
+    def run(self, end_time, step=0.001, visualize=True, reward_probability_update_step=10):
         """
         Args:
             end_time (float): end time of simulation provided as mjd2000.
@@ -200,10 +198,15 @@ class Simulator:
 
         while self.curr_time.mjd2000 <= end_time:
             self.env.propagate_forward(self.curr_time.mjd2000)
+            if iteration % reward_probability_update_step == 0:
+                self.env.update_collision_probability()
+                self.env.update_reward()
 
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
                 s = self.env.get_state()
                 action = self.agent.get_action(s)
+                self.env.update_collision_probability()
+                self.env.update_reward()
                 r = self.env.reward
                 err = self.env.act(action)
                 if err:

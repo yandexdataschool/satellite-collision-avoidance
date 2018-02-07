@@ -229,11 +229,14 @@ class Environment:
         self.whole_trajectory_deviation = 0.
         self.reward = 0.
 
-    def propagate_forward(self, end_time):
+    def propagate_forward(self, end_time, auto_update_reward_probability=False):
         """ Forward step.
 
         Args:
             end_time (float): end time for propagation as mjd2000.
+            auto_update_reward (bool): 
+                True if reward and total probability are updated at the each step,
+                False if reward and total probability are updated only from outside.
 
         Raises:
             ValueError: if end_time is less then current time of the environment.
@@ -277,12 +280,14 @@ class Environment:
                 epoch=epoch, fuel=self.protected.get_fuel()
             )
             self.update_distances_and_probabilities_prior_to_current_conjunction()
-            self.reward = self.get_reward()
+            if auto_update_reward_probability:
+                self.update_collision_probability()
+                self.update_reward()
 
         return
 
-    def get_reward(self, coll_prob_C=10000., traj_C=1., fuel_C=1.,
-                   danger_prob=10e-4):
+    def update_reward(self, coll_prob_C=10000., traj_C=1., fuel_C=1.,
+                      danger_prob=10e-4):
         """ Provide total reward from the environment state.
 
         Args:
@@ -294,7 +299,7 @@ class Environment:
 
         """
         # reward components
-        coll_prob = self.update_collision_probability()
+        coll_prob = self.total_collision_probability
         ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
         # collision probability reward - some kind of ELU function
         # of collision probability
@@ -304,8 +309,8 @@ class Environment:
 
         # whole reward
         # TODO - add weights to all reward components
-        r = (coll_prob_r + traj_r + fuel_r)
-        return r
+        self.reward = (coll_prob_r + traj_r + fuel_r)
+        return
 
     def update_collision_probability(self):
         # if new_danger_debr.size:
