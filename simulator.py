@@ -230,19 +230,26 @@ class Simulator:
                 self.curr_time.mjd2000 + step, "mjd2000")
 
             if self.print_out:
+
                 print("\niteration:", iteration)
-                print("coll prob in current conjunct:",
-                      self.env.collision_probability_in_current_conjunction)
-                print("coll prob prior current conjunct:",
+                print("min_distances_in_current_conjunction:",
+                      self.env.min_distances_in_current_conjunction)
+                print("collision_probability_prior_to_current_conjunction:",
                       self.env.collision_probability_prior_to_current_conjunction)
-                print("total coll prob dict:",
+                print("danger debris in curr conj:",
+                      self.env.danger_debris_in_current_conjunction)
+
+                print("total coll prob array:",
                       self.env.total_collision_probability_array)
                 print("total coll prob:",
                       self.env.total_collision_probability)
+                print("traj dev:", self.env.whole_trajectory_deviation)
                 print("reward:", self.env.reward)
 
             iteration += 1
 
+        self.env.update_collision_probability()
+        self.env.update_reward()
         self.log_protected_position()
 
         # TODO - whole reward
