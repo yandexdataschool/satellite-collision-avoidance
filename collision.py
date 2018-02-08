@@ -9,15 +9,15 @@ from api import Agent, Environment
 
 import pykep as pk
 
-START_TIME = 6599.95
+START_TIME = 6599.99
 SIMULATION_STEP = 0.0001
-END_TIME = 6600.05
+END_TIME = 6600.01
 
 
 def main(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--visualize", type=str,
-                        default="True", required=False)
+                        default="False", required=False)
     parser.add_argument("-start", "--start_time", type=float,
                         default=START_TIME, required=False)
     parser.add_argument("-end", "--end_time", type=float,
