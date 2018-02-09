@@ -176,7 +176,7 @@ class Simulator:
         self.logger = logging.getLogger('simulator.Simulator')
         self.print_out = print_out
 
-    def run(self, end_time, step=0.001, visualize=True, reward_probability_update_step=10):
+    def run(self, end_time, step=0.001, visualize=True):
         """
         Args:
             end_time (float): end time of simulation provided as mjd2000.
@@ -198,8 +198,6 @@ class Simulator:
 
         while self.curr_time.mjd2000 <= end_time:
             self.env.propagate_forward(self.curr_time.mjd2000)
-            if iteration % reward_probability_update_step == 0:
-                self.env.get_reward()
 
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
                 s = self.env.get_state()

@@ -232,15 +232,14 @@ class Environment:
         self.reward = 0.
         # : epoch: Last reward and collision probability update.
         self.last_r_p_update = None
+        self.pf_iteration = 0  # int: propagate forward iteration
 
-    def propagate_forward(self, end_time, update_r_p=False):
+    def propagate_forward(self, end_time, update_r_p_step=20):
         """ Forward step.
 
         Args:
             end_time (float): end time for propagation as mjd2000.
-            update_r_p (bool):
-                True if reward and total probability are updated at the each step,
-                False if reward and total probability are updated only from outside.
+            update_r_p_step (int): update reward and probability step.
 
         Raises:
             ValueError: if end_time is less then current time of the environment.
@@ -284,8 +283,10 @@ class Environment:
                 epoch=epoch, fuel=self.protected.get_fuel()
             )
             self.update_distances_and_probabilities_prior_to_current_conjunction()
-            if update_r_p:
-                self.get_reward()
+
+        if self.pf_iteration % update_r_p_step == 0:
+            self.get_reward()
+        self.pf_iteration += 1
 
         return
 
