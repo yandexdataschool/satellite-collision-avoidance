@@ -165,16 +165,15 @@ class Simulator:
             start_time (pk.epoch): start epoch of simulation.
             print_out (bool): print out some results for each step.
         """
-        self.print_out = print_out
 
         self.agent = agent
         self.env = environment
         self.start_time = self.env.state["epoch"]
         self.curr_time = self.start_time
-        self.last_update = -1
 
         self.vis = Visualizer()
         self.logger = logging.getLogger('simulator.Simulator')
+        self.print_out = print_out
 
     def run(self, end_time, step=0.001, visualize=True, reward_probability_update_step=10):
         """
@@ -196,18 +195,15 @@ class Simulator:
             for spaceObject in self.env.debris:
                 print(spaceObject.satellite)
 
-        self.update_reward_and_probability()
-
         while self.curr_time.mjd2000 <= end_time:
             self.env.propagate_forward(self.curr_time.mjd2000)
             if iteration % reward_probability_update_step == 0:
-                self.update_reward_and_probability()
+                self.env.get_reward()
 
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
                 s = self.env.get_state()
                 action = self.agent.get_action(s)
-                self.update_reward_and_probability()
-                r = self.env.reward
+                r = self.env.get_reward()
                 err = self.env.act(action)
                 if err:
                     self.log_bad_action(err, action)
@@ -223,8 +219,9 @@ class Simulator:
                 self.plot_debris()
                 self.vis.plot_earth()
                 self.vis.pause_and_clear()
+                # self.env.reward - reward without update
                 self.vis.plot_iteration(
-                    self.curr_time, self.last_update, self.env.reward, self.env.total_collision_probability)
+                    self.curr_time, self.env.last_r_p_update, self.env.reward, self.env.total_collision_probability)
 
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + step, "mjd2000")
@@ -232,35 +229,27 @@ class Simulator:
             if self.print_out:
 
                 print("\niteration:", iteration)
+                print("crit distance:", self.env.crit_distance)
                 print("min_distances_in_current_conjunction:",
                       self.env.min_distances_in_current_conjunction)
                 print("collision_probability_prior_to_current_conjunction:",
                       self.env.collision_probability_prior_to_current_conjunction)
                 print("danger debris in curr conj:",
-                      self.env.danger_debris_in_current_conjunction)
+                      self.env.dangerous_debris_in_current_conjunction)
 
                 print("total coll prob array:",
                       self.env.total_collision_probability_array)
                 print("total coll prob:",
                       self.env.total_collision_probability)
                 print("traj dev:", self.env.whole_trajectory_deviation)
+                # self.env.reward - reward without update
                 print("reward:", self.env.reward)
-
             iteration += 1
 
-        self.update_reward_and_probability()
         self.log_protected_position()
 
-        # TODO - whole reward
-        # TODO - probability of collision
-
         print("Simulation ended.\nCollision probability: {}.\nReward: {}.".format(
-            self.env.total_collision_probability, self.env.reward))
-
-    def update_reward_and_probability(self):
-        self.env.update_collision_probability()
-        self.env.update_reward()
-        self.last_update = self.env.state["epoch"]
+            self.env.get_collision_probability(), self.env.get_reward()))
 
     def log_protected_position(self):
         self.logger.info(strf_position(self.env.protected, self.curr_time))

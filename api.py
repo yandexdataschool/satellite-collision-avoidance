@@ -53,7 +53,7 @@ def rV2ocs(r0, r1, V0, V1):
 
     Returns:
         floats: dr, dn, db
-
+    TODO - remove
     """
     dr_vec = r0 - r1
     # orbital coordinate system
@@ -138,7 +138,7 @@ def coll_prob_estimation(rV0, rV1, d0=1., d1=1.,
     return probability
 
 
-def get_conjunction(st_r, debr_r, threshold_d=10000):
+def get_potentially_dangerous_debris(st_r, debr_r, threshold_d):
     """ Finding potentially dangerous debris, comparing the distance to them with the threshold.
 
     Args:
@@ -230,13 +230,15 @@ class Environment:
 
         self.whole_trajectory_deviation = 0.
         self.reward = 0.
+        # : epoch: Last reward and collision probability update.
+        self.last_r_p_update = None
 
-    def propagate_forward(self, end_time, auto_update_reward_probability=False):
+    def propagate_forward(self, end_time, update_r_p=True):
         """ Forward step.
 
         Args:
             end_time (float): end time for propagation as mjd2000.
-            auto_update_reward (bool):
+            update_r_p (bool):
                 True if reward and total probability are updated at the each step,
                 False if reward and total probability are updated only from outside.
 
@@ -282,9 +284,8 @@ class Environment:
                 epoch=epoch, fuel=self.protected.get_fuel()
             )
             self.update_distances_and_probabilities_prior_to_current_conjunction()
-            if auto_update_reward_probability:
-                self.update_collision_probability()
-                self.update_reward()
+            if update_r_p:
+                self.get_reward()
 
         return
 
@@ -292,7 +293,7 @@ class Environment:
         """ Update the distances and collision probabilities prior to current conjunction.
 
         """
-        new_dangerous_debris, new_distances_in_current_conjunction = get_conjunction(
+        new_dangerous_debris, new_distances_in_current_conjunction = get_potentially_dangerous_debris(
             self.state['coord']['st'][:, :3],
             self.state['coord']['debr'][:, :3],
             self.crit_distance
@@ -352,8 +353,8 @@ class Environment:
             for d in end_cojunction_debris:
                 del self.state_for_min_distances_in_current_conjunction[d]
 
-    def update_collision_probability(self):
-        """ Update the total collision probability.
+    def get_collision_probability(self):
+        """ Update and return total collision probability.
 
         """
         if self.dangerous_debris_in_current_conjunction.size:
@@ -375,11 +376,12 @@ class Environment:
             self.total_collision_probability = sum_coll_prob(
                 self.total_collision_probability_array
             )
-        return
 
-    def update_reward(self, coll_prob_C=10000., traj_C=1., fuel_C=1.,
-                      dangerous_prob=10e-4):
-        """ Update total reward from the environment state.
+        return self.total_collision_probability
+
+    def get_reward(self, coll_prob_C=10000., traj_C=1., fuel_C=1.,
+                   dangerous_prob=10e-4):
+        """ Update and return total reward from the environment state.
 
         Args:
             coll_prob_C, traj_C, fuel_C (float): constants for the singnificance regulation of reward components.
@@ -387,7 +389,7 @@ class Environment:
 
         """
         # reward components
-        coll_prob = self.total_collision_probability
+        coll_prob = self.get_collision_probability()
         ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
         # collision probability reward - some kind of ELU function
         # of collision probability
@@ -395,10 +397,11 @@ class Environment:
         traj_r = - traj_C * self.whole_trajectory_deviation
         fuel_r = fuel_C * self.protected.get_fuel()
 
-        # whole reward
+        # total reward
         # TODO - add weights to all reward components
         self.reward = (coll_prob_r + traj_r + fuel_r)
-        return
+        self.last_r_p_update = self.state["epoch"]
+        return self.reward
 
     def act(self, action):
         """ Change velocity for protected object.
