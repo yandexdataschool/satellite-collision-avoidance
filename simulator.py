@@ -146,10 +146,11 @@ class Visualizer:
         plt.pause(PAUSE_TIME)
         plt.cla()
 
-    def plot_iteration(self, epoch, last_update, reward, collision_prob):
-        s = 'Epoch: {}     Last Update: {}     R: {:.7}     Coll Prob: {:.5}'.format(
-            epoch, last_update, reward, collision_prob)
-        self.ax.text2D(-0.2, 1.1, s, transform=self.ax.transAxes)
+    def plot_iteration(self, epoch, reward, collision_prob, last_update):
+        s = '  Epoch: {}     R: {:.7}     Coll Prob: {:.5}\nUpdate: {}'.format(
+            epoch, reward, collision_prob, last_update)
+        self.ax.text2D(-0.3, 1.05, s, transform=self.ax.transAxes)
+        # self.ax.text2D(-0.2, 1.1, s, transform=self.ax.transAxes)
 
 
 class Simulator:
@@ -221,7 +222,7 @@ class Simulator:
                 self.vis.pause_and_clear()
                 # self.env.reward - reward without update
                 self.vis.plot_iteration(
-                    self.curr_time, self.env.last_r_p_update, self.env.reward, self.env.total_collision_probability)
+                    self.curr_time, self.env.reward, self.env.total_collision_probability, self.env.last_r_p_update)
 
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + step, "mjd2000")
