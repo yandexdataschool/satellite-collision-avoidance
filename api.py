@@ -144,19 +144,19 @@ def get_conjunction(st_r, debr_r, threshold_d=10000):
     Args:
         st_r (np.array with shape(1, 3)): satellite position (meters).
         debr_r (np.array with shape(n_denris, 3)): debris positions (meters).
-        threshold_d (float): distance danger threshold (meters).
+        threshold_d (float): dangerous distance threshold (meters).
 
     Returns:
-        distances (np.array): Euclidean distances for the each danger debris (meters).
-        danger_debris (np.array): danger debris indicies.
+        dangerous_debris (np.array): dangerous debris indicies.
+        distances (np.array): Euclidean distances for the each dangerous debris (meters).
 
     TODO:
         * add distance units and true threshold_d.
     """
     distances = np.linalg.norm(debr_r - st_r, axis=1)
-    danger_debris = np.where(distances <= threshold_d)[0]
-    distances = distances[danger_debris]
-    return distances, danger_debris
+    dangerous_debris = np.where(distances <= threshold_d)[0]
+    distances = distances[dangerous_debris]
+    return dangerous_debris, distances
 
 
 class Agent:
@@ -221,7 +221,7 @@ class Environment:
         self.min_distances_in_current_conjunction = np.full(
             (self.n_debris), np.nan)  # np.nan if not in conjunction.
         self.state_for_min_distances_in_current_conjunction = dict()
-        self.danger_debris_in_current_conjunction = np.array([])
+        self.dangerous_debris_in_current_conjunction = np.array([])
 
         self.collision_probability_prior_to_current_conjunction = np.zeros(
             self.n_debris)
@@ -292,24 +292,24 @@ class Environment:
         """ Update the distances and collision probabilities prior to current conjunction.
 
         """
-        new_distances_in_current_conjunction, new_danger_debris = get_conjunction(
+        new_dangerous_debris, new_distances_in_current_conjunction = get_conjunction(
             self.state['coord']['st'][:, :3],
             self.state['coord']['debr'][:, :3],
             self.crit_distance
         )
         end_cojunction_debris = np.setdiff1d(
-            self.danger_debris_in_current_conjunction,
-            new_danger_debris
+            self.dangerous_debris_in_current_conjunction,
+            new_dangerous_debris
         )  # the debris for which the conjunction has now ceased.
         new_cojunction_debris = np.setdiff1d(
-            new_danger_debris,
-            self.danger_debris_in_current_conjunction
+            new_dangerous_debris,
+            self.dangerous_debris_in_current_conjunction
         )
-        self.danger_debris_in_current_conjunction = new_danger_debris
+        self.dangerous_debris_in_current_conjunction = new_dangerous_debris
 
-        for_update_debris = new_danger_debris[np.logical_not(
+        for_update_debris = new_dangerous_debris[np.logical_not(
             new_distances_in_current_conjunction >
-            self.min_distances_in_current_conjunction[new_danger_debris]
+            self.min_distances_in_current_conjunction[new_dangerous_debris]
         )]
         """
         np.array: Debris (indices) which:
@@ -317,7 +317,7 @@ class Environment:
             have not been not in conjunction, but now are taken into account.
         """
 
-        # Update min distances and states for danger debris
+        # Update min distances and states for dangerous debris
         # in current conjunction.
         if for_update_debris.size:
             self.min_distances_in_current_conjunction[
@@ -356,19 +356,19 @@ class Environment:
         """ Update the total collision probability.
 
         """
-        if self.danger_debris_in_current_conjunction.size:
+        if self.dangerous_debris_in_current_conjunction.size:
             collision_probability_in_current_conjunction = np.array([
                 coll_prob_estimation(
                     self.state_for_min_distances_in_current_conjunction[d][0],
                     self.state_for_min_distances_in_current_conjunction[d][1],
                     self.st_d, self.debr_d[d], self.sigma
                 )
-                for d in self.danger_debris_in_current_conjunction
+                for d in self.dangerous_debris_in_current_conjunction
             ])
-            self.total_collision_probability_array[self.danger_debris_in_current_conjunction] = sum_coll_prob(
+            self.total_collision_probability_array[self.dangerous_debris_in_current_conjunction] = sum_coll_prob(
                 np.vstack([
                     self.collision_probability_prior_to_current_conjunction[
-                        self.danger_debris_in_current_conjunction],
+                        self.dangerous_debris_in_current_conjunction],
                     collision_probability_in_current_conjunction
                 ])
             )
@@ -378,12 +378,12 @@ class Environment:
         return
 
     def update_reward(self, coll_prob_C=10000., traj_C=1., fuel_C=1.,
-                      danger_prob=10e-4):
+                      dangerous_prob=10e-4):
         """ Update total reward from the environment state.
 
         Args:
             coll_prob_C, traj_C, fuel_C (float): constants for the singnificance regulation of reward components.
-            danger_prob (float): the threshold below which the probability is negligible.
+            dangerous_prob (float): the threshold below which the probability is negligible.
 
         """
         # reward components
@@ -391,7 +391,7 @@ class Environment:
         ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
         # collision probability reward - some kind of ELU function
         # of collision probability
-        coll_prob_r = -(ELU((coll_prob - danger_prob) * coll_prob_C) + 1)
+        coll_prob_r = -(ELU((coll_prob - dangerous_prob) * coll_prob_C) + 1)
         traj_r = - traj_C * self.whole_trajectory_deviation
         fuel_r = fuel_C * self.protected.get_fuel()
 
