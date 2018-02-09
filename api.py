@@ -214,9 +214,9 @@ class Environment:
         self.n_debris = len(debris)
         self.st_d = 1.  #: Satellite size (meters)
         self.debr_d = np.ones(self.n_debris)  #: Debris sizes (meters)
-        self.crit_distance = 50  #: Critical convergence distance (meters)
+        self.crit_distance = 50000  #: Critical convergence distance (meters)
         # TODO choose true sigma
-        self.sigma = 50000  #: Coordinates uncertainly (meters)
+        self.sigma = 500  #: Coordinates uncertainly (meters)
 
         self.min_distances_in_current_conjunction = np.full(
             (self.n_debris), np.nan)  # np.nan if not in conjunction.
