@@ -44,32 +44,6 @@ def sum_coll_prob(p, axis=0):
     return result
 
 
-def rV2ocs(r0, r1, V0, V1):
-    """ Convert cartesian coordinate system to orbital coordinate system.
-
-    Args:
-        r0, r1 (np.array([x,y,z])): coordinates (meters).
-        V0, V1 (np.array([Vx,Vy,Vz])): velocities (m/s).
-
-    Returns:
-        floats: dr, dn, db
-    TODO - remove
-    """
-    dr_vec = r0 - r1
-    # orbital coordinate system
-    i_r = dr_vec / np.linalg.norm(dr_vec)
-    i_b = dr_vec * V0
-    i_b = -i_b / np.linalg.norm(i_b)
-    i_n = i_r * i_b
-    i_n = -i_n / np.linalg.norm(i_n)
-
-    dr = np.dot(dr_vec, i_r)
-    dn = np.dot(dr_vec, i_n)
-    db = np.dot(dr_vec, i_b)
-
-    return dr, dn, db
-
-
 def TestProbability(p):
     # Value error
     if ((not isinstance(p, float)) & (not isinstance(p, int))):
@@ -89,8 +63,6 @@ def coll_prob_estimation(rV0, rV1, d0=1., d1=1.,
         d0, d1 (float, float): objects size (meters).
         sigma (float): standard deviation.
         approach (str): name of approach.
-            "Hutor" - Hutorovski approach suited for near circular orbits and
-                for convergence at a large angle.
             "normal" - assumption of coordinates are distributed normally
                 common empirical approach.
 
@@ -104,26 +76,9 @@ def coll_prob_estimation(rV0, rV1, d0=1., d1=1.,
 
     """
     probability = 1.
-    # TODO - remove
 
-    if approach == "Hutor":
-        # # V test
-        # if np.array_equal(V0, np.zeros(3)) | np.array_equal(V1, np.zeros(3)):
-        #     raise Exception("velocities are required for Hutorovski approach")
-        # # cosine of angle between velocities
-        # cos_vel_angle = (np.dot(V0, V1)
-        #                  / (np.linalg.norm(V0) * np.linalg.norm(V1)))
-        # dr, dn, db = rV2ocs(r0, r1, V0, V1)
-        # A = (
-        #     dr**2 / (4 * sigma**2)
-        #     + dn**2 / (2 * sigma**2)
-        #     + db**2 / (2 * sigma**2)
-        # )
-        # k = (
-        #     (d0 + d1)**2
-        #     / (sigma * (11 + 5 * sigma * cos_vel_angle**2))
-        # )
-        # probability = k * np.exp(-A)
+    if approach == "":
+
         pass
     elif approach == "normal":
         # TODO - truncated normal distribution?
@@ -138,7 +93,7 @@ def coll_prob_estimation(rV0, rV1, d0=1., d1=1.,
     return probability
 
 
-def get_potentially_dangerous_debris(st_r, debr_r, threshold_d):
+def get_dangerous_debris(st_r, debr_r, threshold_d):
     """ Finding potentially dangerous debris, comparing the distance to them with the threshold.
 
     Args:
@@ -294,7 +249,7 @@ class Environment:
         """ Update the distances and collision probabilities prior to current conjunction.
 
         """
-        new_curr_dangerous_debris, new_curr_dangerous_distances = get_potentially_dangerous_debris(
+        new_curr_dangerous_debris, new_curr_dangerous_distances = get_dangerous_debris(
             self.state['coord']['st'][:, :3],
             self.state['coord']['debr'][:, :3],
             self.crit_distance
@@ -361,8 +316,10 @@ class Environment:
         if self.dangerous_debris_in_current_conjunction.size:
             collision_probability_in_current_conjunction = np.array([
                 coll_prob_estimation(
-                    self.state_for_min_distances_in_current_conjunction[d][0],
-                    self.state_for_min_distances_in_current_conjunction[d][1],
+                    self.state_for_min_distances_in_current_conjunction[
+                        d][0],
+                    self.state_for_min_distances_in_current_conjunction[
+                        d][1],
                     self.st_d, self.debr_d[d], self.sigma
                 )
                 for d in self.dangerous_debris_in_current_conjunction
