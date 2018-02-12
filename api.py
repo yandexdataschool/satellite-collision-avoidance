@@ -63,6 +63,8 @@ def coll_prob_estimation(rV0, rV1, d0=1., d1=1.,
         d0, d1 (float, float): objects size (meters).
         sigma (float): standard deviation.
         approach (str): name of approach.
+            "ChenBai" - Lei Chen, Xian-Zong Bai, Yan-Gang Liang, Ke-Bo Li approach
+                from "Orbital Data Applications for Space Objects".
             "normal" - assumption of coordinates are distributed normally
                 common empirical approach.
 
@@ -72,14 +74,13 @@ def coll_prob_estimation(rV0, rV1, d0=1., d1=1.,
     Raises:
         ValueError: If any probability has incorrect value.
         TypeError: If any probability has incorrect type.
-        ValueError: If approach="Hutor" and V0=np.zeros(3), V1=np.zeros(3).
 
     """
     probability = 1.
 
-    if approach == "":
+    if approach == "ChenBai":
 
-        pass
+        probability
     elif approach == "normal":
         # TODO - truncated normal distribution?
         # TODO - multivariate normal distribution?
