@@ -35,7 +35,6 @@ def ChenBai_coll_prob_estimation(rV1=np.ones(6), rV2=np.ones(6),
                                  sigma_2N=1, sigma_2T=1, sigma_2W=1,
                                  cs_r1=100, cs_r2=0.1,
                                  test=False):
-    # TODO - check units - m, km, time
     if test:
         # collision cross-section radii of ISS and the debris
         r1 = np.array([3126018.8, 5227146.1, -2891302.9])  # meters
@@ -52,16 +51,9 @@ def ChenBai_coll_prob_estimation(rV1=np.ones(6), rV2=np.ones(6),
         sigma_1N = 554.8968
         sigma_1T = 6185.655
         sigma_1W = 1943.3925
-        sigma_2N = 0871.7616
+        sigma_2N = 871.7616
         sigma_2T = 12306.207
         sigma_2W = 921.0618
-
-        # sigma_1N = sigma_1N ** 0.5
-        # sigma_1T = sigma_1T ** 0.5
-        # sigma_1W = sigma_1W ** 0.5
-        # sigma_2N = sigma_2N ** 0.5
-        # sigma_2T = sigma_2T ** 0.5
-        # sigma_2W = sigma_2W ** 0.5
 
     # r and V
     r1_vec = rV1[:3]
@@ -111,6 +103,6 @@ def ChenBai_coll_prob_estimation(rV1=np.ones(6), rV2=np.ones(6),
         print("test passed")
         return
     return probability
-
+import unittest
 if __name__ == "__main__":
     ChenBai_coll_prob_estimation(test=True)
