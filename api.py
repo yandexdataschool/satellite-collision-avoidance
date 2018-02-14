@@ -61,31 +61,6 @@ class CollProbEstimation:
     def __init__(self):
         """"""
 
-    def norm_approach(self, rV1, rV2, sigma=50):
-        """ Returns probability of collision between two objects.
-
-        Args:
-            rV1, rV2 (np.array([x, y, z, Vx, Vy, Vz])): objects coordinates (meteres) and velocities (m/s).
-            d1, d2 (float, float): objects size (meters).
-            sigma (float): standard deviation.
-
-        Returns:
-            float: probability.
-
-        Raises:
-            ValueError: If any probability has incorrect value.
-            TypeError: If any probability has incorrect type.
-
-        """
-        probability = 1.
-        for c1, c2 in zip(rV1[:3], rV2[:3]):
-            av = (c1 + c2) / 2.
-            integtal = norm.cdf(av, loc=min(c1, c2), scale=sigma)
-            probability *= (1 - integtal) / integtal
-
-        TestProbability(probability)
-        return probability
-
     def ChenBai_approach(self, rV1, rV2,
                          cs_r1=100, cs_r2=0.1,
                          sigma_1N=50, sigma_1T=50, sigma_1W=50,
@@ -157,6 +132,31 @@ class CollProbEstimation:
         probability = np.exp(
             -0.5 * (mu_x**2 / sigma_x_square + mu_y**2 / sigma_y_square)
         ) * (1 - np.exp(-rA**2 / (2 * (sigma_x_square * sigma_y_square)**0.5)))
+
+        TestProbability(probability)
+        return probability
+
+    def norm_approach(self, rV1, rV2, sigma=50):
+        """ Returns probability of collision between two objects.
+
+        Args:
+            rV1, rV2 (np.array([x, y, z, Vx, Vy, Vz])): objects coordinates (meteres) and velocities (m/s).
+            d1, d2 (float, float): objects size (meters).
+            sigma (float): standard deviation.
+
+        Returns:
+            float: probability.
+
+        Raises:
+            ValueError: If any probability has incorrect value.
+            TypeError: If any probability has incorrect type.
+
+        """
+        probability = 1.
+        for c1, c2 in zip(rV1[:3], rV2[:3]):
+            av = (c1 + c2) / 2.
+            integtal = norm.cdf(av, loc=min(c1, c2), scale=sigma)
+            probability *= (1 - integtal) / integtal
 
         TestProbability(probability)
         return probability
