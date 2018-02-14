@@ -54,43 +54,112 @@ def TestProbability(p):
     return
 
 
-def coll_prob_estimation(rV0, rV1, d0=1., d1=1.,
-                         sigma=1., approach="normal"):
-    """ Returns probability of collision between two objects.
+class CollProbEstimation:
 
-    Args:
-        rV0, rV1 (np.array([x, y, z, Vx, Vy, Vz])): objects coordinates (meteres) and velocities(m/s).
-        d0, d1 (float, float): objects size (meters).
-        sigma (float): standard deviation.
-        approach (str): name of approach.
-            "normal" - assumption of coordinates are distributed normally
-                common empirical approach.
+    """ Estimate probability of collision between two objects. """
 
-    Returns:
-        float: probability.
+    def __init__(self):
+        """"""
 
-    Raises:
-        ValueError: If any probability has incorrect value.
-        TypeError: If any probability has incorrect type.
-        ValueError: If approach="Hutor" and V0=np.zeros(3), V1=np.zeros(3).
+    def ChenBai_approach(self, rV1, rV2,
+                         cs_r1=100, cs_r2=0.1,
+                         sigma_1N=50, sigma_1T=50, sigma_1W=50,
+                         sigma_2N=300, sigma_2T=300, sigma_2W=300):
+        """ Returns probability of collision between two objects.
 
-    """
-    probability = 1.
+        Lei Chen, Xian-Zong Bai, Yan-Gang Liang, Ke-Bo Li
+        closest approach between objects from "Orbital Data Applications for Space Objects".
 
-    if approach == "":
+        Args:
+            rV1, rV2 (np.array([x, y, z, Vx, Vy, Vz])): objects coordinates (meters) and velocities (m/s).
+            cs_r1, cs_r1 (float): objects cross-section radii (meters).
+            sigma_N, sigma_T, sigma_W (float): objects positional error standard deviations
+                in normal, tangential, cross-track direction (meters).
 
-        pass
-    elif approach == "normal":
-        # TODO - truncated normal distribution?
-        # TODO - multivariate normal distribution?
-        for c0, c1 in zip(rV0[:3], rV1[:3]):
-            av = (c0 + c1) / 2.
-            integtal = norm.cdf(av, loc=min(c0, c1), scale=sigma)
+        Note:
+            The default args imply the first object is protected satellite
+            and other is debris.
+
+        Returns:
+            float: probability.
+
+        Raises:
+            ValueError: If any probability has incorrect value.
+            TypeError: If any probability has incorrect type.
+
+        """
+
+        r1_vec = rV1[:3]
+        r2_vec = rV2[:3]
+        v1_vec = rV1[3:]
+        v2_vec = rV2[3:]
+
+        r1 = np.linalg.norm(r1_vec)
+        r2 = np.linalg.norm(r2_vec)
+        v1 = np.linalg.norm(v1_vec)
+        v2 = np.linalg.norm(v2_vec)
+        dr0_vec = r2_vec - r1_vec
+        dr0 = np.linalg.norm(dr0_vec)
+
+        rA = cs_r1 + cs_r2  # : Combined collision cross-section radii
+        miss_distance = dr0
+        nu = v2 / v1
+        # : The angle w between two velocities
+        psi = np.arccos(np.dot(v1_vec, v2_vec) / (v1 * v2))
+
+        temp = v1 * v2 * np.sin(psi)**2
+        t1_min = (nu * np.dot(dr0_vec, v1_vec) - np.cos(psi) *
+                  np.dot(dr0_vec, v2_vec)) / temp
+        t2_min = (np.cos(psi) * np.dot(dr0_vec, v1_vec) -
+                  np.dot(dr0_vec, v2_vec) / nu) / temp
+        #: Crossing time difference of the common perpendicular line (sec)
+        dt = abs(t2_min - t1_min)
+        #: The relative position vector at closest approach between orbits
+        dr_min_vec = dr0_vec + v2_vec * t2_min - v1_vec * t1_min
+        #: The closest approach distance between two straight line trajectories
+        dr_min = np.linalg.norm(dr_min_vec)
+        # Probability.
+        temp = 1 + nu**2 - 2 * nu * np.cos(psi)
+        mu_x = dr_min
+        mu_y = v2 * np.sin(psi) * dt / temp**0.5
+        sigma_x_square = sigma_1N**2 + sigma_2N**2
+        sigma_y_square = ((sigma_1T * nu * np.sin(psi))**2
+                          + ((1 - nu * np.cos(psi)) * sigma_1W)**2
+                          + (sigma_2T * np.sin(psi))**2
+                          + ((nu - np.cos(psi)) * sigma_2W)**2
+                          ) / temp
+
+        probability = np.exp(
+            -0.5 * (mu_x**2 / sigma_x_square + mu_y**2 / sigma_y_square)
+        ) * (1 - np.exp(-rA**2 / (2 * (sigma_x_square * sigma_y_square)**0.5)))
+
+        TestProbability(probability)
+        return probability
+
+    def norm_approach(self, rV1, rV2, sigma=50):
+        """ Returns probability of collision between two objects.
+
+        Args:
+            rV1, rV2 (np.array([x, y, z, Vx, Vy, Vz])): objects coordinates (meteres) and velocities (m/s).
+            d1, d2 (float, float): objects size (meters).
+            sigma (float): standard deviation.
+
+        Returns:
+            float: probability.
+
+        Raises:
+            ValueError: If any probability has incorrect value.
+            TypeError: If any probability has incorrect type.
+
+        """
+        probability = 1.
+        for c1, c2 in zip(rV1[:3], rV2[:3]):
+            av = (c1 + c2) / 2.
+            integtal = norm.cdf(av, loc=min(c1, c2), scale=sigma)
             probability *= (1 - integtal) / integtal
-    else:
-        raise Exception("unknown probability estimation approach:" + approach)
-    TestProbability(probability)
-    return probability
+
+        TestProbability(probability)
+        return probability
 
 
 def get_dangerous_debris(st_r, debr_r, threshold_d):
@@ -167,11 +236,11 @@ class Environment:
         self.next_action = pk.epoch(0, "mjd2000")
         self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
         self.n_debris = len(debris)
-        self.st_d = 1.  #: Satellite size (meters)
-        self.debr_d = np.ones(self.n_debris)  #: Debris sizes (meters)
+        self.st_cs_r = 100  #: Satellite cross-section radius (meters)
+        self.debr_cs_r = np.full(
+            (self.n_debris), 0.1)  #: Debris cross-section radii (meters)
         self.crit_distance = 50000  #: Critical convergence distance (meters)
-        # TODO choose true sigma
-        self.sigma = 500  #: Coordinates uncertainly (meters)
+        self.collision_probability_estimator = CollProbEstimation()
 
         self.min_distances_in_current_conjunction = np.full(
             (self.n_debris), np.nan)  # np.nan if not in conjunction.
@@ -185,7 +254,7 @@ class Environment:
 
         self.whole_trajectory_deviation = 0.
         self.reward = 0.
-        # : epoch: Last reward and collision probability update.
+        # : epoch: Last reward and collision probability update
         self.last_r_p_update = None
         self.pf_iteration = 0  # int: propagate forward iteration
 
@@ -290,10 +359,10 @@ class Environment:
         # Update collision probability prior to current conjunction.
         if end_cojunction_debris.size:
             coll_prob = np.array([
-                coll_prob_estimation(
+                self.collision_probability_estimator.ChenBai_approach(
                     self.state_for_min_distances_in_current_conjunction[d][0],
                     self.state_for_min_distances_in_current_conjunction[d][1],
-                    self.st_d, self.debr_d[d], self.sigma
+                    self.st_cs_r, self.debr_cs_r[d]
                 )
                 for d in end_cojunction_debris
             ])
@@ -315,12 +384,12 @@ class Environment:
         """
         if self.dangerous_debris_in_current_conjunction.size:
             collision_probability_in_current_conjunction = np.array([
-                coll_prob_estimation(
+                self.collision_probability_estimator.ChenBai_approach(
                     self.state_for_min_distances_in_current_conjunction[
                         d][0],
                     self.state_for_min_distances_in_current_conjunction[
                         d][1],
-                    self.st_d, self.debr_d[d], self.sigma
+                    self.st_cs_r, self.debr_cs_r[d]
                 )
                 for d in self.dangerous_debris_in_current_conjunction
             ])
