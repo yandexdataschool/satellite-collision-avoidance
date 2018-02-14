@@ -61,7 +61,7 @@ class CollProbEstimation:
     def __init__(self):
         """"""
 
-    def norm_approach(self, rV1, rV2, sigma=10.):
+    def norm_approach(self, rV1, rV2, sigma=50):
         """ Returns probability of collision between two objects.
 
         Args:
@@ -359,10 +359,10 @@ class Environment:
         # Update collision probability prior to current conjunction.
         if end_cojunction_debris.size:
             coll_prob = np.array([
-                self.collision_probability_estimator.norm_approach(
+                self.collision_probability_estimator.ChenBai_approach(
                     self.state_for_min_distances_in_current_conjunction[d][0],
                     self.state_for_min_distances_in_current_conjunction[d][1],
-                    # self.st_cs_r, self.debr_cs_r[d]
+                    self.st_cs_r, self.debr_cs_r[d]
                 )
                 for d in end_cojunction_debris
             ])
@@ -384,12 +384,12 @@ class Environment:
         """
         if self.dangerous_debris_in_current_conjunction.size:
             collision_probability_in_current_conjunction = np.array([
-                self.collision_probability_estimator.norm_approach(
+                self.collision_probability_estimator.ChenBai_approach(
                     self.state_for_min_distances_in_current_conjunction[
                         d][0],
                     self.state_for_min_distances_in_current_conjunction[
                         d][1],
-                    # self.st_d, self.debr_d[d], self.sigma
+                    self.st_cs_r, self.debr_cs_r[d]
                 )
                 for d in self.dangerous_debris_in_current_conjunction
             ])
