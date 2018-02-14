@@ -61,7 +61,7 @@ class CollProbEstimation:
     def __init__(self):
         """"""
 
-    def norm_approach(self, rV1, rV2, d1=1., d2=1., sigma=10.):
+    def norm_approach(self, rV1, rV2, sigma=10.):
         """ Returns probability of collision between two objects.
 
         Args:
@@ -236,12 +236,11 @@ class Environment:
         self.next_action = pk.epoch(0, "mjd2000")
         self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
         self.n_debris = len(debris)
-        self.st_d = 1.  #: Satellite size (meters)
-        self.debr_d = np.ones(self.n_debris)  #: Debris sizes (meters)
+        self.st_cs_r = 100  #: Satellite cross-section radius (meters)
+        self.debr_cs_r = np.full(
+            (self.n_debris), 0.1)  #: Debris cross-section radii (meters)
         self.crit_distance = 50000  #: Critical convergence distance (meters)
-        # TODO choose true sigma
         self.collision_probability_estimator = CollProbEstimation()
-        self.sigma = 500  #: Coordinates uncertainly (meters)
 
         self.min_distances_in_current_conjunction = np.full(
             (self.n_debris), np.nan)  # np.nan if not in conjunction.
@@ -363,7 +362,7 @@ class Environment:
                 self.collision_probability_estimator.norm_approach(
                     self.state_for_min_distances_in_current_conjunction[d][0],
                     self.state_for_min_distances_in_current_conjunction[d][1],
-                    self.st_d, self.debr_d[d], self.sigma
+                    # self.st_cs_r, self.debr_cs_r[d]
                 )
                 for d in end_cojunction_debris
             ])
@@ -390,7 +389,7 @@ class Environment:
                         d][0],
                     self.state_for_min_distances_in_current_conjunction[
                         d][1],
-                    self.st_d, self.debr_d[d], self.sigma
+                    # self.st_d, self.debr_d[d], self.sigma
                 )
                 for d in self.dangerous_debris_in_current_conjunction
             ])
