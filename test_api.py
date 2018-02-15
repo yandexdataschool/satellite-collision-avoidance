@@ -10,14 +10,6 @@ from api import MAX_PROPAGATION_STEP, MAX_FUEL_CONSUMPTION
 from api import CollProbEstimation
 
 
-def CheckValue(result, true, deviation=0.01):
-    l = true * (1 - deviation)
-    r = true * (1 + deviation)
-    if (result < l) | (result > r):
-        return False
-    return True
-
-
 class TestBasicFunctions(unittest.TestCase):
 
     def setUp(self):
@@ -79,15 +71,13 @@ class TestCollProbEstimation(unittest.TestCase):
         sigma_2N = 871.7616
         sigma_2T = 12306.207
         sigma_2W = 921.0618
-
         probability = estimator.ChenBai_approach(
             rV1, rV2,
             cs_r1, cs_r2,
             sigma_1N, sigma_1T, sigma_1W,
             sigma_2N, sigma_2T, sigma_2W
         )
-
-        self.assertTrue(CheckValue(probability, 4.749411e-5))
+        self.assertAlmostEqual(probability, 4.749411e-5)
 
 
 class TestEnvironment(unittest.TestCase):

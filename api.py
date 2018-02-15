@@ -44,16 +44,6 @@ def sum_coll_prob(p, axis=0):
     return result
 
 
-def TestProbability(p):
-    # Value error
-    if ((not isinstance(p, float)) & (not isinstance(p, int))):
-        raise TypeError("incorrect probability type: " +
-                        str(p) + " " + str(type(p)))
-    if ((p > 1) | (p < 0)):
-        raise ValueError("incorrect probability value: " + str(p))
-    return
-
-
 class CollProbEstimation:
 
     """ Estimate probability of collision between two objects. """
@@ -133,7 +123,6 @@ class CollProbEstimation:
             -0.5 * (mu_x**2 / sigma_x_square + mu_y**2 / sigma_y_square)
         ) * (1 - np.exp(-rA**2 / (2 * (sigma_x_square * sigma_y_square)**0.5)))
 
-        TestProbability(probability)
         return probability
 
     def norm_approach(self, rV1, rV2, sigma=50):
@@ -158,27 +147,26 @@ class CollProbEstimation:
             integtal = norm.cdf(av, loc=min(c1, c2), scale=sigma)
             probability *= (1 - integtal) / integtal
 
-        TestProbability(probability)
         return probability
 
 
-def get_dangerous_debris(st_r, debr_r, threshold_d):
+def get_dangerous_debris(st_r, debr_r, crit_distance):
     """ Finding potentially dangerous debris, comparing the distance to them with the threshold.
 
     Args:
         st_r (np.array with shape(1, 3)): satellite position (meters).
         debr_r (np.array with shape(n_denris, 3)): debris positions (meters).
-        threshold_d (float): dangerous distance threshold (meters).
+        crit_distance (float): dangerous distance threshold (meters).
 
     Returns:
         dangerous_debris (np.array): dangerous debris indicies.
         distances (np.array): Euclidean distances for the each dangerous debris (meters).
 
     TODO:
-        * add distance units and true threshold_d.
+        * add distance units and true crit_distance.
     """
     distances = np.linalg.norm(debr_r - st_r, axis=1)
-    dangerous_debris = np.where(distances <= threshold_d)[0]
+    dangerous_debris = np.where(distances <= crit_distance)[0]
     distances = distances[dangerous_debris]
     return dangerous_debris, distances
 
@@ -256,7 +244,9 @@ class Environment:
         self.reward = 0.
         # : epoch: Last reward and collision probability update
         self.last_r_p_update = None
-        self.pf_iteration = 0  # int: propagate forward iteration
+        # : int: number of propagate forward iterations
+        # since last update collision probability and reward.
+        self.pf_iterations_since_update = 0
 
     def propagate_forward(self, end_time, update_r_p_step=20):
         """ Forward step.
@@ -308,11 +298,10 @@ class Environment:
             )
             self.update_distances_and_probabilities_prior_to_current_conjunction()
 
-        if self.pf_iteration % update_r_p_step == 0:
-            self.get_reward()
-        self.pf_iteration += 1
+        self.pf_iterations_since_update += 1
 
-        return
+        if self.pf_iterations_since_update == update_r_p_step:
+            self.get_reward()
 
     def update_distances_and_probabilities_prior_to_current_conjunction(self):
         """ Update the distances and collision probabilities prior to current conjunction.
@@ -430,6 +419,7 @@ class Environment:
         # TODO - add weights to all reward components
         self.reward = (coll_prob_r + traj_r + fuel_r)
         self.last_r_p_update = self.state["epoch"]
+        self.pf_iterations_since_update = 0
         return self.reward
 
     def act(self, action):
