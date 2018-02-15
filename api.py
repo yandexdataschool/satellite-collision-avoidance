@@ -16,6 +16,7 @@ from scipy.stats import norm
 
 MAX_PROPAGATION_STEP = 0.000001  # equal to 0.0864 sc.
 MAX_FUEL_CONSUMPTION = 10
+epsilon = 10e-7
 
 
 def fuel_consumption(dV):
@@ -99,8 +100,9 @@ class CollProbEstimation:
             psi = 0
         else:
             psi = np.arccos(np.dot(v1_vec, v2_vec) / (v1 * v2))
-
         temp = v1 * v2 * np.sin(psi)**2
+        if temp == 0:
+            temp += epsilon
         t1_min = (nu * np.dot(dr0_vec, v1_vec) - np.cos(psi) *
                   np.dot(dr0_vec, v2_vec)) / temp
         t2_min = (np.cos(psi) * np.dot(dr0_vec, v1_vec) -
@@ -113,6 +115,8 @@ class CollProbEstimation:
         dr_min = np.linalg.norm(dr_min_vec)
         # Probability.
         temp = 1 + nu**2 - 2 * nu * np.cos(psi)
+        if temp == 0:
+            temp += epsilon
         mu_x = dr_min
         mu_y = v2 * np.sin(psi) * dt / temp**0.5
         sigma_x_square = sigma_1N**2 + sigma_2N**2
@@ -121,11 +125,13 @@ class CollProbEstimation:
                           + (sigma_2T * np.sin(psi))**2
                           + ((nu - np.cos(psi)) * sigma_2W)**2
                           ) / temp
-
+        if sigma_x_square == 0:
+            sigma_x_square += epsilon
+        if sigma_y_square == 0:
+            sigma_y_square += epsilon
         probability = np.exp(
             -0.5 * (mu_x**2 / sigma_x_square + mu_y**2 / sigma_y_square)
         ) * (1 - np.exp(-rA**2 / (2 * (sigma_x_square * sigma_y_square)**0.5)))
-
         return probability
 
     def norm_approach(self, rV1, rV2, sigma=50):
