@@ -8,17 +8,6 @@ from api import Environment, SpaceObject
 from api import fuel_consumption, sum_coll_prob
 from api import MAX_PROPAGATION_STEP, MAX_FUEL_CONSUMPTION
 from api import CollProbEstimation
-<< << << < HEAD
-== == == =
-
-
-def CheckValue(result, true, deviation=0.01):
-    l = true * (1 - deviation)
-    r = true * (1 + deviation)
-    if (result < l) | (result > r):
-        return False
-    return True
->>>>>> > 7c0ba7b66e7d0c6fe44a087b346a0e53ee168058
 
 
 class TestBasicFunctions(unittest.TestCase):
