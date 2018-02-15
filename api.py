@@ -95,7 +95,7 @@ class CollProbEstimation:
         miss_distance = dr0
         nu = v2 / v1
         # : The angle w between two velocities
-        if v1_vec == v2_vec:
+        if np.array_equal(v1_vec, v2_vec):
             psi = 0
         else:
             psi = np.arccos(np.dot(v1_vec, v2_vec) / (v1 * v2))
