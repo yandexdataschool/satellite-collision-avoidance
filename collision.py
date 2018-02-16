@@ -6,7 +6,7 @@ import sys
 
 from simulator import Simulator, read_space_objects
 from api import Environment
-from agent import Agent
+from agent import TableAgent as Agent
 
 import pykep as pk
 
