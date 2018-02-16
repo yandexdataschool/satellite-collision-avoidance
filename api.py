@@ -16,7 +16,6 @@ from scipy.stats import norm
 
 MAX_PROPAGATION_STEP = 0.000001  # equal to 0.0864 sc.
 MAX_FUEL_CONSUMPTION = 10
-epsilon = 10e-7
 
 
 def fuel_consumption(dV):
@@ -92,14 +91,15 @@ class CollProbEstimation:
         dr0_vec = r2_vec - r1_vec
         dr0 = np.linalg.norm(dr0_vec)
 
-        rA = cs_r1 + cs_r2  # : Combined collision cross-section radii
+        rA = cs_r1 + cs_r2  #: Combined collision cross-section radii
         miss_distance = dr0
         nu = v2 / v1
-        # : The angle w between two velocities
+        #: The angle w between two velocities
         if np.array_equal(v1_vec, v2_vec):
             psi = 0
         else:
             psi = np.arccos(np.dot(v1_vec, v2_vec) / (v1 * v2))
+        epsilon = 10e-7
         temp = v1 * v2 * np.sin(psi)**2
         if temp == 0:
             temp += epsilon
