@@ -121,7 +121,12 @@ class TestEnvironment(unittest.TestCase):
             self.assertEqual(env.state["epoch"].mjd2000, end_time)
             env = Environment(self.protected, [], self.start_time)
 
-    def test_update_collision_probability(self):
+    def test_update_distances_and_probabilities_prior_to_current_conjunction(self):
+        env = Environment(self.protected, [], self.start_time)
+
+        self.assertTrue(True)
+
+    def test_get_collision_probability(self):
         # TODO: implement test after new approach will be added.
         self.assertTrue(True)
 

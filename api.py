@@ -62,7 +62,7 @@ class CollProbEstimation:
 
         Args:
             rV1, rV2 (np.array([x, y, z, Vx, Vy, Vz])): objects coordinates (meters) and velocities (m/s).
-            cs_r1, cs_r1 (float): objects cross-section radii (meters).
+            cs_r1, cs_r2 (float): objects cross-section radii (meters).
             sigma_N, sigma_T, sigma_W (float): objects positional error standard deviations
                 in normal, tangential, cross-track direction (meters).
 
@@ -230,12 +230,11 @@ class Environment:
         """
         self.protected = protected
         self.debris = debris
+        self.protected_r = protected.get_radius()
+        self.debris_r = np.array([d.get_radius() for d in debris])
         self.next_action = pk.epoch(0, "mjd2000")
         self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
         self.n_debris = len(debris)
-        self.st_cs_r = 100  #: Satellite cross-section radius (meters)
-        self.debr_cs_r = np.full(
-            (self.n_debris), 0.1)  #: Debris cross-section radii (meters)
         self.crit_distance = 50000  #: Critical convergence distance (meters)
         self.collision_probability_estimator = CollProbEstimation()
 
@@ -360,7 +359,7 @@ class Environment:
                 self.collision_probability_estimator.ChenBai_approach(
                     self.state_for_min_distances_in_current_conjunction[d][0],
                     self.state_for_min_distances_in_current_conjunction[d][1],
-                    self.st_cs_r, self.debr_cs_r[d]
+                    self.protected_r, self.debris_r[d]
                 )
                 for d in end_cojunction_debris
             ])
@@ -387,7 +386,7 @@ class Environment:
                         d][0],
                     self.state_for_min_distances_in_current_conjunction[
                         d][1],
-                    self.st_cs_r, self.debr_cs_r[d]
+                    self.protected_r, self.debris_r[d]
                 )
                 for d in self.dangerous_debris_in_current_conjunction
             ])
@@ -566,3 +565,6 @@ class SpaceObject:
 
     def get_fuel(self):
         return self.fuel
+
+    def get_radius(self):
+        return self.satellite.radius
