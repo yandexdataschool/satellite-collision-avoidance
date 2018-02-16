@@ -122,8 +122,7 @@ class TestEnvironment(unittest.TestCase):
             env = Environment(self.protected, [], self.start_time)
 
     def test_update_distances_and_probabilities_prior_to_current_conjunction(self):
-        env = Environment(self.protected, [], self.start_time)
-
+        # TODO: implement test after new approach will be added.
         self.assertTrue(True)
 
     def test_get_collision_probability(self):

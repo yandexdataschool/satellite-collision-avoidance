@@ -5,7 +5,8 @@ import argparse
 import sys
 
 from simulator import Simulator, read_space_objects
-from api import Agent, Environment
+from api import Environment
+from agent import Agent
 
 import pykep as pk
 
