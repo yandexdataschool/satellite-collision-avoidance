@@ -12,13 +12,13 @@ class TableAgent:
 
     """
 
-    def __init__(self, table_path="data/actions_table.csv"):
+    def __init__(self, table_path="data/action_table.csv"):
         """
         Args:
             table_path (str): path to table of actions (.csv).
 
         """
-        self.table = pd.read_csv(table_path, index_col=0).values
+        self.action_table = pd.read_csv(table_path, index_col=0).values
 
     def get_action(self, state):
         """ Provides action for protected object.
@@ -44,11 +44,11 @@ class TableAgent:
         dVx, dVy, dVz = 0, 0, 0
         # print(epoch)
         # action = np.array([0, 0, 0, epoch, 0])  #: default action
-        # if self.table.size:
-        #     if (epoch >= self.table[0, 0]):
+        # if self.action_table.size:
+        #     if (epoch >= self.action_table[0, 0]):
         #         action = np.hstack(
-        #             [self.table[0, 1:], epoch, 0])
+        #             [self.action_table[0, 1:], epoch, 0])
         #         print("maneuver!:", action)
-        #         self.table = np.delete(self.table, 0, axis=0)
+        #         self.action_table = np.delete(self.action_table, 0, axis=0)
         action = np.array([dVx, dVy, dVz, epoch, time_to_req])
         return action
