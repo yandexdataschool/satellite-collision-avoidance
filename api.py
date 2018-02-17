@@ -396,14 +396,13 @@ class Environment:
     def act(self, action):
         """ Change velocity for protected object.
         Args:
-            action (np.array([dVx, dVy, dVz, pk.epoch, time_to_req])):
+            action (np.array([dVx, dVy, dVz, time_to_req])):
                 vector of velocity deltas for protected object (m/s),
-                maneuver time (mjd2000) and step in time
-                when to request the next action (mjd2000).
+                step in time when to request the next action (mjd2000).
         """
         self.next_action = pk.epoch(
-            self.state["epoch"].mjd2000 + float(action[4]), "mjd2000")
-        error, fuel_cons = self.protected.maneuver(action[:4])
+            self.state["epoch"].mjd2000 + float(action[3]), "mjd2000")
+        error, fuel_cons = self.protected.maneuver(action[:3], self.state["epoch"])
         if not error:
             self.state["fuel"] -= fuel_cons
         return error
@@ -482,11 +481,12 @@ class SpaceObject:
         else:
             raise ValueError("Unknown initial parameteres type")
 
-    def maneuver(self, action):
+    def maneuver(self, action, t_man):
         """ Make manoeuvre for the object.
         Args:
-            action (np.array([dVx, dVy, dVz, pk.epoch])): vector of velocity
-                deltas for protected object and maneuver time (m/s).
+            action (np.array([dVx, dVy, dVz])): vector of velocity
+                deltas for protected object (m/s).
+            t_man (pk.epoch): maneuver time.
         Returns:
             (string): empty string if action is successfully made by satellite,
                 error message otherwise.
@@ -499,7 +499,6 @@ class SpaceObject:
         elif fuel_cons > self.fuel:
             return "requested action exceeds fuel amount in the satellite.", 0
 
-        t_man = pk.epoch(float(action[3]), "mjd2000")
         pos, vel = self.position(t_man)
         new_vel = list(np.array(vel) + dV)
 

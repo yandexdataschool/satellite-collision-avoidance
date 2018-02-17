@@ -262,7 +262,7 @@ class Simulator:
             iteration,  self.curr_time, self.env.total_collision_probability))
 
     def log_reward_action(self, iteration, reward, action):
-        self.logger.info("Iter: {} \tReward: {} \taction: (dVx:{}, dVy: {}, dVz: {}, epoch: {}, time_to_request: {})".format(
+        self.logger.info("Iter: {} \tReward: {} \taction: (dVx:{}, dVy: {}, dVz: {}, time_to_request: {})".format(
             iteration, reward, *action))
 
     def log_bad_action(self, message, action):
