@@ -5,8 +5,9 @@ import pykep as pk
 import numpy as np
 
 from api import Environment, SpaceObject
-from api import fuel_consumption, sum_coll_prob
+from api import fuel_consumption, sum_coll_prob, get_dangerous_debris
 from api import MAX_PROPAGATION_STEP, MAX_FUEL_CONSUMPTION
+from api import CollProbEstimation
 
 
 class TestBasicFunctions(unittest.TestCase):
@@ -44,13 +45,50 @@ class TestBasicFunctions(unittest.TestCase):
         for axis, want in zip(axises, wants):
             self.assertTrue(np.allclose(sum_coll_prob(p, axis=axis), want))
 
-    def test_coll_prob_estimation(self):
-        # TODO: implement test after new approach will be added.
-        self.assertTrue(True)
-
     def test_danger_debr_and_collision_prob(self):
-        # TODO: implement test after new approach will be added.
-        self.assertTrue(True)
+        satellite_r = np.array([[100, 100, -100]])
+        debris_r = np.array([
+            [100, 100, -100],
+            [120, 100, -100],
+            [120, 120, -120],
+        ])
+        crit_distance = 30
+        want_debr, want_dist = ([0, 1], [0, 20])
+        dangerous_debris, distances = get_dangerous_debris(
+            satellite_r, debris_r, crit_distance)
+        self.assertTrue(np.array_equal(dangerous_debris, want_debr))
+        self.assertTrue(np.array_equal(distances, want_dist))
+
+
+class TestCollProbEstimation(unittest.TestCase):
+
+    def test_ChenBai_approach(self):
+        estimator = CollProbEstimation()
+        # collision cross-section radii of ISS and the debris
+        rV1 = np.array([
+            3126018.8, 5227146.1, -2891302.9, -3298.0, 4758.7, 5054.3
+        ])  # meters, m/s
+        rV2 = np.array([
+            3124368.5, 5226004.2, -2889944.6, -7772.6, 1930.8, -2758.0
+        ])  # meters, m/s
+        # sizes
+        cs_r1 = 100  # meters
+        cs_r2 = 0.13  # meters
+        # sigma/ meters
+        sigma_1N = 554.8968
+        sigma_1T = 6185.655
+        sigma_1W = 1943.3925
+        sigma_2N = 871.7616
+        sigma_2T = 12306.207
+        sigma_2W = 921.0618
+        probability = estimator.ChenBai_approach(
+            rV1, rV2,
+            cs_r1, cs_r2,
+            sigma_1N, sigma_1T, sigma_1W,
+            sigma_2N, sigma_2T, sigma_2W
+        )
+        self.assertAlmostEqual(probability, 4.749411e-5)
+        self.assertEqual(1, estimator.ChenBai_approach(np.ones(6), np.ones(6)))
 
 
 class TestEnvironment(unittest.TestCase):
@@ -83,7 +121,12 @@ class TestEnvironment(unittest.TestCase):
             self.assertEqual(env.state["epoch"].mjd2000, end_time)
             env = Environment(self.protected, [], self.start_time)
 
-    def test_update_collision_probability(self):
+    def test_update_distances_and_probabilities_prior_to_current_conjunction(self):
+        env = Environment(self.protected, [], self.start_time)
+
+        self.assertTrue(True)
+
+    def test_get_collision_probability(self):
         # TODO: implement test after new approach will be added.
         self.assertTrue(True)
 

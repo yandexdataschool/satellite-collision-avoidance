@@ -146,10 +146,11 @@ class Visualizer:
         plt.pause(PAUSE_TIME)
         plt.cla()
 
-    def plot_iteration(self, epoch, reward, collision_prob):
-        s = 'Epoch: {}     R: {:.7}     Coll Prob: {:.5}'.format(
-            epoch, reward, collision_prob)
-        self.ax.text2D(-0.2, 1.1, s, transform=self.ax.transAxes)
+    def plot_iteration(self, epoch, reward, collision_prob, last_update):
+        s = '  Epoch: {}     R: {:.7}     Coll Prob: {:.5}\nUpdate: {}'.format(
+            epoch, reward, collision_prob, last_update)
+        self.ax.text2D(-0.3, 1.05, s, transform=self.ax.transAxes)
+        # self.ax.text2D(-0.2, 1.1, s, transform=self.ax.transAxes)
 
 
 class Simulator:
@@ -165,7 +166,6 @@ class Simulator:
             start_time (pk.epoch): start epoch of simulation.
             print_out (bool): print out some results for each step.
         """
-        self.print_out = print_out
 
         self.agent = agent
         self.env = environment
@@ -174,6 +174,7 @@ class Simulator:
 
         self.vis = Visualizer()
         self.logger = logging.getLogger('simulator.Simulator')
+        self.print_out = print_out
 
     def run(self, end_time, step=0.001, visualize=True):
         """
@@ -183,7 +184,6 @@ class Simulator:
             visualize (bool): whether show the simulation or not.
         """
         iteration = 0
-
         if visualize:
             self.vis.run()
 
@@ -202,7 +202,7 @@ class Simulator:
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
                 s = self.env.get_state()
                 action = self.agent.get_action(s)
-                r = self.env.reward
+                r = self.env.get_reward()
                 err = self.env.act(action)
                 if err:
                     self.log_bad_action(err, action)
@@ -218,33 +218,37 @@ class Simulator:
                 self.plot_debris()
                 self.vis.plot_earth()
                 self.vis.pause_and_clear()
+                # self.env.reward - reward without update
                 self.vis.plot_iteration(
-                    self.curr_time, self.env.reward, self.env.total_collision_probability)
+                    self.curr_time, self.env.reward, self.env.total_collision_probability, self.env.last_r_p_update)
 
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + step, "mjd2000")
 
             if self.print_out:
+
                 print("\niteration:", iteration)
-                print("coll prob in current conjunct:",
-                      self.env.collision_probability_in_current_conjunction)
-                print("coll prob prior current conjunct:",
+                print("crit distance:", self.env.crit_distance)
+                print("min_distances_in_current_conjunction:",
+                      self.env.min_distances_in_current_conjunction)
+                print("collision_probability_prior_to_current_conjunction:",
                       self.env.collision_probability_prior_to_current_conjunction)
-                print("total coll prob dict:",
+                print("danger debris in curr conj:",
+                      self.env.dangerous_debris_in_current_conjunction)
+
+                print("total coll prob array:",
                       self.env.total_collision_probability_array)
                 print("total coll prob:",
                       self.env.total_collision_probability)
+                print("traj dev:", self.env.whole_trajectory_deviation)
+                # self.env.reward - reward without update
                 print("reward:", self.env.reward)
-
             iteration += 1
 
         self.log_protected_position()
 
-        # TODO - whole reward
-        # TODO - probability of collision
-
         print("Simulation ended.\nCollision probability: {}.\nReward: {}.".format(
-            self.env.total_collision_probability, self.env.reward))
+            self.env.get_collision_probability(), self.env.get_reward()))
 
     def log_protected_position(self):
         self.logger.info(strf_position(self.env.protected, self.curr_time))

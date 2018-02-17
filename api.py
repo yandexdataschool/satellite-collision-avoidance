@@ -18,26 +18,6 @@ MAX_PROPAGATION_STEP = 0.000001  # equal to 0.0864 sc.
 MAX_FUEL_CONSUMPTION = 10
 
 
-def euclidean_distance(r_main, r_other, rev_sort=True):
-    """Euclidean distances calculation.
-
-    Args:
-        r_main (np.array with shape=(1, 3)): xyz coordinates of main object.
-        r_other (np.array with shape=(n_objects, 3)): xyz coordinates of other objects.
-        rev_sort (bool): True for reverse sorted distances array, False for not sorted one.
-
-    Returns:
-        distances (np.array with shape=(n_objects)): Euclidean distances between main object and the others.
-
-    """
-    distances = np.sum(
-        (r_main - r_other) ** 2,
-        axis=1) ** 0.5
-    if rev_sort:
-        distances = np.sort(distances)[::-1]
-    return distances
-
-
 def fuel_consumption(dV):
     """ Provide the value of fuel consumption for given velocity delta.
 
@@ -64,132 +44,140 @@ def sum_coll_prob(p, axis=0):
     return result
 
 
-def rV2ocs(r0, r1, V0, V1):
-    """ Convert cartesian coordinate system to orbital coordinate system.
+class CollProbEstimation:
 
-    Args:
-        r0, r1 (np.array([x,y,z])): coordinates (meters).
-        V0, V1 (np.array([Vx,Vy,Vz])): velocities (m/s).
+    """ Estimate probability of collision between two objects. """
 
-    Returns:
-        floats: dr, dn, db
+    def __init__(self):
+        """"""
 
-    """
-    dr_vec = r0 - r1
-    # orbital coordinate system
-    i_r = dr_vec / np.linalg.norm(dr_vec)
-    i_b = dr_vec * V0
-    i_b = -i_b / np.linalg.norm(i_b)
-    i_n = i_r * i_b
-    i_n = -i_n / np.linalg.norm(i_n)
+    def ChenBai_approach(self, rV1, rV2,
+                         cs_r1=100, cs_r2=0.1,
+                         sigma_1N=50, sigma_1T=50, sigma_1W=50,
+                         sigma_2N=300, sigma_2T=300, sigma_2W=300):
+        """ Returns probability of collision between two objects.
 
-    dr = np.dot(dr_vec, i_r)
-    dn = np.dot(dr_vec, i_n)
-    db = np.dot(dr_vec, i_b)
+        Lei Chen, Xian-Zong Bai, Yan-Gang Liang, Ke-Bo Li
+        closest approach between objects from "Orbital Data Applications for Space Objects".
 
-    return dr, dn, db
+        Args:
+            rV1, rV2 (np.array([x, y, z, Vx, Vy, Vz])): objects coordinates (meters) and velocities (m/s).
+            cs_r1, cs_r2 (float): objects cross-section radii (meters).
+            sigma_N, sigma_T, sigma_W (float): objects positional error standard deviations
+                in normal, tangential, cross-track direction (meters).
 
+        Note:
+            The default args imply the first object is protected satellite
+            and other is debris.
 
-def TestProbability(p):
-    # Value error
-    if ((not isinstance(p, float)) & (not isinstance(p, int))):
-        raise TypeError("incorrect probability type: " +
-                        str(p) + " " + str(type(p)))
-    if ((p > 1) | (p < 0)):
-        raise ValueError("incorrect probability value: " + str(p))
-    return
+        Returns:
+            float: probability.
 
+        Raises:
+            ValueError: If any probability has incorrect value.
+            TypeError: If any probability has incorrect type.
 
-def coll_prob_estimation(r0, r1, V0=np.zeros(3), V1=np.zeros(3), d0=1, d1=1,
-                         sigma=1., approach="normal"):
-    """ Returns probability of collision between two objects.
+        """
 
-    Args:
-        r0, r1 (np.array([x, y, z])): objects coordinates (meteres).
-        V0, V1 (np.array([Vx,Vy,Vz])): velocities (m/s).
-        d0, d1 (float, float): objects size (meters).
-        sigma (float): standard deviation.
-        approach (str): name of approach.
-            "Hutor" - Hutorovski approach suited for near circular orbits and
-                for convergence at a large angle.
-            "normal" - assumption of coordinates are distributed normally
-                common empirical approach.
+        r1_vec = rV1[:3]
+        r2_vec = rV2[:3]
+        v1_vec = rV1[3:]
+        v2_vec = rV2[3:]
 
-    Returns:
-        float: probability.
+        r1 = np.linalg.norm(r1_vec)
+        r2 = np.linalg.norm(r2_vec)
+        v1 = np.linalg.norm(v1_vec)
+        v2 = np.linalg.norm(v2_vec)
+        dr0_vec = r2_vec - r1_vec
+        dr0 = np.linalg.norm(dr0_vec)
 
-    Raises:
-        ValueError: If any probability has incorrect value.
-        TypeError: If any probability has incorrect type.
-        ValueError: If approach="Hutor" and V0=np.zeros(3), V1=np.zeros(3).
+        rA = cs_r1 + cs_r2  #: Combined collision cross-section radii
+        miss_distance = dr0
+        nu = v2 / v1
+        #: The angle w between two velocities
+        if np.array_equal(v1_vec, v2_vec):
+            psi = 0
+        else:
+            psi = np.arccos(np.dot(v1_vec, v2_vec) / (v1 * v2))
+        epsilon = 10e-7
+        temp = v1 * v2 * np.sin(psi)**2
+        if temp == 0:
+            temp += epsilon
+        t1_min = (nu * np.dot(dr0_vec, v1_vec) - np.cos(psi) *
+                  np.dot(dr0_vec, v2_vec)) / temp
+        t2_min = (np.cos(psi) * np.dot(dr0_vec, v1_vec) -
+                  np.dot(dr0_vec, v2_vec) / nu) / temp
+        #: Crossing time difference of the common perpendicular line (sec)
+        dt = abs(t2_min - t1_min)
+        #: The relative position vector at closest approach between orbits
+        dr_min_vec = dr0_vec + v2_vec * t2_min - v1_vec * t1_min
+        #: The closest approach distance between two straight line trajectories
+        dr_min = np.linalg.norm(dr_min_vec)
+        # Probability.
+        temp = 1 + nu**2 - 2 * nu * np.cos(psi)
+        if temp == 0:
+            temp += epsilon
+        mu_x = dr_min
+        mu_y = v2 * np.sin(psi) * dt / temp**0.5
+        sigma_x_square = sigma_1N**2 + sigma_2N**2
+        sigma_y_square = ((sigma_1T * nu * np.sin(psi))**2
+                          + ((1 - nu * np.cos(psi)) * sigma_1W)**2
+                          + (sigma_2T * np.sin(psi))**2
+                          + ((nu - np.cos(psi)) * sigma_2W)**2
+                          ) / temp
+        if sigma_x_square == 0:
+            sigma_x_square += epsilon
+        if sigma_y_square == 0:
+            sigma_y_square += epsilon
+        probability = np.exp(
+            -0.5 * (mu_x**2 / sigma_x_square + mu_y**2 / sigma_y_square)
+        ) * (1 - np.exp(-rA**2 / (2 * (sigma_x_square * sigma_y_square)**0.5)))
+        return probability
 
-    """
-    probability = 1.
+    def norm_approach(self, rV1, rV2, sigma=50):
+        """ Returns probability of collision between two objects.
 
-    if approach == "Hutor":
-        # V test
-        if np.array_equal(V0, np.zeros(3)) | np.array_equal(V1, np.zeros(3)):
-            raise Exception("velocities are required for Hutorovski approach")
-        # cosine of angle between velocities
-        cos_vel_angle = (np.dot(V0, V1)
-                         / (np.linalg.norm(V0) * np.linalg.norm(V1)))
-        dr, dn, db = rV2ocs(r0, r1, V0, V1)
-        A = (
-            dr**2 / (4 * sigma**2)
-            + dn**2 / (2 * sigma**2)
-            + db**2 / (2 * sigma**2)
-        )
-        k = (
-            (d0 + d1)**2
-            / (sigma * (11 + 5 * sigma * cos_vel_angle**2))
-        )
-        probability = k * np.exp(-A)
-    elif approach == "normal":
-        # TODO - truncated normal distribution?
-        # TODO - multivariate normal distribution?
-        for c0, c1 in zip(r0, r1):
-            av = (c0 + c1) / 2.
-            integtal = norm.cdf(av, loc=min(c0, c1), scale=sigma)
+        Args:
+            rV1, rV2 (np.array([x, y, z, Vx, Vy, Vz])): objects coordinates (meteres) and velocities (m/s).
+            d1, d2 (float, float): objects size (meters).
+            sigma (float): standard deviation.
+
+        Returns:
+            float: probability.
+
+        Raises:
+            ValueError: If any probability has incorrect value.
+            TypeError: If any probability has incorrect type.
+
+        """
+        probability = 1.
+        for c1, c2 in zip(rV1[:3], rV2[:3]):
+            av = (c1 + c2) / 2.
+            integtal = norm.cdf(av, loc=min(c1, c2), scale=sigma)
             probability *= (1 - integtal) / integtal
-    else:
-        raise Exception("unknown probability estimation approach:" + approach)
-    TestProbability(probability)
-    return probability
+
+        return probability
 
 
-def danger_debr_and_collision_prob(st_rV, debr_rV, st_d, debr_d, sigma, threshold_p):
-    """Probability of collision with danger debris.
+def get_dangerous_debris(st_r, debr_r, crit_distance):
+    """ Finding potentially dangerous debris, comparing the distance to them with the threshold.
 
     Args:
-        st_r (np.array with shape(1, 6)): satellite position (meters) and velocity (m/s).
-        debr_r (np.array with shape(n_denris, 6)): debris positions (meters) and velocities (m/s).
-        st_d (float): satellite size (meters).
-        debr_d (np.array with shape(n_denris, 6)): debris sizes (meters).
-        threshold_p (float): danger probability.
-        sigma (float): standard deviation.
+        st_r (np.array with shape(1, 3)): satellite position (meters).
+        debr_r (np.array with shape(n_denris, 3)): debris positions (meters).
+        crit_distance (float): dangerous distance threshold (meters).
 
     Returns:
-        coll_prob (np.array): collision probability for each debris.
+        dangerous_debris (np.array): dangerous debris indicies.
+        distances (np.array): Euclidean distances for the each dangerous debris (meters).
 
-    Raises:
-        ValueError: If any probability has incorrect value.
-        TypeError: If any probability has incorrect type.
-        ValueError: If sigma <= 0.
-
+    TODO:
+        * add distance units and true crit_distance.
     """
-    TestProbability(threshold_p)
-    if sigma <= 0:
-        raise ValueError("sigma must be greater than 0")
-    coll_prob = np.zeros(debr_rV.shape[0])
-    for d in range(debr_rV.shape[0]):
-        p = coll_prob_estimation(
-            st_rV[0, :3], debr_rV[d, :3],
-            st_rV[0, 3:], debr_rV[d, 3:],
-            st_d, debr_d[d], sigma
-        )
-        if p >= threshold_p:
-            coll_prob[d] = p
-    return coll_prob
+    distances = np.linalg.norm(debr_r - st_r, axis=1)
+    dangerous_debris = np.where(distances <= crit_distance)[0]
+    distances = distances[dangerous_debris]
+    return dangerous_debris, distances
 
 
 class Agent:
@@ -220,9 +208,8 @@ class Agent:
                 vector of deltas for protected object (m/s),
                 maneuver time (mjd2000) and step in time
                 when to request the next action (mjd2000).
-
         """
-        dVx, dVy, dVz = 0, 0, 0  # meters
+        dVx, dVy, dVz = 0, 0, 0  # m/s
         epoch = state["epoch"].mjd2000
         time_to_req = 0.001  # mjd2000
         action = np.array([dVx, dVy, dVz, epoch, time_to_req])
@@ -243,29 +230,38 @@ class Environment:
         """
         self.protected = protected
         self.debris = debris
+        self.protected_r = protected.get_radius()
+        self.debris_r = np.array([d.get_radius() for d in debris])
         self.next_action = pk.epoch(0, "mjd2000")
         self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
         self.n_debris = len(debris)
-        self.st_d = 1.  #: Satellite size (meters)
-        self.debr_d = np.ones(self.n_debris)  #: Debris sizes (meters)
-        self.crit_prob = 10e-5  #: Critical convergence distance (meters)
-        # TODO choose true sigma
-        self.sigma = 50000  #: Coordinates uncertainly (meters)
-        self.collision_probability_in_current_conjunction = np.zeros(
-            self.n_debris)
+        self.crit_distance = 50000  #: Critical convergence distance (meters)
+        self.collision_probability_estimator = CollProbEstimation()
+
+        self.min_distances_in_current_conjunction = np.full(
+            (self.n_debris), np.nan)  # np.nan if not in conjunction.
+        self.state_for_min_distances_in_current_conjunction = dict()
+        self.dangerous_debris_in_current_conjunction = np.array([])
+
         self.collision_probability_prior_to_current_conjunction = np.zeros(
             self.n_debris)
-
         self.total_collision_probability_array = np.zeros(self.n_debris)
         self.total_collision_probability = 0.
+
         self.whole_trajectory_deviation = 0.
         self.reward = 0.
+        # : epoch: Last reward and collision probability update
+        self.last_r_p_update = None
+        # : int: number of propagate forward iterations
+        # since last update collision probability and reward.
+        self.pf_iterations_since_update = 0
 
-    def propagate_forward(self, end_time):
+    def propagate_forward(self, end_time, update_r_p_step=20):
         """ Forward step.
 
         Args:
             end_time (float): end time for propagation as mjd2000.
+            update_r_p_step (int): update reward and probability step.
 
         Raises:
             ValueError: if end_time is less then current time of the environment.
@@ -308,79 +304,131 @@ class Environment:
                 coord=coord, trajectory_deviation_coef=trajectory_deviation_coef,
                 epoch=epoch, fuel=self.protected.get_fuel()
             )
-            self.update_collision_probability()
-            self.reward = self.get_reward()
+            self.update_distances_and_probabilities_prior_to_current_conjunction()
 
-        return
+        self.pf_iterations_since_update += 1
 
-    def get_reward(self, coll_prob_C=10000., traj_C=1., fuel_C=1.,
-                   danger_prob=10e-4):
-        """ Provide total reward from the environment state.
+        if self.pf_iterations_since_update == update_r_p_step:
+            self.get_reward()
 
-        Args:
-            coll_prob_C, traj_C, fuel_C (float): constants for the singnificance regulation of reward components.
-            danger_prob (float): the threshold below which the probability is negligible.
-
-        Returns:
-            r (float): total reward.
+    def update_distances_and_probabilities_prior_to_current_conjunction(self):
+        """ Update the distances and collision probabilities prior to current conjunction.
 
         """
-        # reward components
-        coll_prob = self.total_collision_probability
-        ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
-        # collision probability reward - some kind of ELU function
-        # of collision probability
-        coll_prob_r = -(ELU((coll_prob - danger_prob) * coll_prob_C) + 1)
-        traj_r = - traj_C * self.whole_trajectory_deviation
-        fuel_r = fuel_C * self.protected.get_fuel()
-
-        # whole reward
-        # TODO - add weights to all reward components
-        r = (coll_prob_r + traj_r + fuel_r)
-        return r
-
-    def update_collision_probability(self):
-        """ Update the probability of collision on the propagation step.
-
-        """
-        # TODO - log probability?
-        new_collision_probability_in_current_conjunction = danger_debr_and_collision_prob(
-            self.state['coord']['st'],
-            self.state['coord']['debr'],
-            self.st_d, self.debr_d,
-            self.sigma, self.crit_prob
+        new_curr_dangerous_debris, new_curr_dangerous_distances = get_dangerous_debris(
+            self.state['coord']['st'][:, :3],
+            self.state['coord']['debr'][:, :3],
+            self.crit_distance
         )
+        end_cojunction_debris = np.setdiff1d(
+            self.dangerous_debris_in_current_conjunction,
+            new_curr_dangerous_debris
+        )  # the debris with which the conjunction has now ceased.
+        begin_cojunction_debris = np.setdiff1d(
+            new_curr_dangerous_debris,
+            self.dangerous_debris_in_current_conjunction
+        )  # the debris with which the conjunction begins.
 
-        new_danger_debr = np.where(
-            new_collision_probability_in_current_conjunction > 0)[0]
-        cur_danger_debr = np.where(
-            self.collision_probability_in_current_conjunction > 0)[0]
-        new_not_danger_debr = np.setdiff1d(cur_danger_debr, new_danger_debr)
+        self.dangerous_debris_in_current_conjunction = new_curr_dangerous_debris
 
-        self.collision_probability_in_current_conjunction[new_danger_debr] = np.maximum(
-            new_collision_probability_in_current_conjunction[new_danger_debr],
-            self.collision_probability_in_current_conjunction[new_danger_debr])
+        for_update_debris = new_curr_dangerous_debris[np.logical_not(
+            new_curr_dangerous_distances >
+            self.min_distances_in_current_conjunction[
+                new_curr_dangerous_debris]
+        )]
+        """
+        np.array: Debris (indices) which:
+            have been in current conjunction and the distance to which has decreased,
+            have not been not in conjunction, but now are taken into account.
+        """
 
-        self.collision_probability_prior_to_current_conjunction[new_not_danger_debr] = sum_coll_prob(
-            np.vstack([
-                self.collision_probability_prior_to_current_conjunction[
-                    new_not_danger_debr],
-                self.collision_probability_in_current_conjunction[
-                    new_not_danger_debr]
+        # Update min distances and states for dangerous debris
+        # in current conjunction.
+        if for_update_debris.size:
+            self.min_distances_in_current_conjunction[
+                for_update_debris] = new_curr_dangerous_distances[for_update_debris]
+            for d in for_update_debris:
+                self.state_for_min_distances_in_current_conjunction[d] = np.vstack((
+                    self.state['coord']['st'][0, :],
+                    self.state['coord']['debr'][d, :]
+                ))
+
+        # Update collision probability prior to current conjunction.
+        if end_cojunction_debris.size:
+            coll_prob = np.array([
+                self.collision_probability_estimator.ChenBai_approach(
+                    self.state_for_min_distances_in_current_conjunction[d][0],
+                    self.state_for_min_distances_in_current_conjunction[d][1],
+                    self.protected_r, self.debris_r[d]
+                )
+                for d in end_cojunction_debris
             ])
-        )
-        self.collision_probability_in_current_conjunction[
-            new_not_danger_debr] = 0.
+            self.collision_probability_prior_to_current_conjunction[end_cojunction_debris] = sum_coll_prob(
+                np.vstack([
+                    self.collision_probability_prior_to_current_conjunction[
+                        end_cojunction_debris],
+                    coll_prob
+                ])
+            )
+            self.min_distances_in_current_conjunction[
+                end_cojunction_debris] = np.nan
+            for d in end_cojunction_debris:
+                del self.state_for_min_distances_in_current_conjunction[d]
 
-        self.total_collision_probability_array = sum_coll_prob(np.vstack([
-            self.collision_probability_in_current_conjunction,
-            self.collision_probability_prior_to_current_conjunction])
-        )
+    def get_collision_probability(self):
+        """ Update and return total collision probability.
+
+        """
+        if self.dangerous_debris_in_current_conjunction.size:
+            collision_probability_in_current_conjunction = np.array([
+                self.collision_probability_estimator.ChenBai_approach(
+                    self.state_for_min_distances_in_current_conjunction[
+                        d][0],
+                    self.state_for_min_distances_in_current_conjunction[
+                        d][1],
+                    self.protected_r, self.debris_r[d]
+                )
+                for d in self.dangerous_debris_in_current_conjunction
+            ])
+            self.total_collision_probability_array[self.dangerous_debris_in_current_conjunction] = sum_coll_prob(
+                np.vstack([
+                    self.collision_probability_prior_to_current_conjunction[
+                        self.dangerous_debris_in_current_conjunction],
+                    collision_probability_in_current_conjunction
+                ])
+            )
+        else:
+            self.total_collision_probability_array = self.collision_probability_prior_to_current_conjunction
+
         self.total_collision_probability = sum_coll_prob(
             self.total_collision_probability_array
         )
+        return self.total_collision_probability
 
-        return
+    def get_reward(self, coll_prob_C=10000., traj_C=1., fuel_C=1.,
+                   dangerous_prob=10e-4):
+        """ Update and return total reward from the environment state.
+
+        Args:
+            coll_prob_C, traj_C, fuel_C (float): constants for the singnificance regulation of reward components.
+            dangerous_prob (float): the threshold below which the probability is negligible.
+
+        """
+        # reward components
+        coll_prob = self.get_collision_probability()
+        ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
+        # collision probability reward - some kind of ELU function
+        # of collision probability
+        coll_prob_r = -(ELU((coll_prob - dangerous_prob) * coll_prob_C) + 1)
+        traj_r = - traj_C * self.whole_trajectory_deviation
+        fuel_r = fuel_C * self.protected.get_fuel()
+
+        # total reward
+        # TODO - add weights to all reward components
+        self.reward = (coll_prob_r + traj_r + fuel_r)
+        self.last_r_p_update = self.state["epoch"]
+        self.pf_iterations_since_update = 0
+        return self.reward
 
     def act(self, action):
         """ Change velocity for protected object.
@@ -471,13 +519,11 @@ class SpaceObject:
         else:
             raise ValueError("Unknown initial parameteres type")
 
-
     def maneuver(self, action):
         """ Make manoeuvre for the object.
         Args:
             action (np.array([dVx, dVy, dVz, pk.epoch])): vector of velocity
                 deltas for protected object and maneuver time (m/s).
-
         Returns:
             (string): empty string if action is successfully made by satellite,
                 error message otherwise.
@@ -519,3 +565,6 @@ class SpaceObject:
 
     def get_fuel(self):
         return self.fuel
+
+    def get_radius(self):
+        return self.satellite.radius
