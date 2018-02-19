@@ -198,7 +198,7 @@ class Environment:
         self.next_action = pk.epoch(0, "mjd2000")
         self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
         self.n_debris = len(debris)
-        self.crit_distance = 50000  #: Critical convergence distance (meters)
+        self.crit_distance = 10000  #: Critical convergence distance (meters)
         self.collision_probability_estimator = CollProbEstimation()
 
         self.min_distances_in_current_conjunction = np.full(
