@@ -33,10 +33,9 @@ class TableAgent:
                 'fuel' (float): current remaining fuel in protected SpaceObject. }.
 
         Returns:
-            action (np.array([dVx, dVy, dVz, pk.epoch, time_to_req])):
+            action (np.array([dVx, dVy, dVz, time_to_req])):
                 vector of deltas for protected object (m/s),
-                maneuver time (mjd2000) and step in time
-                when to request the next action (mjd2000).
+                step in time when to request the next action (mjd2000).
 
         """
         epoch = state["epoch"].mjd2000
@@ -50,5 +49,5 @@ class TableAgent:
         #             [self.action_table[0, 1:], epoch, 0])
         #         print("maneuver!:", action)
         #         self.action_table = np.delete(self.action_table, 0, axis=0)
-        action = np.array([dVx, dVy, dVz, epoch, time_to_req])
+        action = np.array([dVx, dVy, dVz, time_to_req])
         return action

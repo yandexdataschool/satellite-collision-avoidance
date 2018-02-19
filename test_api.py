@@ -137,7 +137,7 @@ class TestEnvironment(unittest.TestCase):
         env = Environment(self.protected, [], self.start_time)
 
         time_to_req = 2
-        action = np.array([1, 1, 1, self.start_time.mjd2000, time_to_req])
+        action = np.array([1, 1, 1, time_to_req])
         dV = action[:3]
         fuel_cons = fuel_consumption(dV)
 
@@ -185,7 +185,7 @@ class TestSpaceObject(unittest.TestCase):
         satellite = SpaceObject("satellite", "osc", self.params)
 
         time_to_req = 2
-        action = np.array([1, 1, 1, self.start_time.mjd2000, time_to_req])
+        action = np.array([1, 1, 1, time_to_req])
         dV = action[:3]
         fuel_cons = fuel_consumption(dV)
 
@@ -197,7 +197,7 @@ class TestSpaceObject(unittest.TestCase):
             0.0, 6.174706362516025, 0.10819939983993268
         )
 
-        satellite.maneuver(action[:4])
+        satellite.maneuver(action[:3], self.start_time)
 
         self.assertEqual(want_osculating_elements,
                          satellite.satellite.osculating_elements(self.start_time))
