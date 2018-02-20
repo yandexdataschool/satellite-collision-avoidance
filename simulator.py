@@ -65,7 +65,7 @@ def read_space_objects(file, param_type):
                 params = dict(
                     tle_line1=tle_line1,
                     tle_line2=tle_line2,
-                    fuel=1,
+                    fuel=20,
                 )
             elif param_type == "eph":
                 epoch = pk.epoch(
@@ -150,7 +150,6 @@ class Visualizer:
         s = '  Epoch: {}     R: {:.7}     Coll Prob: {:.5}\nUpdate: {}'.format(
             epoch, reward, collision_prob, last_update)
         self.ax.text2D(-0.3, 1.05, s, transform=self.ax.transAxes)
-        # self.ax.text2D(-0.2, 1.1, s, transform=self.ax.transAxes)
 
 
 class Simulator:
@@ -172,7 +171,7 @@ class Simulator:
         self.start_time = self.env.state["epoch"]
         self.curr_time = self.start_time
 
-        self.vis = Visualizer()
+        self.vis = None
         self.logger = logging.getLogger('simulator.Simulator')
         self.print_out = print_out
 
@@ -185,6 +184,7 @@ class Simulator:
         """
         iteration = 0
         if visualize:
+            self.vis = Visualizer()
             self.vis.run()
 
         if self.print_out:
@@ -231,7 +231,7 @@ class Simulator:
                 print("crit distance:", self.env.crit_distance)
                 print("min_distances_in_current_conjunction:",
                       self.env.min_distances_in_current_conjunction)
-                print("collision_probability_prior_to_current_conjunction:",
+                print("collision probability prior to current conjunction:",
                       self.env.collision_probability_prior_to_current_conjunction)
                 print("danger debris in curr conj:",
                       self.env.dangerous_debris_in_current_conjunction)
@@ -249,6 +249,8 @@ class Simulator:
 
         print("Simulation ended.\nCollision probability: {}.\nReward: {}.".format(
             self.env.get_collision_probability(), self.env.get_reward()))
+
+        return self.env.get_reward(), self.env.get_collision_probability()
 
     def log_protected_position(self):
         self.logger.info(strf_position(self.env.protected, self.curr_time))

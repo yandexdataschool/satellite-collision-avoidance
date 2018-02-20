@@ -1,7 +1,6 @@
 
 import pykep as pk
 import numpy as np
-import pandas as pd
 
 
 class TableAgent:
@@ -12,13 +11,14 @@ class TableAgent:
 
     """
 
-    def __init__(self, table_path="data/action_table.csv"):
+    def __init__(self, action_table=np.array([])):
         """
         Args:
-            table_path (str): path to table of actions (.csv).
+            action_table (np.array with shape(n_actions, 4)):
+                table of actions with columns ["dVx", "dVy", "dVz", "time to request"].
 
         """
-        self.action_table = pd.read_csv(table_path, index_col=0).values
+        self.action_table = action_table
 
     def get_action(self, state):
         """ Provides action for protected object.
@@ -39,15 +39,9 @@ class TableAgent:
 
         """
         epoch = state["epoch"].mjd2000
-        time_to_req = 0.001  # mjd2000
-        dVx, dVy, dVz = 0, 0, 0
-        # print(epoch)
-        # action = np.array([0, 0, 0, epoch, 0])  #: default action
-        # if self.action_table.size:
-        #     if (epoch >= self.action_table[0, 0]):
-        #         action = np.hstack(
-        #             [self.action_table[0, 1:], epoch, 0])
-        #         print("maneuver!:", action)
-        #         self.action_table = np.delete(self.action_table, 0, axis=0)
-        action = np.array([dVx, dVy, dVz, time_to_req])
+        if not self.action_table.size:
+            action = np.array([0, 0, 0, np.nan])
+            return action
+        action = self.action_table[0]
+        self.action_table = np.delete(self.action_table, 0, axis=0)
         return action
