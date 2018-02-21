@@ -65,7 +65,7 @@ def read_space_objects(file, param_type):
                 params = dict(
                     tle_line1=tle_line1,
                     tle_line2=tle_line2,
-                    fuel=20,
+                    fuel=1,
                 )
             elif param_type == "eph":
                 epoch = pk.epoch(
@@ -157,13 +157,13 @@ class Simulator:
     and starts agent-environment collaboration.
     """
 
-    def __init__(self, agent, environment, print_out=False):
+    def __init__(self, agent, environment, print_out=True):
         """
         Args:
             agent (api.Agent, agent, to do actions in environment.
             environment (api.Environment): the initial space environment.
             start_time (pk.epoch): start epoch of simulation.
-            print_out (bool): print out some results for each step.
+            print_out (bool): print out some parameters and results (reward and probability).
         """
 
         self.agent = agent
@@ -181,6 +181,10 @@ class Simulator:
             end_time (float): end time of simulation provided as mjd2000.
             step (float): time step in simulation.
             visualize (bool): whether show the simulation or not.
+
+        Returns:
+            reward (self.env.get_reward()): reward of session.
+
         """
         iteration = 0
         if visualize:
@@ -225,32 +229,15 @@ class Simulator:
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + step, "mjd2000")
 
-            if self.print_out:
-
-                print("\niteration:", iteration)
-                print("crit distance:", self.env.crit_distance)
-                print("min_distances_in_current_conjunction:",
-                      self.env.min_distances_in_current_conjunction)
-                print("collision probability prior to current conjunction:",
-                      self.env.collision_probability_prior_to_current_conjunction)
-                print("danger debris in curr conj:",
-                      self.env.dangerous_debris_in_current_conjunction)
-
-                print("total coll prob array:",
-                      self.env.total_collision_probability_array)
-                print("total coll prob:",
-                      self.env.total_collision_probability)
-                print("traj dev:", self.env.whole_trajectory_deviation)
-                # self.env.reward - reward without update
-                print("reward:", self.env.reward)
             iteration += 1
 
         self.log_protected_position()
 
-        print("Simulation ended.\nCollision probability: {}.\nReward: {}.".format(
-            self.env.get_collision_probability(), self.env.get_reward()))
+        if self.print_out:
+            print("Simulation ended.\nCollision probability: {}.\nReward: {}.".format(
+                self.env.get_collision_probability(), self.env.get_reward()))
 
-        return self.env.get_reward(), self.env.get_collision_probability()
+        return self.env.get_reward()
 
     def log_protected_position(self):
         self.logger.info(strf_position(self.env.protected, self.curr_time))
