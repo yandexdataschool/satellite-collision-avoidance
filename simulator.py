@@ -157,12 +157,14 @@ class Simulator:
     and starts agent-environment collaboration.
     """
 
-    def __init__(self, agent, environment, print_out=True):
+    def __init__(self, agent, environment, update_r_p_step=None, print_out=True):
         """
         Args:
             agent (api.Agent, agent, to do actions in environment.
             environment (api.Environment): the initial space environment.
             start_time (pk.epoch): start epoch of simulation.
+            update_r_p_step (int): update_r_p_step (int): update reward and probability step;
+                if update_r_p_step == None, reward and probability are updated only by agent).
             print_out (bool): print out some parameters and results (reward and probability).
         """
 
@@ -174,6 +176,7 @@ class Simulator:
         self.vis = None
         self.logger = logging.getLogger('simulator.Simulator')
         self.print_out = print_out
+        self.update_r_p_step = update_r_p_step
 
     def run(self, end_time, step=0.001, visualize=True):
         """
@@ -201,7 +204,8 @@ class Simulator:
                 print(spaceObject.satellite)
 
         while self.curr_time.mjd2000 <= end_time:
-            self.env.propagate_forward(self.curr_time.mjd2000)
+            self.env.propagate_forward(
+                self.curr_time.mjd2000, self.update_r_p_step)
 
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
                 s = self.env.get_state()

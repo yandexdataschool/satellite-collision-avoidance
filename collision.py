@@ -25,6 +25,8 @@ def main(args):
                         default=END_TIME, required=False)
     parser.add_argument("-s", "--step", type=float,
                         default=SIMULATION_STEP, required=False)
+    parser.add_argument("-u", "--update_r_p_step", type=int,
+                        default=None, required=False)
     parser.add_argument("-p", "--print_out", type=str,
                         default="True", required=False)
 
@@ -32,7 +34,7 @@ def main(args):
 
     visualize = args.visualize.lower() == "true"
     print_out = args.print_out.lower() == "true"
-    start_time, end_time, step = args.start_time, args.end_time, args.step
+    start_time, end_time, step, update_r_p_step = args.start_time, args.end_time, args.step, args.update_r_p_step
 
     osc = read_space_objects("data/collision.osc", "osc")
     protected = osc[0]
@@ -42,7 +44,8 @@ def main(args):
     start_time = pk.epoch(start_time, "mjd2000")
     env = Environment(protected, debris, start_time)
 
-    simulator = Simulator(agent, env, print_out=print_out)
+    simulator = Simulator(
+        agent, env, update_r_p_step=update_r_p_step, print_out=print_out)
     simulator.run(end_time=end_time, step=step, visualize=visualize)
     return
 
