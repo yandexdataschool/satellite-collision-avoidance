@@ -26,7 +26,7 @@ def main(args):
     parser.add_argument("-s", "--step", type=float,
                         default=SIMULATION_STEP, required=False)
     parser.add_argument("-u", "--update_r_p_step", type=int,
-                        default=None, required=False)
+                        default=20, required=False)
     parser.add_argument("-p", "--print_out", type=str,
                         default="True", required=False)
 
