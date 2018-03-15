@@ -42,6 +42,7 @@ class TableAgent:
         if not self.action_table.size:
             action = np.array([0, 0, 0, np.nan])
             return action
+        # TODO - first nan can't be - fix
         action = self.action_table[0]
         self.action_table = np.delete(self.action_table, 0, axis=0)
         return action

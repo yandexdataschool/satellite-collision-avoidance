@@ -3,6 +3,7 @@
 
 import argparse
 import sys
+import numpy as np
 
 from simulator import Simulator, read_space_objects
 from api import Environment
@@ -40,7 +41,9 @@ def main(args):
     protected = osc[0]
     debris = [osc[1]]
 
-    agent = Agent()
+    action_table = np.loadtxt(
+        'RL_PolicyBased/action_table_CE.csv', delimiter=',')
+    agent = Agent(action_table)
 
     start_time = pk.epoch(start_time, "mjd2000")
     env = Environment(protected, debris, start_time)
