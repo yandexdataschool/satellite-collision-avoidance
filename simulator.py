@@ -150,7 +150,6 @@ class Visualizer:
         s = '  Epoch: {}     R: {:.7}     Coll Prob: {:.5}\nUpdate: {}'.format(
             epoch, reward, collision_prob, last_update)
         self.ax.text2D(-0.3, 1.05, s, transform=self.ax.transAxes)
-        # self.ax.text2D(-0.2, 1.1, s, transform=self.ax.transAxes)
 
 
 class Simulator:
@@ -158,13 +157,15 @@ class Simulator:
     and starts agent-environment collaboration.
     """
 
-    def __init__(self, agent, environment, print_out=False):
+    def __init__(self, agent, environment, update_r_p_step=None, print_out=True):
         """
         Args:
             agent (api.Agent, agent, to do actions in environment.
             environment (api.Environment): the initial space environment.
             start_time (pk.epoch): start epoch of simulation.
-            print_out (bool): print out some results for each step.
+            update_r_p_step (int): update_r_p_step (int): update reward and probability step;
+                if update_r_p_step == None, reward and probability are updated only by agent).
+            print_out (bool): print out some parameters and results (reward and probability).
         """
 
         self.agent = agent
@@ -172,9 +173,10 @@ class Simulator:
         self.start_time = self.env.state["epoch"]
         self.curr_time = self.start_time
 
-        self.vis = Visualizer()
+        self.vis = None
         self.logger = logging.getLogger('simulator.Simulator')
         self.print_out = print_out
+        self.update_r_p_step = update_r_p_step
 
     def run(self, end_time, step=0.001, visualize=True):
         """
@@ -182,9 +184,14 @@ class Simulator:
             end_time (float): end time of simulation provided as mjd2000.
             step (float): time step in simulation.
             visualize (bool): whether show the simulation or not.
+
+        Returns:
+            reward (self.env.get_reward()): reward of session.
+
         """
         iteration = 0
         if visualize:
+            self.vis = Visualizer()
             self.vis.run()
 
         if self.print_out:
@@ -197,7 +204,8 @@ class Simulator:
                 print(spaceObject.satellite)
 
         while self.curr_time.mjd2000 <= end_time:
-            self.env.propagate_forward(self.curr_time.mjd2000)
+            self.env.propagate_forward(
+                self.curr_time.mjd2000, self.update_r_p_step)
 
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
                 s = self.env.get_state()
@@ -225,30 +233,15 @@ class Simulator:
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + step, "mjd2000")
 
-            if self.print_out:
-
-                print("\niteration:", iteration)
-                print("crit distance:", self.env.crit_distance)
-                print("min_distances_in_current_conjunction:",
-                      self.env.min_distances_in_current_conjunction)
-                print("collision_probability_prior_to_current_conjunction:",
-                      self.env.collision_probability_prior_to_current_conjunction)
-                print("danger debris in curr conj:",
-                      self.env.dangerous_debris_in_current_conjunction)
-
-                print("total coll prob array:",
-                      self.env.total_collision_probability_array)
-                print("total coll prob:",
-                      self.env.total_collision_probability)
-                print("traj dev:", self.env.whole_trajectory_deviation)
-                # self.env.reward - reward without update
-                print("reward:", self.env.reward)
             iteration += 1
 
         self.log_protected_position()
 
-        print("Simulation ended.\nCollision probability: {}.\nReward: {}.".format(
-            self.env.get_collision_probability(), self.env.get_reward()))
+        if self.print_out:
+            print("Simulation ended.\nCollision probability: {}.\nReward: {}.".format(
+                self.env.get_collision_probability(), self.env.get_reward()))
+
+        return self.env.get_reward()
 
     def log_protected_position(self):
         self.logger.info(strf_position(self.env.protected, self.curr_time))
@@ -262,7 +255,7 @@ class Simulator:
             iteration,  self.curr_time, self.env.total_collision_probability))
 
     def log_reward_action(self, iteration, reward, action):
-        self.logger.info("Iter: {} \tReward: {} \taction: (dVx:{}, dVy: {}, dVz: {}, epoch: {}, time_to_request: {})".format(
+        self.logger.info("Iter: {} \tReward: {} \taction: (dVx:{}, dVy: {}, dVz: {}, time_to_request: {})".format(
             iteration, reward, *action))
 
     def log_bad_action(self, message, action):

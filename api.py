@@ -180,43 +180,6 @@ def get_dangerous_debris(st_r, debr_r, crit_distance):
     return dangerous_debris, distances
 
 
-class Agent:
-
-    """ Agent implements an agent to communicate with space Environment.
-
-    Agent can make actions to the space environment by taking it's state
-    after the last action.
-
-    """
-
-    def __init__(self):
-        """"""
-
-    def get_action(self, state):
-        """ Provides action for protected object.
-
-        Args:
-            state (dict): environment state
-                {'coord' (dict):
-                    {'st' (np.array with shape (1, 6)): satellite r and Vx, Vy, Vz coordinates (meters).
-                     'debr' (np.array with shape (n_items, 6)): debris r and Vx, Vy, Vz coordinates (meters).}
-                'trajectory_deviation_coef' (float).
-                'epoch' (pk.epoch): at which time environment state is calculated.
-                'fuel' (float): current remaining fuel in protected SpaceObject. }
-        Returns:
-            action (np.array([dVx, dVy, dVz, pk.epoch, time_to_req])):
-                vector of deltas for protected object (m/s),
-                maneuver time (mjd2000) and step in time
-                when to request the next action (mjd2000).
-        """
-        dVx, dVy, dVz = 0, 0, 0  # m/s
-        epoch = state["epoch"].mjd2000
-        time_to_req = 0.001  # mjd2000
-        action = np.array([dVx, dVy, dVz, epoch, time_to_req])
-
-        return action
-
-
 class Environment:
     """ Environment provides the space environment with space objects: satellites and debris, in it."""
 
@@ -235,7 +198,7 @@ class Environment:
         self.next_action = pk.epoch(0, "mjd2000")
         self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
         self.n_debris = len(debris)
-        self.crit_distance = 50000  #: Critical convergence distance (meters)
+        self.crit_distance = 10000  #: Critical convergence distance (meters)
         self.collision_probability_estimator = CollProbEstimation()
 
         self.min_distances_in_current_conjunction = np.full(
@@ -433,14 +396,13 @@ class Environment:
     def act(self, action):
         """ Change velocity for protected object.
         Args:
-            action (np.array([dVx, dVy, dVz, pk.epoch, time_to_req])):
+            action (np.array([dVx, dVy, dVz, time_to_req])):
                 vector of velocity deltas for protected object (m/s),
-                maneuver time (mjd2000) and step in time
-                when to request the next action (mjd2000).
+                step in time when to request the next action (mjd2000).
         """
         self.next_action = pk.epoch(
-            self.state["epoch"].mjd2000 + float(action[4]), "mjd2000")
-        error, fuel_cons = self.protected.maneuver(action[:4])
+            self.state["epoch"].mjd2000 + float(action[3]), "mjd2000")
+        error, fuel_cons = self.protected.maneuver(action[:3], self.state["epoch"])
         if not error:
             self.state["fuel"] -= fuel_cons
         return error
@@ -519,11 +481,12 @@ class SpaceObject:
         else:
             raise ValueError("Unknown initial parameteres type")
 
-    def maneuver(self, action):
+    def maneuver(self, action, t_man):
         """ Make manoeuvre for the object.
         Args:
-            action (np.array([dVx, dVy, dVz, pk.epoch])): vector of velocity
-                deltas for protected object and maneuver time (m/s).
+            action (np.array([dVx, dVy, dVz])): vector of velocity
+                deltas for protected object (m/s).
+            t_man (pk.epoch): maneuver time.
         Returns:
             (string): empty string if action is successfully made by satellite,
                 error message otherwise.
@@ -536,7 +499,6 @@ class SpaceObject:
         elif fuel_cons > self.fuel:
             return "requested action exceeds fuel amount in the satellite.", 0
 
-        t_man = pk.epoch(float(action[3]), "mjd2000")
         pos, vel = self.position(t_man)
         new_vel = list(np.array(vel) + dV)
 
