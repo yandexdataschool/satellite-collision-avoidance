@@ -3,6 +3,8 @@ from copy import copy
 import pykep as pk
 import pandas as pd
 
+import matplotlib.pyplot as plt
+
 import sys
 import os
 parent_dir = os.path.dirname(os.getcwd())
@@ -89,6 +91,52 @@ def random_action_table(mu_table, sigma_table, max_fuel_cons, fuel_level):
     return action_table
 
 
+class ShowProgress:
+    """Displays training progress."""
+
+    def __init__(self):
+        self.fig = plt.figure(figsize=[12, 6])
+        self.fig.show()
+        self.fig.canvas.draw()
+
+    def plot(self, batch_rewards, log):  # , :
+        """Displays training progress.
+
+        Args:
+            batch_rewards (list of floats): batch of rewards.
+            log ([[mean_reward, max_reward, policy_reward, threshold], ]): training log.
+            reward_range (list): [min_reward, max_reward] for chart.
+
+        TODO:
+            text "mean reward = %.3f, threshold=%.3f" % (log[-1][0], log[-1][-1]) with plt.text?
+            reward_range=[-1500, 10]) ?
+            labels
+
+        """
+        mean_rewards = list(zip(*log))[0]
+        max_rewards = list(zip(*log))[1]
+        policy_rewards = list(zip(*log))[2]
+        threshold = log[-1][-1]
+
+        plt.subplot(1, 2, 1)
+        plt.cla()
+        plt.plot(mean_rewards, label='Mean rewards')
+        plt.plot(max_rewards, label='Max rewards')
+        plt.plot(policy_rewards, label='Policy rewards')
+        plt.legend(loc=2, prop={'size': 10})
+        plt.grid()
+
+        plt.subplot(1, 2, 2)
+        plt.cla()
+        plt.hist(batch_rewards)  # , range=reward_range)
+        plt.vlines(threshold,  [0], [len(batch_rewards)],
+                   label="threshold", color='red')  # percentile?
+        plt.legend(loc=2, prop={'size': 10})
+        plt.grid()
+
+        self.fig.canvas.draw()
+
+
 class CrossEntropy:
     """Cross-Entropy Method for Reinforcement Learning."""
 
@@ -126,7 +174,7 @@ class CrossEntropy:
 
     def train(self, n_iterations=10, n_sessions=20, n_best_actions=4,
               learning_rate=0.7, sigma_coef=1, learning_rate_coef=1,
-              print_out=False, visualize=False):
+              print_out=False, progress=False):
         """Training agent policy (self.action_table).
 
         Args:
@@ -134,10 +182,10 @@ class CrossEntropy:
             n_sessions (int): number of sessions per iteration.
             n_best_actions (int): number of best actions provided by iteration for update policy.
             learning_rate (float): learning rate for stability.
-            sigma_coef (float): coefficient of changing sigma per iteration. 
+            sigma_coef (float): coefficient of changing sigma per iteration.
             learning_rate_coef (float): coefficient of changing learning rate per iteration.
             print_out (bool): print information during the training.
-            visualise (bool): training schedule.
+            progress (bool): show training chart.
 
         TODO:
             percentile + perc coef
@@ -149,30 +197,35 @@ class CrossEntropy:
             test
 
         """
-        if print_out | visualize:
+        if print_out | progress:
             agent = Agent(self.action_table)
             self.total_reward = generate_session(self.protected, self.debris,
                                                  agent, self.start_time, self.end_time, self.step)
             if print_out:
                 print('initial action table:\n', self.action_table)
                 print('initial reward:', self.total_reward, '\n')
+            if progress:
+                show_progress = ShowProgress()
+                log = [[self.total_reward] * 4]
+                show_progress.plot([self.total_reward], log)
         for i in range(n_iterations):
-            rewards = []
+            batch_rewards = []
             action_tables = []
             for j in range(n_sessions):
                 # TODO - parallel this part
+                if print_out:
+                    print('iter:', i, "session:", j)
                 action_table = random_action_table(
                     self.action_table, self.sigma_table, self.max_fuel_cons, self.fuel_level)
                 agent = Agent(action_table)
                 action_tables.append(action_table)
                 reward = generate_session(self.protected, self.debris,
                                           agent, self.start_time, self.end_time, self.step)
-                rewards.append(reward)
+                batch_rewards.append(reward)
                 if print_out:
-                    print('iter:', i, "session:", j)
                     print('action_table:\n', action_table)
                     print('reward:\n', reward)
-            best_rewards = np.argsort(rewards)[-n_best_actions:]
+            best_rewards = np.argsort(batch_rewards)[-n_best_actions:]
             best_action_tables = np.array(action_tables)[best_rewards]
             new_action_table = np.mean(best_action_tables, axis=0)
             self.action_table = (
@@ -181,23 +234,39 @@ class CrossEntropy:
             )
             self.sigma_table *= sigma_coef
             learning_rate *= learning_rate
-            if print_out:
-                print('best rewards:', np.array(rewards)[best_rewards])
-                print('new action table:', new_action_table)
-                print('action table:', self.action_table)
-                print(self.get_total_reward(), '\n')
+            if print_out | progress:
+                self.update_total_reward()
+                if print_out:
+                    print('best rewards:', np.array(
+                        batch_rewards)[best_rewards])
+                    print('new action table:', new_action_table)
+                    print('action table:', self.action_table)
+                    print('policy reward:', self.get_total_reward(), '\n')
+                if progress:
+                    mean_reward = np.mean(batch_rewards)
+                    max_reward = best_rewards[-1]
+                    policy_reward = self.get_total_reward()
+                    threshold = best_rewards[0]
+                    log.append([mean_reward, max_reward,
+                                policy_reward, threshold])
+                    show_progress.plot(batch_rewards, log)
+        if not (print_out | progress):
+            update_total_reward()
         print("training completed")
 
     def set_action_table(self, action_table):
+        # TODO - try to set MCTS action_table and train (tune) it.
         self.action_table = action_table
 
     def get_action_table(self):
         return self.action_table
 
-    def get_total_reward(self):
+    def update_total_reward(self):
         agent = Agent(self.action_table)
         self.total_reward = generate_session(self.protected, self.debris,
                                              agent, self.start_time, self.end_time, self.step)
+
+    def get_total_reward(self):
         return self.total_reward
 
     def save_action_table(self, path):
