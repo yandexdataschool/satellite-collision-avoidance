@@ -111,6 +111,7 @@ class ShowProgress:
             text "mean reward = %.3f, threshold=%.3f" % (log[-1][0], log[-1][-1]) with plt.text?
             reward_range=[-1500, 10]) ?
             labels
+            threshold to subplot 0
 
         """
         mean_rewards = list(zip(*log))[0]
@@ -192,6 +193,8 @@ class CrossEntropy:
             stop if reward change < epsilon
             careful update
             good print_out or remove it
+            lists => np.arrays
+            save table sometimes during the learning?
             parallel
             log
             test
@@ -214,7 +217,7 @@ class CrossEntropy:
             for j in range(n_sessions):
                 # TODO - parallel this part
                 if print_out:
-                    print('iter:', i, "session:", j)
+                    print('iter:', i + 1, "session:", j + 1)
                 action_table = random_action_table(
                     self.action_table, self.sigma_table, self.max_fuel_cons, self.fuel_level)
                 agent = Agent(action_table)
@@ -225,8 +228,9 @@ class CrossEntropy:
                 if print_out:
                     print('action_table:\n', action_table)
                     print('reward:\n', reward)
-            best_rewards = np.argsort(batch_rewards)[-n_best_actions:]
-            best_action_tables = np.array(action_tables)[best_rewards]
+            best_rewards_indices = np.argsort(batch_rewards)[-n_best_actions:]
+            best_rewards = np.array(batch_rewards)[best_rewards_indices]
+            best_action_tables = np.array(action_tables)[best_rewards_indices]
             new_action_table = np.mean(best_action_tables, axis=0)
             self.action_table = (
                 new_action_table * learning_rate
@@ -237,8 +241,7 @@ class CrossEntropy:
             if print_out | progress:
                 self.update_total_reward()
                 if print_out:
-                    print('best rewards:', np.array(
-                        batch_rewards)[best_rewards])
+                    print('best rewards:', best_rewards)
                     print('new action table:', new_action_table)
                     print('action table:', self.action_table)
                     print('policy reward:', self.get_total_reward(), '\n')
@@ -251,7 +254,7 @@ class CrossEntropy:
                                 policy_reward, threshold])
                     show_progress.plot(batch_rewards, log)
         if not (print_out | progress):
-            update_total_reward()
+            self.update_total_reward()
         print("training completed")
 
     def set_action_table(self, action_table):
