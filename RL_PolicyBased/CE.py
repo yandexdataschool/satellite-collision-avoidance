@@ -17,15 +17,41 @@ np.random.seed(0)
 
 
 def generate_session(protected, debris, agent, start_time, end_time, step):
+    """Simulation.
+
+    Args:
+        protected (SpaceObject): protected space object in Environment.
+        debris ([SpaceObject, ]): list of other space objects.
+        agent (Agent): agent, to do actions in environment.
+        start_time (float): start time of simulation provided as mjd2000.
+        end_time (float): end time of simulation provided as mjd2000.
+        step (float): time step in simulation.
+
+    Returns:
+        reward: reward of the session.
+
+    """
     start_time_mjd2000 = pk.epoch(start_time, "mjd2000")
     env = Environment(copy(protected), copy(debris), start_time_mjd2000)
     simulator = Simulator(agent, env, update_r_p_step=None, print_out=False)
-    # reward
     reward = simulator.run(end_time, step, visualize=False)
     return reward
 
 
 def constrain_action(action, max_fuel_cons):
+    """Changes the action in accordance with the restrictions.
+
+    Args:
+        action (np.array): action.
+        max_fuel_cons (float): maximum allowable fuel consumption.
+
+    Returns:
+        action (np.array): changed action.
+
+    TODO:
+        time constrain (max and min time to request)
+
+    """
     fuel_cons = np.sum(action[:3])
     if fuel_cons > max_fuel_cons:
         action[:3] *= max_fuel_cons / fuel_cons
@@ -34,6 +60,18 @@ def constrain_action(action, max_fuel_cons):
 
 
 def random_action_table(mu_table, sigma_table, max_fuel_cons, fuel_level):
+    """Returns random action table using normal distributions under the given parameters.
+
+    Args:
+        mu_table (np.array): action table as table of expectation.
+        sigma_table (np.array): table of sigmas.
+        max_fuel_cons (float): maximum allowable fuel consumption per action.
+        fuel_level (float): total fuel level.
+
+    Returns:
+        action_table (np.array): random table of actions.
+
+    """
     n_actions = mu_table.shape[0]
     action_table = np.zeros_like(mu_table)
     for i in range(n_actions - 1):
@@ -52,9 +90,22 @@ def random_action_table(mu_table, sigma_table, max_fuel_cons, fuel_level):
 
 
 class CrossEntropy:
+    """Cross-Entropy Method for Reinforcement Learning."""
 
     def __init__(self, protected, debris, start_time, end_time, step,
                  max_fuel_cons=10, fuel_level=20, n_actions=3):
+        """
+        Agrs:
+            protected (SpaceObject): protected space object in Environment.
+            debris ([SpaceObject, ]): list of other space objects.
+            start_time (float): start time of simulation provided as mjd2000.
+            end_time (float): end time of simulation provided as mjd2000.
+            step (float): time step in simulation.
+            max_fuel_cons (float): maximum allowable fuel consumption per action.
+            fuel_level (float): total fuel level.
+            n_actions (int): total number of actions.
+
+        """
 
         self.env = Environment(copy(protected), copy(debris), start_time)
         self.protected = protected
@@ -67,36 +118,60 @@ class CrossEntropy:
         self.fuel_level = fuel_level
         self.action_table = np.zeros((self.n_actions, 4))
         self.action_table[:, 3] = self.max_time / n_actions
-        # self.mu_table[-1, -1] = np.nan
-        self.sigma_table = np.ones((self.n_actions, 4))  # * 0.5
+        self.action_table[-1, -1] = np.nan
+        self.sigma_table = np.ones((self.n_actions, 4))
         self.sigma_table[:, 3] = 0.01
-        # self.sigma_table[-1, -1] = np.nan
+        self.sigma_table[-1, -1] = np.nan
         self.max_fuel_cons = max_fuel_cons
 
-    def train(self, n_iterations=10, n_sessions=20, n_best_actions=4, learning_rate=0.7, sigma_coef=1, learning_rate_coef=1):
-        # TODO - percentile + perc coef
-        # TODO - stop if reward change < epsilon
-        # TODO - careful update
-        agent = Agent(self.action_table)
-        print('initial action table:', self.action_table)
-        print('initial reward:', generate_session(self.protected, self.debris,
-                                                  agent, self.start_time, self.end_time, self.step))
+    def train(self, n_iterations=10, n_sessions=20, n_best_actions=4,
+              learning_rate=0.7, sigma_coef=1, learning_rate_coef=1,
+              print_out=False, visualize=False):
+        """Training agent policy (self.action_table).
+
+        Args:
+            n_iterations (int): number of iterations.
+            n_sessions (int): number of sessions per iteration.
+            n_best_actions (int): number of best actions provided by iteration for update policy.
+            learning_rate (float): learning rate for stability.
+            sigma_coef (float): coefficient of changing sigma per iteration. 
+            learning_rate_coef (float): coefficient of changing learning rate per iteration.
+            print_out (bool): print information during the training.
+            visualise (bool): training schedule.
+
+        TODO:
+            percentile + perc coef
+            stop if reward change < epsilon
+            careful update
+            good print_out or remove it
+            parallel
+            log
+            test
+
+        """
+        if print_out | visualize:
+            agent = Agent(self.action_table)
+            self.total_reward = generate_session(self.protected, self.debris,
+                                                 agent, self.start_time, self.end_time, self.step)
+            if print_out:
+                print('initial action table:\n', self.action_table)
+                print('initial reward:', self.total_reward, '\n')
         for i in range(n_iterations):
-            print("i:", i)
             rewards = []
             action_tables = []
             for j in range(n_sessions):
                 # TODO - parallel this part
-                print("j:", j)
                 action_table = random_action_table(
                     self.action_table, self.sigma_table, self.max_fuel_cons, self.fuel_level)
-                print(action_table)
                 agent = Agent(action_table)
                 action_tables.append(action_table)
                 reward = generate_session(self.protected, self.debris,
                                           agent, self.start_time, self.end_time, self.step)
-                print(reward)
                 rewards.append(reward)
+                if print_out:
+                    print('iter:', i, "session:", j)
+                    print('action_table:\n', action_table)
+                    print('reward:\n', reward)
             best_rewards = np.argsort(rewards)[-n_best_actions:]
             best_action_tables = np.array(action_tables)[best_rewards]
             new_action_table = np.mean(best_action_tables, axis=0)
@@ -104,12 +179,13 @@ class CrossEntropy:
                 new_action_table * learning_rate
                 + self.action_table * (1 - learning_rate)
             )
-            print('best rewards', np.array(rewards)[best_rewards])
-            print("new_action_table", new_action_table)
-            print("action_table", self.action_table)
-            print(self.get_total_reward(), '\n')
             self.sigma_table *= sigma_coef
             learning_rate *= learning_rate
+            if print_out:
+                print('best rewards:', np.array(rewards)[best_rewards])
+                print('new action table:', new_action_table)
+                print('action table:', self.action_table)
+                print(self.get_total_reward(), '\n')
         print("training completed")
 
     def set_action_table(self, action_table):
@@ -125,5 +201,6 @@ class CrossEntropy:
         return self.total_reward
 
     def save_action_table(self, path):
+        # TODO - save reward here?
         header = "dVx,dVy,dVz,time to request"
         np.savetxt(path, self.action_table, delimiter=',', header=header)

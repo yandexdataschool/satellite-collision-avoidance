@@ -32,8 +32,8 @@ fuel_level = protected.get_fuel()
 
 action_table = DecisionTree(
     protected, debris, start_time, end_time, step, n_actions=n_actions)
-action_table.train(n_iterations)
+action_table.train(n_iterations, print_out=True)
 # TODO - maneuvers to print_out with the time
-# print(action_table.get_action_table())
-# print(action_table.get_total_reward())
+print(action_table.get_action_table())
+print(action_table.get_total_reward())
 action_table.save_action_table('action_table.csv')
