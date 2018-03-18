@@ -194,6 +194,7 @@ class Environment:
         self.protected = protected
         self.debris = debris
         self.protected_r = protected.get_radius()
+        self.init_fuel = self.protected.get_fuel()
         self.debris_r = np.array([d.get_radius() for d in debris])
         self.next_action = pk.epoch(0, "mjd2000")
         self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
@@ -384,7 +385,7 @@ class Environment:
         # of collision probability
         coll_prob_r = -(ELU((coll_prob - dangerous_prob) * coll_prob_C) + 1)
         traj_r = - traj_C * self.whole_trajectory_deviation
-        fuel_r = fuel_C * self.protected.get_fuel()
+        fuel_r = - fuel_C * (self.init_fuel - self.protected.get_fuel())
 
         # total reward
         # TODO - add weights to all reward components
@@ -402,7 +403,8 @@ class Environment:
         """
         self.next_action = pk.epoch(
             self.state["epoch"].mjd2000 + float(action[3]), "mjd2000")
-        error, fuel_cons = self.protected.maneuver(action[:3], self.state["epoch"])
+        error, fuel_cons = self.protected.maneuver(
+            action[:3], self.state["epoch"])
         if not error:
             self.state["fuel"] -= fuel_cons
         return error
