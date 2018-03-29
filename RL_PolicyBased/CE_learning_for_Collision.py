@@ -31,7 +31,9 @@ fuel_level = protected.get_fuel()
 
 action_table = CrossEntropy(
     protected, debris, start_time, end_time, step, n_actions=n_actions)
-action_table.train(5, 20, 3, 0.9, 0.9, 0.9, True, True)
+action_table.train(n_iterations=5, n_sessions=20, n_best_actions=3,
+                   learning_rate=0.9, sigma_coef=0.9, learning_rate_coef=0.9,
+                   print_out=True, progress=True)
 # TODO - maneuvers to print_out with the time
 print(action_table.get_action_table())
 print(action_table.get_total_reward())

@@ -112,6 +112,7 @@ class ShowProgress:
             reward_range=[-1500, 10]) ?
             labels
             threshold to subplot 0
+            some report on the plot (iteration, n_iterations...)
 
         """
         mean_rewards = list(zip(*log))[0]

@@ -41,7 +41,8 @@ def main(args):
     protected = osc[0]
     debris = [osc[1]]
 
-    action_table = np.loadtxt('MCTS/action_table_MCTS.csv', delimiter=',')
+    action_table = np.loadtxt(
+        'MCTS/action_table_MCTS_simple.csv', delimiter=',')
     agent = Agent(action_table)
 
     start_time = pk.epoch(start_time, "mjd2000")
