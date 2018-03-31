@@ -1,85 +1,96 @@
 # Satellite Collision Avoidance
 
+
+## Motivation
+
 Since 2004 the amount of space launchings has been gradually increased. Currently, there are more than 100 satellites launched into space every year. This number could be expanded rapidly due to such projects as providing global internet by Starlink. The increased amount of objects in space leads to a higher probability of their collision.
 
-Every case of collision is currently processed manually. In this project, we investigate methods of reinforcement learning to create a system for automatic maneuver estimation in order to prevent collisions.
+Every case of collision is currently processed manually. In this project, we investigate methods of **reinforcement learning** to create a system for **automatic maneuver estimation** in order to prevent collisions.
 
-## Getting Started
+|![](data/images/stuffin_space.png)|
+|:--:| 
+|Space debris reconstrucion from [Stuffin Space project](http://stuffin.space)|
 
-To set up the project 
+## What is this project about?
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+Here I will pass the short project description with scheme's.
 
-### Prerequisites
+## Installation
+<!-- 
+For installation you need python 3 and . -->
 
-#### Pykep
+### Step 1
 
-[Instructions for install pykep](https://esa.github.io/pykep/installation.html)
-```
-Give examples
-```
+To set up the project first copy the repo to your local machine:
 
-### Installing
-
-A step by step series of examples that tell you have to get a development env running
-
-Say what the step will be
-
-```
-Give the example
+``` 
+git clone https://github.com/yandexdataschool/satellite-collision-avoidance.git
 ```
 
-And repeat
+### Step 2
+
+After cloning the repo, install **requirements**:
 
 ```
-until finished
+ pip install -r requirements.txt
 ```
 
-End with an example of getting some data out of the system or using it for a little demo
+We use following libraries:
+> * Pykep
+> * Pandas
+> * Matplotlib
+> * Numpy
+> * Scipy
 
-## Running the tests
+### Run Examples
 
-Explain how to run the automated tests for this system
+Now you can run examples of space simulator.
 
-### Break down into end to end tests
-
-Explain what these tests test and why
-
+Run following code:
 ```
-Give an example
-```
-
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
+python example1.py
 ```
 
-## Deployment
+If evereything is correct, you should get such plot:
 
-Add additional notes about how to deploy this on a live system
+![](data/images/example1.png)
 
-## Built With
+And output:
+```
+Simulation ended.
+Collision probability: 0.0.
+Reward: 0.9999546000702375.
+```
 
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
+Here I will provide more demo, including one of RL method example (learning and running).
+
+## API
+Here will be described all usage scenarios with code examples. 
+
+## Method Descriptions
+Here will be described main methods of the project. I suggest to create for any new RL method a new .md file in different folder, and get there fulldescription of what was done, which results  we have.
 
 ## Authors
 
-* **Billie Thompson** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
+* **Nikita Kazeev** - scientific director, Yandex LAMBDA Factory
+* **Irina Ponomareva** - scientific advisor, TSNIIMASH
+* **Leonid Gremyachi** - MSc in computer science, NRU-HSE, 1st year.
+* **Dubov Dmitry** - BSc in computer science, NRU-HSE, 4th year.
 
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
-
+<!-- See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+ -->
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the TSNIIMASH and LAMBDA Factory. (?)
 
-## Acknowledgments
+<!-- ## Acknowledgments
 
 * Hat tip to anyone who's code was used
 * Inspiration
-* etc
+* etc -->
 
+## Useful links
+
+* For space simulation and calculations we use **pykep** library. [[Pykep](https://esa.github.io/pykep/)]
+* http://stuffin.space/
+* other links ...
