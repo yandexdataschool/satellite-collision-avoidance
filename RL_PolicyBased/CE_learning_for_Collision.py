@@ -19,6 +19,7 @@ step = 0.0001
 end_time = 6600.05
 
 n_actions = 3
+n_iterations = 30
 time_space = np.arange(start_time, end_time, step)
 
 osc = read_space_objects(parent_dir + "/data/collision.osc", "osc")
@@ -31,7 +32,7 @@ fuel_level = protected.get_fuel()
 
 action_table = CrossEntropy(
     protected, debris, start_time, end_time, step, n_actions=n_actions)
-action_table.train(n_iterations=5, n_sessions=20, n_best_actions=3,
+action_table.train(n_iterations=n_iterations, n_sessions=30, n_best_actions=1,
                    learning_rate=0.9, sigma_coef=0.9, learning_rate_coef=0.9,
                    print_out=True, progress=True)
 # TODO - maneuvers to print_out with the time

@@ -238,8 +238,8 @@ class Simulator:
         self.log_protected_position()
 
         if self.print_out:
-            print("Simulation ended.\nCollision probability: {}.\nReward: {}.".format(
-                self.env.get_collision_probability(), self.env.get_reward()))
+            print("Simulation ended.\nCollision probability: {}.\nReward: {}.\nFuel consumption: {}.".format(
+                self.env.get_collision_probability(), self.env.get_reward(), self.env.init_fuel - self.env.protected.get_fuel()))
 
         return self.env.get_reward()
 

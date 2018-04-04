@@ -13,6 +13,8 @@ from simulator import Simulator, read_space_objects
 from agent import TableAgent as Agent
 
 
+PI = 3.1415
+
 np.random.seed(0)
 
 # TODO - check functions and do tests
@@ -80,6 +82,30 @@ def get_random_time_to_req(time_space, n_actions, last_nan=True):
     return time_to_req
 
 
+def get_random_dV(fuel_cons):
+    """Returns random x, y, z accelerations at a given fuel consumption.
+
+    Args:
+        fuel_cons (float): fuel consumption.
+
+    Returns:
+        dV (np.array): accelerations.
+
+    """
+    # using Spherical coordinate system
+    r = fuel_cons
+    theta = np.random.uniform(PI)
+    phi = np.random.uniform(2 * PI)
+
+    dVx = r * np.sin(theta) * np.cos(phi)
+    dVy = r * np.sin(theta) * np.sin(phi)
+    dVz = r * np.cos(theta)
+
+    dV = np.array([dVx, dVy, dVz])
+
+    return dV
+
+
 def get_random_actions(n_rnd_actions, max_time, max_fuel_cons, nan_time_to_req=False, inaction=True):
     '''Random actions (not action table).
 
@@ -107,8 +133,7 @@ def get_random_actions(n_rnd_actions, max_time, max_fuel_cons, nan_time_to_req=F
 
     for i in range(n_rnd_actions):
         fuel_cons = np.random.uniform(max_fuel_cons)
-        dV[i] = get_random_on_interval(np.linspace(
-            0, fuel_cons), 3, True) - fuel_cons / 3
+        dV[i] = get_random_dV(fuel_cons)
 
     actions = np.hstack((dV, time_to_req))
 

@@ -54,7 +54,7 @@ def constrain_action(action, max_fuel_cons):
         time constrain (max and min time to request)
 
     """
-    fuel_cons = np.sum(action[:3])
+    fuel_cons = np.linalg.norm(action[:3])
     if fuel_cons > max_fuel_cons:
         action[:3] *= max_fuel_cons / fuel_cons
     action[3] = max(0.001, action[3])

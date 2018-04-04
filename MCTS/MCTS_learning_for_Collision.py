@@ -18,7 +18,7 @@ start_time = 6599.95
 step = 0.0001
 end_time = 6600.05
 
-n_iterations = 20
+n_iterations = 100
 n_steps_ahead = 2
 time_space = np.arange(start_time, end_time, step)
 
@@ -32,7 +32,7 @@ fuel_level = protected.get_fuel()
 
 action_table = DecisionTree(
     protected, debris, start_time, end_time, step)
-action_table.train(n_iterations, print_out=True)
+action_table.train(n_iterations, n_steps_ahead, print_out=True)
 print(action_table.get_action_table())
 print(action_table.get_total_reward())
 action_table.save_action_table('action_table_MCTS.csv')

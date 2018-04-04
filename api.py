@@ -340,9 +340,7 @@ class Environment:
                 del self.state_for_min_distances_in_current_conjunction[d]
 
     def get_collision_probability(self):
-        """ Update and return total collision probability.
-
-        """
+        """ Update and return total collision probability."""
         if self.dangerous_debris_in_current_conjunction.size:
             collision_probability_in_current_conjunction = np.array([
                 self.collision_probability_estimator.ChenBai_approach(

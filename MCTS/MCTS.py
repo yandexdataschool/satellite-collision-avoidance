@@ -12,10 +12,12 @@ from api import Environment, MAX_FUEL_CONSUMPTION
 from simulator import Simulator, read_space_objects
 from agent import TableAgent as Agent
 
+PI = 3.1415
 
 np.random.seed(0)
 
 # TODO - check functions and do tests
+# TODO - check max fuel / total fuel level are correct
 
 
 def generate_session(protected, debris, agent, start_time, end_time, step):
@@ -40,54 +42,66 @@ def generate_session(protected, debris, agent, start_time, end_time, step):
     return reward
 
 
-def get_random_on_interval(space, n, replace=False):
-    """Returns n random indents from some space.
+def get_random_dV(fuel_cons):
+    """Returns random x, y, z accelerations at a given fuel consumption.
 
     Args:
-        space (np.array): ordered array.
-        n (int): number of indents.
+        fuel_cons (float): fuel consumption.
 
     Returns:
-        result (np.array): indents.
+        dV (np.array): accelerations.
 
     """
-    result = np.sort(np.random.choice(space, n, replace))
-    result = result - space[0]
-    result[1:] = result[1:] - result[:-1]
-    return result
+    # using Spherical coordinate system
+    r = fuel_cons
+    theta = np.random.uniform(PI)
+    phi = np.random.uniform(2 * PI)
+
+    dVx = r * np.sin(theta) * np.cos(phi)
+    dVy = r * np.sin(theta) * np.sin(phi)
+    dVz = r * np.cos(theta)
+
+    dV = np.array([dVx, dVy, dVz])
+
+    return dV
 
 
-def get_random_actions(n_rnd_actions, max_time, max_fuel_cons, nan_time_to_req=False, inaction=True):
-    '''Random actions (not action table).
+def get_random_actions(n_rnd_actions, max_time, max_fuel_cons, fuel_level, inaction=True,
+                       p_skip=0.2, p_skip_coef=0.1):
+    '''Random actions.
 
     Agrs:
         n_rnd_actions (int): number of random actions.
-        max_time (float): maximum time to request. 
-        max_fuel_cons (float): maximum allowable fuel consumption.
+        max_time (float): maximum time to request.
+        max_fuel_cons (float): maximum allowable fuel consumption per action.
+        fuel_level (float): total fuel level.
         nan_time_to_req (bool): array of times to request is np.nan (for example, for last action).
-        inaction (bool): one action of random actions is inaction.
+        inaction (bool): first action of random actions is inaction.
+        p_skip (float): probability of inaction (besides force first inaction).
+        p_skip_coef (float): coefficient of inaction probability increase (from 0 to 1).
 
     Returns:
         actions (np.array): array of random actions.
 
     '''
-    dV = np.empty((n_rnd_actions, 3))
+    dV_arr = np.empty((n_rnd_actions - inaction, 3))
 
-    if nan_time_to_req:
-        time_to_req = np.full((n_rnd_actions, 1), np.nan)
-    else:
-        time_to_req = np.random.uniform(high=max_time, size=(n_rnd_actions, 1))
+    for i in range(n_rnd_actions - inaction):
+        if np.random.uniform() < p_skip:
+            dV_arr[i] = [0, 0, 0]
+        else:
+            fuel_cons = np.random.uniform(
+                min(max_fuel_cons, fuel_level))
+            fuel_level -= fuel_cons
+            dV_arr[i] = get_random_dV(fuel_cons)
+        p_skip = 1 - (1 - p_skip) * (1 - p_skip_coef)
 
     if inaction:
-        n_rnd_actions -= 1
-        dV[0] = np.zeros(3)
+        dV_arr = np.vstack((np.zeros((1, 3)), dV_arr))
 
-    for i in range(inaction, n_rnd_actions):
-        fuel_cons = np.random.uniform(max_fuel_cons)
-        dV[i] = get_random_on_interval(np.linspace(
-            0, fuel_cons), 3, True) - fuel_cons / 3
+    time_to_req = np.random.uniform(high=max_time, size=(n_rnd_actions, 1))
 
-    actions = np.hstack((dV, time_to_req))
+    actions = np.hstack((dV_arr, time_to_req))
 
     return actions
 
@@ -128,9 +142,9 @@ class DecisionTree:
         self.investigated_time = self.start_time
         self.step = step
         self.fuel_level = fuel_level
+        self.max_fuel_cons = max_fuel_cons
         self.action_table = np.empty((0, 4))
         self.total_reward = None
-        self.max_fuel_cons = max_fuel_cons
         self.max_time_to_req = 0.05
 
     def train(self, n_iterations=10, n_steps_ahead=2, print_out=False):
@@ -161,10 +175,9 @@ class DecisionTree:
             model description!
             combine get_best_current_action and get_best_actions_if_current_passed into one function.
 
-
         """
         skipped = False
-        while self.investigated_time < self.end_time:
+        while (self.investigated_time < self.end_time) & (self.fuel_level > 0):
             if not skipped:
                 current_best_action, current_best_reward = self.get_best_current_action(
                     n_iterations, n_steps_ahead, print_out=print_out)
@@ -176,9 +189,10 @@ class DecisionTree:
             else:
                 skipped = True
                 best_action = skip_best_action
-                current_best_action, current_best_reward = skip_best_action, skip_best_reward
+                current_best_action, current_best_reward = skip_best_next_action, skip_best_reward
             self.action_table = add_action_to_action_table(
                 self.action_table, best_action)
+            self.fuel_level -= np.linalg.norm(best_action[:3])
             if print_out:
                 print("inv time:", self.investigated_time)
                 print("best cur r:", current_best_reward, '\n',
@@ -186,24 +200,24 @@ class DecisionTree:
                 print("best skip r:", skip_best_reward, '\n',
                       "best skip a:", skip_best_action, '\n',
                       "best skip next a:", skip_best_next_action)
-                print("best_action:", best_action, '\n',
+                print("best action:", best_action, '\n',
+                      "fuel level:", self.fuel_level, '\n',
                       "skipped:", skipped, '\n',
                       "total AT:\n", self.action_table, '\n\n\n')
             self.investigated_time += best_action[3]
 
-    def get_best_current_action(self, n_iterations, n_steps_ahead, print_out, p_pass=0.4):
+    def get_best_current_action(self, n_iterations, n_steps_ahead, print_out):
         """Returns the best of random actions with given parameters.
 
         Args:
             n_iterations (int): number of iterations for choice an action.
             n_steps_ahead (int): number of actions ahead to evaluate.
             p_pass (float): cumulative probability of skip ahead action.
-            print_out (bool): print information during the training.
-
 
         Returns:
             best_action (np.array): best action action among considered.
             best_reward (float): reward of the session that contained the best action.
+            fuel_cons (float): fuel consumption.
 
         """
         best_reward = -float("inf")
@@ -212,14 +226,8 @@ class DecisionTree:
                 n_rnd_actions=n_steps_ahead + 1,
                 max_time=self.max_time_to_req,
                 max_fuel_cons=self.max_fuel_cons,
-                nan_time_to_req=False,
+                fuel_level=self.fuel_level,
                 inaction=False)
-            p = p_pass
-            for j in range(n_steps_ahead):
-                if np.random.uniform() < p:
-                    temp_action_table[j + 1] = np.array(
-                        [0, 0, 0, temp_action_table[j + 1, 3]])
-                p = 1 - (1 - p) * p_pass
             action_table = np.vstack((self.action_table, temp_action_table))
             agent = Agent(action_table)
             r = generate_session(
@@ -256,14 +264,8 @@ class DecisionTree:
                 n_rnd_actions=n_steps_ahead + 2,
                 max_time=self.max_time_to_req,
                 max_fuel_cons=self.max_fuel_cons,
-                nan_time_to_req=False,
+                fuel_level=self.fuel_level,
                 inaction=True)
-            p = p_pass
-            for j in range(n_steps_ahead):
-                if np.random.uniform() < p:
-                    temp_action_table[j + 2] = np.array(
-                        [0, 0, 0, temp_action_table[j + 2, 3]])
-                p = 1 - (1 - p) * p_pass
             action_table = np.vstack((
                 self.action_table, temp_action_table))
             agent = Agent(action_table)

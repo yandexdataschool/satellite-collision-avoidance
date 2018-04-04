@@ -19,7 +19,7 @@ step = 0.0001
 end_time = 6600.05
 
 n_actions = 3
-n_iterations = 20
+n_iterations = 100
 time_space = np.arange(start_time, end_time, step)
 
 osc = read_space_objects(parent_dir + "/data/collision.osc", "osc")
