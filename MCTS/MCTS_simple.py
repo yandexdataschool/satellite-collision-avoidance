@@ -8,8 +8,8 @@ import os
 parent_dir = os.path.dirname(os.getcwd())
 sys.path.append(parent_dir)
 
-from api import Environment, MAX_FUEL_CONSUMPTION
-from simulator import Simulator, read_space_objects
+from api import Environment
+from simulator import Simulator
 from agent import TableAgent as Agent
 
 
@@ -17,7 +17,7 @@ PI = 3.1415
 
 np.random.seed(0)
 
-# TODO - check functions and do tests
+# TODO - tests
 
 
 def generate_session(protected, debris, agent, start_time, end_time, step):
@@ -94,8 +94,8 @@ def get_random_dV(fuel_cons):
     """
     # using Spherical coordinate system
     r = fuel_cons
-    theta = np.random.uniform(PI)
-    phi = np.random.uniform(2 * PI)
+    theta = np.random.uniform(0, PI)
+    phi = np.random.uniform(0, 2 * PI)
 
     dVx = r * np.sin(theta) * np.cos(phi)
     dVy = r * np.sin(theta) * np.sin(phi)
@@ -125,14 +125,14 @@ def get_random_actions(n_rnd_actions, max_time, max_fuel_cons, nan_time_to_req=F
     if nan_time_to_req:
         time_to_req = np.full((n_rnd_actions, 1), np.nan)
     else:
-        time_to_req = np.random.uniform(high=max_time, size=(n_rnd_actions, 1))
+        time_to_req = np.random.uniform(0, max_time, (n_rnd_actions, 1))
 
     if inaction:
         n_rnd_actions -= 1
         dV[-1] = np.zeros(3)
 
     for i in range(n_rnd_actions):
-        fuel_cons = np.random.uniform(max_fuel_cons)
+        fuel_cons = np.random.uniform(0, max_fuel_cons)
         dV[i] = get_random_dV(fuel_cons)
 
     actions = np.hstack((dV, time_to_req))

@@ -105,7 +105,6 @@ class ShowProgress:
         Args:
             batch_rewards (list of floats): batch of rewards.
             log ([[mean_reward, max_reward, policy_reward, threshold], ]): training log.
-            reward_range (list): [min_reward, max_reward] for chart.
 
         TODO:
             text "mean reward = %.3f, threshold=%.3f" % (log[-1][0], log[-1][-1]) with plt.text?
@@ -113,6 +112,9 @@ class ShowProgress:
             labels
             threshold to subplot 0
             some report on the plot (iteration, n_iterations...)
+            reward_range (list): [min_reward, max_reward] for chart?
+            plt.hist(batch_rewards, range=reward_range)? 
+            percentile?
 
         """
         mean_rewards = list(zip(*log))[0]
@@ -130,9 +132,9 @@ class ShowProgress:
 
         plt.subplot(1, 2, 2)
         plt.cla()
-        plt.hist(batch_rewards)  # , range=reward_range)
+        plt.hist(batch_rewards)
         plt.vlines(threshold,  [0], [len(batch_rewards)],
-                   label="threshold", color='red')  # percentile?
+                   label="threshold", color='red')
         plt.legend(loc=2, prop={'size': 10})
         plt.grid()
 
@@ -216,7 +218,6 @@ class CrossEntropy:
             batch_rewards = []
             action_tables = []
             for j in range(n_sessions):
-                # TODO - parallel this part
                 if print_out:
                     print('iter:', i + 1, "session:", j + 1)
                 action_table = random_action_table(

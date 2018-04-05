@@ -8,16 +8,15 @@ import os
 parent_dir = os.path.dirname(os.getcwd())
 sys.path.append(parent_dir)
 
-from api import Environment, MAX_FUEL_CONSUMPTION
-from simulator import Simulator, read_space_objects
+from api import Environment
+from simulator import Simulator
 from agent import TableAgent as Agent
 
 PI = 3.1415
 
 np.random.seed(0)
 
-# TODO - check functions and do tests
-# TODO - check max fuel / total fuel level are correct
+# TODO - tests
 
 
 def generate_session(protected, debris, agent, start_time, end_time, step):
@@ -54,8 +53,8 @@ def get_random_dV(fuel_cons):
     """
     # using Spherical coordinate system
     r = fuel_cons
-    theta = np.random.uniform(PI)
-    phi = np.random.uniform(2 * PI)
+    theta = np.random.uniform(0, PI)
+    phi = np.random.uniform(0, 2 * PI)
 
     dVx = r * np.sin(theta) * np.cos(phi)
     dVy = r * np.sin(theta) * np.sin(phi)
@@ -91,7 +90,7 @@ def get_random_actions(n_rnd_actions, max_time, max_fuel_cons, fuel_level, inact
             dV_arr[i] = [0, 0, 0]
         else:
             fuel_cons = np.random.uniform(
-                min(max_fuel_cons, fuel_level))
+                0, min(max_fuel_cons, fuel_level))
             fuel_level -= fuel_cons
             dV_arr[i] = get_random_dV(fuel_cons)
         p_skip = 1 - (1 - p_skip) * (1 - p_skip_coef)
@@ -99,7 +98,7 @@ def get_random_actions(n_rnd_actions, max_time, max_fuel_cons, fuel_level, inact
     if inaction:
         dV_arr = np.vstack((np.zeros((1, 3)), dV_arr))
 
-    time_to_req = np.random.uniform(high=max_time, size=(n_rnd_actions, 1))
+    time_to_req = np.random.uniform(0.001, max_time, (n_rnd_actions, 1))
 
     actions = np.hstack((dV_arr, time_to_req))
 
@@ -158,8 +157,6 @@ class DecisionTree:
         TODO:
             MCTS strategy (not just step-by-step)?
             deal with bias
-            fuel construction for whole table
-            check max_fuel_cons
             don't generate whole session all the time
             time to req from previous action learn after learn action
             choose several best actions?
@@ -168,9 +165,7 @@ class DecisionTree:
             parallel
             log
             test
-            good function names
             good name for method - is it MCTS
-            save forward action, if skip
             add min time to req?
             model description!
             combine get_best_current_action and get_best_actions_if_current_passed into one function.
@@ -183,9 +178,13 @@ class DecisionTree:
                     n_iterations, n_steps_ahead, print_out=print_out)
             skip_best_action, skip_best_reward, skip_best_next_action = self.get_best_actions_if_current_passed(
                 n_iterations, n_steps_ahead, print_out)
+            # it is more advantageous to maneuver.
             if current_best_reward > skip_best_reward:
                 skipped = False
                 best_action = current_best_action
+            # it is more advantageous to skip the maneuver.
+            # in this case, at the next step the current_best_action is
+            # skip_best_next_action.
             else:
                 skipped = True
                 best_action = skip_best_action
@@ -212,12 +211,11 @@ class DecisionTree:
         Args:
             n_iterations (int): number of iterations for choice an action.
             n_steps_ahead (int): number of actions ahead to evaluate.
-            p_pass (float): cumulative probability of skip ahead action.
+            print_out (bool): print information during the training.
 
         Returns:
             best_action (np.array): best action action among considered.
             best_reward (float): reward of the session that contained the best action.
-            fuel_cons (float): fuel consumption.
 
         """
         best_reward = -float("inf")
@@ -242,13 +240,12 @@ class DecisionTree:
 
         return best_action, best_reward
 
-    def get_best_actions_if_current_passed(self, n_iterations, n_steps_ahead, print_out, p_pass=0.4):
+    def get_best_actions_if_current_passed(self, n_iterations, n_steps_ahead, print_out):
         """Returns the best of random actions with given parameters, provided that firts action skipped.
 
         Args:
             n_iterations (int): number of iterations for choice an action.
             n_steps_ahead (int): number of actions ahead to evaluate.
-            p_pass (float): cumulative probability of skip ahead action.
             print_out (bool): print information during the training.
 
 
