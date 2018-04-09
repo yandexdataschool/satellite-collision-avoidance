@@ -1,21 +1,14 @@
+# Reinforcement Learning - Cross-Entropy method.
+
 import numpy as np
 from copy import copy
 import pykep as pk
-import pandas as pd
 
 import matplotlib.pyplot as plt
-
-import sys
-import os
-parent_dir = os.path.dirname(os.getcwd())
-sys.path.append(parent_dir)
 
 from api import Environment, MAX_FUEL_CONSUMPTION
 from simulator import Simulator, read_space_objects
 from agent import TableAgent as Agent
-
-
-np.random.seed(0)
 
 
 def generate_session(protected, debris, agent, start_time, end_time, step):
@@ -177,8 +170,8 @@ class CrossEntropy:
         self.max_fuel_cons = max_fuel_cons
 
     def train(self, n_iterations=10, n_sessions=20, n_best_actions=4,
-              learning_rate=0.7, sigma_coef=1, learning_rate_coef=1,
-              print_out=False, progress=False):
+              learning_rate=0.7, sigma_coef=0.9, learning_rate_coef=0.9,
+              print_out=False, show_progress=False):
         """Training agent policy (self.action_table).
 
         Args:
@@ -189,7 +182,7 @@ class CrossEntropy:
             sigma_coef (float): coefficient of changing sigma per iteration.
             learning_rate_coef (float): coefficient of changing learning rate per iteration.
             print_out (bool): print information during the training.
-            progress (bool): show training chart.
+            show_progress (bool): show training chart.
 
         TODO:
             percentile + perc coef
@@ -203,17 +196,16 @@ class CrossEntropy:
             test
 
         """
-        if print_out | progress:
+        if print_out | show_progress:
             agent = Agent(self.action_table)
             self.total_reward = generate_session(self.protected, self.debris,
                                                  agent, self.start_time, self.end_time, self.step)
             if print_out:
-                print('initial action table:\n', self.action_table)
-                print('initial reward:', self.total_reward, '\n')
-            if progress:
-                show_progress = ShowProgress()
+                self.print_start_train()
+            if show_progress:
+                progress = ShowProgress()
                 log = [[self.total_reward] * 4]
-                show_progress.plot([self.total_reward], log)
+                progress.plot([self.total_reward], log)
         for i in range(n_iterations):
             batch_rewards = []
             action_tables = []
@@ -240,24 +232,25 @@ class CrossEntropy:
             )
             self.sigma_table *= sigma_coef
             learning_rate *= learning_rate
-            if print_out | progress:
+            if print_out | show_progress:
                 self.update_total_reward()
                 if print_out:
                     print('best rewards:', best_rewards)
                     print('new action table:', new_action_table)
                     print('action table:', self.action_table)
                     print('policy reward:', self.get_total_reward(), '\n')
-                if progress:
+                if show_progress:
                     mean_reward = np.mean(batch_rewards)
                     max_reward = best_rewards[-1]
                     policy_reward = self.get_total_reward()
                     threshold = best_rewards[0]
                     log.append([mean_reward, max_reward,
                                 policy_reward, threshold])
-                    show_progress.plot(batch_rewards, log)
-        if not (print_out | progress):
+                    progress.plot(batch_rewards, log)
+        if not (print_out | show_progress):
             self.update_total_reward()
-        print("training completed")
+        if print_out:
+            self.print_end_train()
 
     def set_action_table(self, action_table):
         # TODO - try to set MCTS action_table and train (tune) it.
@@ -273,6 +266,14 @@ class CrossEntropy:
 
     def get_total_reward(self):
         return self.total_reward
+
+    def print_start_train(self):
+        print("Start training.\nInitial action table:\n", self.action_table,
+              "\nInitial reward:", self.total_reward, "\n")
+
+    def print_end_train(self):
+        print("Training completed.\nTotal reward:", self.total_reward,
+              "\nAction Table:\n", self.action_table)
 
     def save_action_table(self, path):
         # TODO - save reward here?

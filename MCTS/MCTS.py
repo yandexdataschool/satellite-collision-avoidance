@@ -1,22 +1,12 @@
+# Reinforcement Learning - Monte-Carlo Tree Search method.
+
 import numpy as np
 from copy import copy
 import pykep as pk
-import pandas as pd
-
-import sys
-import os
-parent_dir = os.path.dirname(os.getcwd())
-sys.path.append(parent_dir)
 
 from api import Environment
 from simulator import Simulator
 from agent import TableAgent as Agent
-
-PI = 3.1415
-
-np.random.seed(0)
-
-# TODO - tests
 
 
 def generate_session(protected, debris, agent, start_time, end_time, step):
@@ -53,8 +43,8 @@ def get_random_dV(fuel_cons):
     """
     # using Spherical coordinate system
     r = fuel_cons
-    theta = np.random.uniform(0, PI)
-    phi = np.random.uniform(0, 2 * PI)
+    theta = np.random.uniform(0, np.pi)
+    phi = np.random.uniform(0, 2 * np.pi)
 
     dVx = r * np.sin(theta) * np.cos(phi)
     dVy = r * np.sin(theta) * np.sin(phi)
@@ -65,7 +55,7 @@ def get_random_dV(fuel_cons):
     return dV
 
 
-def get_random_actions(n_rnd_actions, max_time, max_fuel_cons, fuel_level, inaction=True,
+def get_random_actions(n_rnd_actions, max_time, max_fuel_cons, fuel_level=None, inaction=True,
                        p_skip=0.2, p_skip_coef=0.1):
     '''Random actions.
 
@@ -73,8 +63,7 @@ def get_random_actions(n_rnd_actions, max_time, max_fuel_cons, fuel_level, inact
         n_rnd_actions (int): number of random actions.
         max_time (float): maximum time to request.
         max_fuel_cons (float): maximum allowable fuel consumption per action.
-        fuel_level (float): total fuel level.
-        nan_time_to_req (bool): array of times to request is np.nan (for example, for last action).
+        fuel_level (float): total fuel level (not taken into account if None).
         inaction (bool): first action of random actions is inaction.
         p_skip (float): probability of inaction (besides force first inaction).
         p_skip_coef (float): coefficient of inaction probability increase (from 0 to 1).
@@ -89,9 +78,13 @@ def get_random_actions(n_rnd_actions, max_time, max_fuel_cons, fuel_level, inact
         if np.random.uniform() < p_skip:
             dV_arr[i] = [0, 0, 0]
         else:
-            fuel_cons = np.random.uniform(
-                0, min(max_fuel_cons, fuel_level))
-            fuel_level -= fuel_cons
+            if fuel_level:
+                fuel_cons = np.random.uniform(
+                    0, min(max_fuel_cons, fuel_level))
+                fuel_level -= fuel_cons
+            else:
+                fuel_cons = np.random.uniform(
+                    0, max_fuel_cons)
             dV_arr[i] = get_random_dV(fuel_cons)
         p_skip = 1 - (1 - p_skip) * (1 - p_skip_coef)
 
@@ -106,8 +99,11 @@ def get_random_actions(n_rnd_actions, max_time, max_fuel_cons, fuel_level, inact
 
 
 def add_action_to_action_table(action_table, action):
+    # TODO - docstrings
     if action_table.size:
         action_table = np.vstack([action_table, action])
+        action_table[-2, -1] = action_table[-1, -1]
+        action_table[-1, -1] = np.nan
     else:
         action_table = action.reshape((1, -1))
 
@@ -115,12 +111,10 @@ def add_action_to_action_table(action_table, action):
 
 
 class DecisionTree:
-    """Simple MCTS Method for Reinforcement Learning.
-
-    """
+    """MCTS Method for Reinforcement Learning."""
 
     def __init__(self, protected, debris, start_time, end_time, step,
-                 max_fuel_cons=10, fuel_level=20):
+                 max_fuel_cons, fuel_level, max_time_to_req=0.05):
         """
         Agrs:
             protected (SpaceObject): protected space object in Environment.
@@ -130,7 +124,6 @@ class DecisionTree:
             step (float): time step in simulation.
             max_fuel_cons (float): maximum allowable fuel consumption per action.
             fuel_level (float): total fuel level.
-            n_actions (int): total number of actions.
 
         """
         self.env = Environment(copy(protected), copy(debris), start_time)
@@ -144,7 +137,64 @@ class DecisionTree:
         self.max_fuel_cons = max_fuel_cons
         self.action_table = np.empty((0, 4))
         self.total_reward = None
-        self.max_time_to_req = 0.05
+        self.max_time_to_req = max_time_to_req
+
+    def train_simple(self, n_iterations=10, print_out=False):
+        """Training agent policy (self.action_table).
+
+        Args:
+            n_iterations (int): number of iterations for choice an action.
+            print_out (bool): print information during the training.
+
+        TODO:
+            describe train_simple and train difference
+            deal with bias
+            fuel construction for whole table
+            check max_fuel_cons
+            don't generate whole session all the time
+            time to req from previous action learn after learn action
+            choose several best actions?
+            do not finish the simulation?
+            good print_out or remove it
+            parallel
+            log
+            test
+
+        """
+        if print_out:
+            self.print_start_train()
+        while (self.investigated_time < self.end_time) & (self.fuel_level > 0):
+            reward = -float("inf")
+            fuel = min(self.max_fuel_cons, self.fuel_level)
+            actions = get_random_actions(
+                n_iterations, self.max_time_to_req, self.max_fuel_cons, None, True, 0, 0)
+            print("actions", actions)
+            for a in actions:
+                temp_action_table = add_action_to_action_table(
+                    self.action_table, a)
+                agent = Agent(temp_action_table)
+                r = generate_session(
+                    self.protected, self.debris, agent, self.start_time, self.end_time, self.step)
+                if print_out:
+                    print("action:", a)
+                    print("r:", r, '\n')
+                if r > reward:
+                    best_action = a
+                    reward = r
+                    self.fuel_level -= np.linalg.norm(best_action[:3])
+
+            self.action_table = add_action_to_action_table(
+                self.action_table, best_action)
+            if print_out:
+                print("inv time:", self.investigated_time)
+                print("best r:", reward, '\n',
+                      "best a:", best_action, '\n',
+                      "fuel level:", self.fuel_level, '\n',
+                      "total AT:\n", self.action_table, '\n\n\n')
+            self.investigated_time += best_action[3]
+
+        if print_out:
+            self.print_end_train()
 
     def train(self, n_iterations=10, n_steps_ahead=2, print_out=False):
         """Training agent policy (self.action_table).
@@ -171,6 +221,8 @@ class DecisionTree:
             combine get_best_current_action and get_best_actions_if_current_passed into one function.
 
         """
+        if print_out:
+            self.print_start_train()
         skipped = False
         while (self.investigated_time < self.end_time) & (self.fuel_level > 0):
             if not skipped:
@@ -189,8 +241,12 @@ class DecisionTree:
                 skipped = True
                 best_action = skip_best_action
                 current_best_action, current_best_reward = skip_best_next_action, skip_best_reward
-            self.action_table = add_action_to_action_table(
-                self.action_table, best_action)
+
+            if self.action_table.size:
+                self.action_table = np.vstack([self.action_table, best_action])
+            else:
+                self.action_table = best_action.reshape((1, -1))
+
             self.fuel_level -= np.linalg.norm(best_action[:3])
             if print_out:
                 print("inv time:", self.investigated_time)
@@ -204,6 +260,8 @@ class DecisionTree:
                       "skipped:", skipped, '\n',
                       "total AT:\n", self.action_table, '\n\n\n')
             self.investigated_time += best_action[3]
+        if print_out:
+            self.print_end_train()
 
     def get_best_current_action(self, n_iterations, n_steps_ahead, print_out):
         """Returns the best of random actions with given parameters.
@@ -248,7 +306,6 @@ class DecisionTree:
             n_steps_ahead (int): number of actions ahead to evaluate.
             print_out (bool): print information during the training.
 
-
         Returns:
             best_action (np.array): best action action among considered (empty action just with time to request).
             best_reward (float): reward of the session that contained the best action.
@@ -287,6 +344,13 @@ class DecisionTree:
         self.total_reward = generate_session(
             self.protected, self.debris, agent, self.start_time, self.end_time, self.step)
         return self.total_reward
+
+    def print_start_train(self):
+        print("Start training.\n")
+
+    def print_end_train(self):
+        print("Training completed.\nTotal reward:", self.get_total_reward(),
+              "\nAction Table:\n", self.action_table)
 
     def save_action_table(self, path):
         header = "dVx,dVy,dVz,time to request"
