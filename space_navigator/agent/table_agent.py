@@ -1,15 +1,8 @@
-
-import pykep as pk
 import numpy as np
+from . import BaseAgent
 
 
-class TableAgent:
-    """ Agent implements an agent to communicate with space Environment.
-
-        Agent can make actions to the space environment by taking it's state
-        after the last action.
-
-    """
+class TableAgent(BaseAgent):
 
     def __init__(self, action_table=np.array([])):
         """

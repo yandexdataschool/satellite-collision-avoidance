@@ -2,13 +2,10 @@
 
 import argparse
 import sys
-import numpy as np
 
-from simulator import Simulator, read_space_objects
-from api import Environment, MAX_FUEL_CONSUMPTION
+from simulator import read_space_objects
+from api import MAX_FUEL_CONSUMPTION
 from CE.CE import CrossEntropy
-
-import pykep as pk
 
 START_TIME = 6599.95
 SIMULATION_STEP = 0.0001
@@ -70,6 +67,7 @@ def main(args):
     action_table.save_action_table(save_action_table_path)
 
     return
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
