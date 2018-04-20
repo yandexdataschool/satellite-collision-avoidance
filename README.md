@@ -1,3 +1,4 @@
+
 # Satellite Collision Avoidance
 
 
@@ -13,11 +14,17 @@ Every case of collision is currently processed manually. In this project, we inv
 
 ## What is this project about?
 
-Here I will pass the short project description with scheme's.
+Here is the action structure in a **use case**:
+
+![](data/images/Space_Navigator_scheme.png)
+
+**1** and **2**: Space objects are monitored by ROSCOSCMOS <br />
+**3**: ROSCOSCMOS provides most dangerous objects <br /> 
+**4**: Space Navigator gets data from ROSCOSCMOS <br />
+**5**: Environment is solved with RL <br />
+**6**: Space Navigator returns optimal collision avoidance maneuver <br />
 
 ## Installation
-<!-- 
-For installation you need python 3 and . -->
 
 ### Step 1
 
@@ -42,33 +49,54 @@ We use following libraries:
 > * Numpy
 > * Scipy
 
+### Step 3
+
+Install package:
+```
+python setup.py install
+```
+
 ### Run Examples
 
 Now you can run examples of space simulator.
 
 Run following code:
 ```
-python example1.py
+python examples/test_flight.py 
 ```
 
 If evereything is correct, you should get such plot:
 
-![](data/images/example1.png)
+![](data/images/test_flight.png)
 
 And output:
 ```
+Start time: 6000.0   End time: 6000.01   Simulation step:0.0001
+
+...
+Space objects description
+...
+
 Simulation ended.
 Collision probability: 0.0.
-Reward: 0.9999546000702375.
+Reward: -4.539992976249074e-05.
+Fuel consumption: 0.0.
 ```
 
 Here I will provide more demo, including one of RL method example (learning and running).
 
 ## API
+
 Here will be described all usage scenarios with code examples. 
 
-## Method Descriptions
-Here will be described main methods of the project. I suggest to create for any new RL method a new .md file in different folder, and get there fulldescription of what was done, which results  we have.
+## RL Methods
+
+1. [MCTS](space_navigator/models/MCTS/MCTS.md)
+2. [CE](space_navigator/models/CE/CE.md)
+
+## Learning Example
+
+Here example scenario of collision learning will be provided.
 
 ## Authors
 
@@ -79,9 +107,11 @@ Here will be described main methods of the project. I suggest to create for any 
 
 <!-- See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
  -->
-## License
+
+<!-- ## License
 
 This project is licensed under the TSNIIMASH and LAMBDA Factory. (?)
+ -->
 
 <!-- ## Acknowledgments
 
