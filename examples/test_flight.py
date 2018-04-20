@@ -44,19 +44,19 @@ def main(args):
 
     # SpaceObjects with TLE initial parameters.
     satellites = read_space_objects(
-        "./space_navigator/data/stations.tle", "tle")
+        "data/environments/stations.tle", "tle")
     # ISS - first row in the file, our protected object. Other satellites -
     # space debris.
     iss, debris = satellites[0], satellites[1: 1 + DEBRIS_NUM]
 
     # SpaceObjects with "eph" initial parameters: pos, v, epoch.
-    eph = read_space_objects("./space_navigator/data/space_objects.eph", "eph")
+    eph = read_space_objects("data/environments/space_objects.eph", "eph")
     for obj in eph:
         debris.append(obj)
 
     # SpaceObjects with "osc" initial parameteres: 6 orbital
     # elements and epoch.
-    osc = read_space_objects("./space_navigator/data/space_objects.osc", "osc")
+    osc = read_space_objects("data/environments/space_objects.osc", "osc")
     for obj in osc:
         debris.append(obj)
     agent = TableAgent()
