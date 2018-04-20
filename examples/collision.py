@@ -43,7 +43,7 @@ def main(args):
     start_time, end_time = args.start_time, args.end_time
     step, update_r_p_step = args.step, args.update_r_p_step
 
-    osc = read_space_objects("./space_navigator/data/collision.osc", "osc")
+    osc = read_space_objects("data/environments/collision.osc", "osc")
     protected = osc[0]
     debris = [osc[1]]
 

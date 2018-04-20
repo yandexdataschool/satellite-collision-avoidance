@@ -4,9 +4,9 @@ import numpy as np
 from copy import copy
 import pykep as pk
 
-from ..api import Environment
-from ..simulator import Simulator
-from ..agent import TableAgent as Agent
+from ...api import Environment
+from ...simulator import Simulator
+from ...agent import TableAgent as Agent
 
 
 def generate_session(protected, debris, agent, start_time, end_time, step):

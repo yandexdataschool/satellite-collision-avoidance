@@ -6,9 +6,10 @@ import pykep as pk
 
 import matplotlib.pyplot as plt
 
-from api import Environment, MAX_FUEL_CONSUMPTION
-from simulator import Simulator, read_space_objects
-from agent import TableAgent as Agent
+from ...api import Environment, MAX_FUEL_CONSUMPTION
+from ...simulator import Simulator
+from ...agent import TableAgent as Agent
+from ...utils import read_space_objects
 
 
 def generate_session(protected, debris, agent, start_time, end_time, step):
