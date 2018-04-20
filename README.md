@@ -14,7 +14,7 @@ Every case of collision is currently processed manually. In this project, we inv
 
 ## What is this project about?
 
-Here is the action structure in a **use case**:
+Here is the activity model in a **use case**:
 
 ![](data/images/Space_Navigator_scheme.png)
 
@@ -83,20 +83,26 @@ Reward: -4.539992976249074e-05.
 Fuel consumption: 0.0.
 ```
 
-Here I will provide more demo, including one of RL method example (learning and running).
+## Running the test
 
-## API
+Currently there are only tests for api module. Run it with command:
+```
+python tests/test_api.py
+```
 
-Here will be described all usage scenarios with code examples. 
+## Documentation and tutorials
 
-## RL Methods
+Tutorial on environment setup and simulator:
+* [Simulator](examples/Notebooks/Simulator_tutorial    .ipynb)
+
+Tutorial on learning an agent: 
+* [MCTC](examples/Notebooks/MCTS_tutorial.ipynb)
+* [CE](examples/Notebooks/CE_tutorial.ipynb)
+
+## RL Methods description
 
 1. [MCTS](space_navigator/models/MCTS/MCTS.md)
 2. [CE](space_navigator/models/CE/CE.md)
-
-## Learning Example
-
-Here example scenario of collision learning will be provided.
 
 ## Authors
 
@@ -123,4 +129,3 @@ This project is licensed under the TSNIIMASH and LAMBDA Factory. (?)
 
 * For space simulation and calculations we use **pykep** library. [[Pykep](https://esa.github.io/pykep/)]
 * http://stuffin.space/
-* other links ...
