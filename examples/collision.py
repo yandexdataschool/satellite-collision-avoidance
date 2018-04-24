@@ -5,9 +5,11 @@ import argparse
 import sys
 import numpy as np
 
-from simulator import Simulator, read_space_objects
-from api import Environment
-from agent import TableAgent as Agent
+# import space_navigator
+from space_navigator.simulator import Simulator
+from space_navigator.api import Environment
+from space_navigator.agent import TableAgent as Agent
+from space_navigator.utils import read_space_objects
 
 import pykep as pk
 
@@ -38,9 +40,10 @@ def main(args):
     action_table_path = args.action_table_path
     visualize = args.visualize.lower() == "true"
     print_out = args.print_out.lower() == "true"
-    start_time, end_time, step, update_r_p_step = args.start_time, args.end_time, args.step, args.update_r_p_step
+    start_time, end_time = args.start_time, args.end_time
+    step, update_r_p_step = args.step, args.update_r_p_step
 
-    osc = read_space_objects("data/collision.osc", "osc")
+    osc = read_space_objects("data/environments/collision.osc", "osc")
     protected = osc[0]
     debris = [osc[1]]
 

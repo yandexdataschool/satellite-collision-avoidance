@@ -4,10 +4,10 @@ import unittest
 import pykep as pk
 import numpy as np
 
-from api import Environment, SpaceObject
-from api import fuel_consumption, sum_coll_prob, get_dangerous_debris
-from api import MAX_PROPAGATION_STEP, MAX_FUEL_CONSUMPTION
-from api import CollProbEstimation
+from space_navigator.api import Environment, SpaceObject
+from space_navigator.api import fuel_consumption, sum_coll_prob, get_dangerous_debris
+from space_navigator.api import MAX_PROPAGATION_STEP
+from space_navigator.collision import CollProbEstimator
 
 
 class TestBasicFunctions(unittest.TestCase):
@@ -63,7 +63,7 @@ class TestBasicFunctions(unittest.TestCase):
 class TestCollProbEstimation(unittest.TestCase):
 
     def test_ChenBai_approach(self):
-        estimator = CollProbEstimation()
+        estimator = CollProbEstimator()
         # collision cross-section radii of ISS and the debris
         rV1 = np.array([
             3126018.8, 5227146.1, -2891302.9, -3298.0, 4758.7, 5054.3

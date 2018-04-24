@@ -2,13 +2,10 @@
 
 import argparse
 import sys
-import numpy as np
 
-from simulator import Simulator, read_space_objects
-from api import Environment, MAX_FUEL_CONSUMPTION
-from CE.CE import CrossEntropy
-
-import pykep as pk
+from space_navigator.utils import read_space_objects
+from space_navigator.api import MAX_FUEL_CONSUMPTION
+from space_navigator.models.CE import CrossEntropy
 
 START_TIME = 6599.95
 SIMULATION_STEP = 0.0001
@@ -43,19 +40,22 @@ def main(args):
                         default="False", required=False)
     parser.add_argument("-progress", "--show_progress", type=str,
                         default="False", required=False)
+    parser.add_argument("-env", "--environment", type=str,
+                        default="data/environments/collision.osc", required=False)
 
     args = parser.parse_args(args)
 
     n_actions, n_iterations = args.n_actions, args.n_iterations
     n_sessions, n_best_actions = args.n_sessions, args.n_best_actions
     learning_rate, sigma_coef, learning_rate_coef = args.learning_rate, args.sigma_coef, args.learning_rate_coef
+    env = args.environment
 
     start_time, end_time, step = args.start_time, args.end_time, args.step
     save_action_table_path = args.save_action_table_path
     print_out = args.print_out.lower() == "true"
     show_progress = args.show_progress.lower() == "true"
 
-    osc = read_space_objects("data/collision.osc", "osc")
+    osc = read_space_objects(env, "osc")
     protected = osc[0]
     debris = [osc[1]]
 
@@ -70,6 +70,7 @@ def main(args):
     action_table.save_action_table(save_action_table_path)
 
     return
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
