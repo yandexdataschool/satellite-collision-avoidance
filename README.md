@@ -4,9 +4,9 @@
 
 ## Motivation
 
-Since 2004 the amount of space launchings has been gradually increased. Currently, there are more than 100 satellites launched into space every year. This number could be expanded rapidly due to such projects as providing global internet by Starlink. The increased amount of objects in space leads to a higher probability of their collision.
+Since 2004 the amount of space launches has been gradually increased. Currently, there are more than 100 satellites launched into space every year. This number could be expanded rapidly due to such projects as providing global internet by Starlink. The increasing amount of objects in space leads to a higher probability of their collision.
 
-Every case of collision is currently processed manually. In this project, we investigate methods of **reinforcement learning** to create a system for **automatic maneuver estimation** in order to prevent collisions.
+Most cases of collision is currently processed manually. In this project, we investigate methods of **reinforcement learning** to create a system for **automatic maneuver optimization** in order to prevent collisions.
 
 |![](data/images/stuffin_space.png)|
 |:--:| 
@@ -51,7 +51,7 @@ We use following libraries:
 
 ### Step 3
 
-Install package:
+Install the package:
 ```
 python setup.py install
 ```
