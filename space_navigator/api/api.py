@@ -49,9 +49,10 @@ class Environment:
         self.collision_probability_prior_to_current_conjunction = np.zeros(
             self.n_debris)
         self.total_collision_probability_array = np.zeros(self.n_debris)
-        self.total_collision_probability = 0.
+        self.total_collision_probability = 0
 
-        self.reward = 0.
+        self.reward_components = (0, 0, 0)
+        self.reward = 0
         # : epoch: Last reward and collision probability update
         self.last_r_p_update = None
         # : int: number of propagate forward iterations
@@ -202,7 +203,7 @@ class Environment:
         )
         return self.total_collision_probability
 
-    def get_trajectory_deviation(self, singnificance):
+    def get_trajectory_deviation(self, singnificance=(0.01, 1, 1, 1, 1, 0)):
         """Returns trajectory deviation from init the trajectory.
 
         Note:
@@ -223,31 +224,33 @@ class Environment:
         deviation = np.sum(diff * np.array(singnificance))
         return deviation
 
-    def get_reward(self, coll_prob_C=10000., traj_C=1000., fuel_C=1.,
-                   dangerous_prob=10e-4, singnificance=(0.01, 1, 1, 1, 1, 0)):
+    def get_reward(self, coll_prob_C=10000, traj_C=1, fuel_C=1,
+                   dangerous_prob=10e-4, get_components=False):
         """ Update and return total reward from the environment state.
 
         Args:
             coll_prob_C, traj_C, fuel_C (float): constants for the singnificance regulation of reward components.
             dangerous_prob (float): the threshold below which the probability is negligible.
-            singnificance (tuple): array of multipliers for orbital parameter differences.
 
         """
         # reward components
         coll_prob = self.get_collision_probability()
-        trajectory_deviation = self.get_trajectory_deviation(singnificance)
+        trajectory_deviation = self.get_trajectory_deviation()
         ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
         # collision probability reward - some kind of ELU function
         # of collision probability
         coll_prob_r = -(ELU((coll_prob - dangerous_prob) * coll_prob_C) + 1)
-        traj_r = - traj_C * trajectory_deviation
         fuel_r = - fuel_C * (self.init_fuel - self.protected.get_fuel())
+        traj_r = - traj_C * trajectory_deviation
 
         # total reward
         # TODO - add weights to all reward components
-        self.reward = (coll_prob_r + traj_r + fuel_r)
+        self.reward_components = (coll_prob_r, fuel_r, traj_r)
+        self.reward = (coll_prob_r + fuel_r + traj_r)
         self.last_r_p_update = self.state["epoch"]
         self.pf_iterations_since_update = 0
+        if get_components:
+            return self.reward, self.reward_components
         return self.reward
 
     def act(self, action):

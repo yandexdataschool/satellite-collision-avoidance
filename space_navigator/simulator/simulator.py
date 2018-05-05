@@ -84,9 +84,15 @@ class Visualizer:
         self.subplot_f.cla()
         self.subplot_r.cla()
 
-    def plot_iteration(self, epoch, last_update, collision_prob, fuel_cons, reward):
-        s = '  Epoch: {}\nUpdate: {}\nColl Prob: {:.7}     Fuel Cons: {:.5}     Reward: {:.5}'.format(
-            epoch, last_update, collision_prob, fuel_cons, reward)
+    def plot_iteration(self, epoch, last_update, collision_prob, fuel_cons, traj_dev,
+                       reward_components, reward):
+        s0 = '  Epoch: {}\nUpdate: {}'.format(epoch, last_update)
+        s1 = '\n\nColl Prob: {:.7}     Fuel Cons: {:.5}     Traj Dev coef: {:.5}'.format(
+            collision_prob, fuel_cons, traj_dev)
+        s2 = '\n\nReward components:\nColl Prob R: {:.5}     Fuel Cons R: {:.5}     Traj Dev coef R: {:.5}\
+            \nTotal Reward: {:.5}'.format(
+            reward_components[0], reward_components[1], reward_components[2], reward)
+        s = s0 + s1 + s2
         self.subplot_3d.text2D(-0.3, 1.05, s,
                                transform=self.subplot_3d.transAxes)
 
@@ -192,6 +198,8 @@ class Simulator:
                 self.vis.plot_earth()
                 p = self.env.total_collision_probability
                 f = self.env.get_fuel_consumption()
+                d = self.env.get_trajectory_deviation()
+                rc = self.env.reward_components
                 r = self.env.reward
                 if iteration % self.update_r_p_step == 0:
                     self.time_arr.append(self.curr_time.mjd2000)
@@ -204,7 +212,7 @@ class Simulator:
                 # without update.
 
                 self.vis.plot_iteration(
-                    self.curr_time, self.env.last_r_p_update, p, f, r)
+                    self.curr_time, self.env.last_r_p_update, p, f, d, rc, r)
 
             self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + step, "mjd2000")
@@ -214,8 +222,10 @@ class Simulator:
         self.log_protected_position()
 
         if self.print_out:
-            print("Simulation ended.\nCollision probability: {}.\nReward: {}.\nFuel consumption: {}.".format(
-                self.env.get_collision_probability(), self.env.get_reward(), self.env.get_fuel_consumption()))
+            print("Simulation ended.\nCollision probability: {}.\nReward: {}.\
+                \nFuel consumption: {}\nTrajectory deviation coefficient: {}.".format(
+                self.env.get_collision_probability(), self.env.get_reward(),
+                self.env.get_fuel_consumption(), self.env.get_trajectory_deviation()))
 
         return self.env.get_reward()
 
