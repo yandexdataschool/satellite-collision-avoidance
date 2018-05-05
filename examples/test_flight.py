@@ -59,13 +59,16 @@ def main(args):
     osc = read_space_objects("data/environments/space_objects.osc", "osc")
     for obj in osc:
         debris.append(obj)
+
     agent = TableAgent()
+
     start_time = pk.epoch(start_time, "mjd2000")
-    env = Environment(iss, debris, start_time)
+    end_time = pk.epoch(end_time, "mjd2000")
+    env = Environment(iss, debris, start_time, end_time)
 
     simulator = Simulator(
         agent, env, update_r_p_step=update_r_p_step, print_out=print_out)
-    simulator.run(end_time=end_time, step=step, visualize=visualize)
+    simulator.run(step=step, visualize=visualize)
     return
 
 
