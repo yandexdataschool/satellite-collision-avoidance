@@ -33,6 +33,7 @@ class Environment:
         self.debris = debris
         self.protected_r = protected.get_radius()
         self.init_fuel = self.protected.get_fuel()
+        self.init_orbital_elements = self.protected.get_orbital_elements()
         self.debris_r = np.array([d.get_radius() for d in debris])
         self.next_action = pk.epoch(0, "mjd2000")
         self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
@@ -50,7 +51,6 @@ class Environment:
         self.total_collision_probability_array = np.zeros(self.n_debris)
         self.total_collision_probability = 0.
 
-        self.whole_trajectory_deviation = 0.
         self.reward = 0.
         # : epoch: Last reward and collision probability update
         self.last_r_p_update = None
@@ -100,11 +100,8 @@ class Environment:
                 debr[i] = np.array(pos + v)
 
             coord = dict(st=st, debr=debr)
-            trajectory_deviation_coef = 0.0
-            self.whole_trajectory_deviation += trajectory_deviation_coef
             self.state = dict(
-                coord=coord, trajectory_deviation_coef=trajectory_deviation_coef,
-                epoch=epoch, fuel=self.protected.get_fuel()
+                coord=coord, epoch=epoch, fuel=self.protected.get_fuel()
             )
             self.update_distances_and_probabilities_prior_to_current_conjunction()
 
@@ -205,22 +202,45 @@ class Environment:
         )
         return self.total_collision_probability
 
-    def get_reward(self, coll_prob_C=10000., traj_C=1., fuel_C=1.,
-                   dangerous_prob=10e-4):
+    def get_trajectory_deviation(self, singnificance):
+        """Returns trajectory deviation from init the trajectory.
+
+        Note:
+            six osculating keplerian elements (a,e,i,W,w,M):
+                a (semi-major axis): meters,
+                e (eccentricity): greater than 0,
+                i (inclination), W (Longitude of the ascending node): radians,
+                w (Argument of periapsis), M (mean anomaly): radians.
+
+        Args:
+            singnificance (tuple): array of multipliers for orbital parameter differences.
+
+        Return:
+            deviation (float): trajectory deviation from init the trajectory.
+        """
+        diff = np.abs(
+            np.array(self.protected.get_orbital_elements()) - np.array(self.init_orbital_elements))
+        deviation = np.sum(diff * np.array(singnificance))
+        return deviation
+
+    def get_reward(self, coll_prob_C=10000., traj_C=1000., fuel_C=1.,
+                   dangerous_prob=10e-4, singnificance=(0.01, 1, 1, 1, 1, 1)):
         """ Update and return total reward from the environment state.
 
         Args:
             coll_prob_C, traj_C, fuel_C (float): constants for the singnificance regulation of reward components.
             dangerous_prob (float): the threshold below which the probability is negligible.
+            singnificance (tuple): array of multipliers for orbital parameter differences.
 
         """
         # reward components
         coll_prob = self.get_collision_probability()
+        trajectory_deviation = self.get_trajectory_deviation(singnificance)
         ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
         # collision probability reward - some kind of ELU function
         # of collision probability
         coll_prob_r = -(ELU((coll_prob - dangerous_prob) * coll_prob_C) + 1)
-        traj_r = - traj_C * self.whole_trajectory_deviation
+        traj_r = - traj_C * trajectory_deviation
         fuel_r = - fuel_C * (self.init_fuel - self.protected.get_fuel())
 
         # total reward
@@ -371,3 +391,6 @@ class SpaceObject:
 
     def get_radius(self):
         return self.satellite.radius
+
+    def get_orbital_elements(self):
+        return self.satellite.orbital_elements
