@@ -31,12 +31,12 @@ class Environment:
         """
         self.protected = protected
         self.debris = debris
-        self.protected_r = protected.get_radius()
+        self.protected_r = self.protected.get_radius()
         self.init_fuel = self.protected.get_fuel()
         self.init_orbital_elements = self.protected.get_orbital_elements()
         self.debris_r = np.array([d.get_radius() for d in debris])
         self.next_action = pk.epoch(0, "mjd2000")
-        self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
+        self.state = dict(epoch=start_time, fuel=self.init_fuel)
         self.n_debris = len(debris)
         self.crit_distance = 10000  #: Critical convergence distance (meters)
         self.collision_probability_estimator = CollProbEstimator()
@@ -221,10 +221,12 @@ class Environment:
         diff = np.abs(
             np.array(self.protected.get_orbital_elements()) - np.array(self.init_orbital_elements))
         deviation = np.sum(diff * np.array(singnificance))
+        print("init: {}\ncurr: {}\ndiff: {}\ndev: {}\n".format(
+            self.init_orbital_elements, self.protected.get_orbital_elements(), diff, deviation))
         return deviation
 
     def get_reward(self, coll_prob_C=10000., traj_C=1000., fuel_C=1.,
-                   dangerous_prob=10e-4, singnificance=(0.01, 1, 1, 1, 1, 1)):
+                   dangerous_prob=10e-4, singnificance=(0.01, 1, 1, 1, 1, 0)):
         """ Update and return total reward from the environment state.
 
         Args:
