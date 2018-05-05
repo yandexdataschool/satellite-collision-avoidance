@@ -221,8 +221,6 @@ class Environment:
         diff = np.abs(
             np.array(self.protected.get_orbital_elements()) - np.array(self.init_orbital_elements))
         deviation = np.sum(diff * np.array(singnificance))
-        print("init: {}\ncurr: {}\ndiff: {}\ndev: {}\n".format(
-            self.init_orbital_elements, self.protected.get_orbital_elements(), diff, deviation))
         return deviation
 
     def get_reward(self, coll_prob_C=10000., traj_C=1000., fuel_C=1.,
