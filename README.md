@@ -56,6 +56,11 @@ Install the package:
 python setup.py install
 ```
 
+or use for development:
+```
+python setup.py develop
+```
+
 ### Run Examples
 
 Now you can run examples of space simulator.
@@ -104,12 +109,12 @@ Tutorial on learning an agent:
 1. [MCTS](space_navigator/models/MCTS/MCTS.md)
 2. [CE](space_navigator/models/CE/CE.md)
 
-## Authors
+<!-- ## Authors
 
 * **Nikita Kazeev** - scientific director, Yandex LAMBDA Factory
 * **Irina Ponomareva** - scientific advisor, TSNIIMASH
 * **Leonid Gremyachi** - MSc in computer science, NRU-HSE, 1st year.
-* **Dubov Dmitry** - BSc in computer science, NRU-HSE, 4th year.
+* **Dubov Dmitry** - BSc in computer science, NRU-HSE, 4th year. -->
 
 <!-- See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
  -->
