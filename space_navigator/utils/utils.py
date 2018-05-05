@@ -7,8 +7,11 @@ from ..api import Environment
 def read_space_objects(file, param_type):
     """ Create SpaceObjects from a text file.
     Args:
+        file (str): path to file with objects
         param_type (str): parameter types for initializing a SpaceObject.
             Could be "tle", "oph" or "osc".
+    Returns:
+        ([SpaceObject]): list of space objects.
     """
     with open(file, 'r') as satellites:
         lines = satellites.readlines()
@@ -16,6 +19,14 @@ def read_space_objects(file, param_type):
 
 
 def read_space_objects_from_list(lines, param_type):
+    """ Create SpaceObjects from a lisst.
+    Args:
+        lines (list): list of lines with objects.
+        param_type (str): parameter types for initializing a SpaceObject.
+            Could be "tle", "oph" or "osc".
+    Returns:
+        ([SpaceObject]): list of space objects.
+    """
     space_objects = []
     iterator = iter(lines)
     while True:
@@ -81,6 +92,13 @@ def read_space_objects_from_list(lines, param_type):
 
 
 def read_environment(path):
+    """ Create SpaceObjects from a text file.
+    Args:
+        path (str): parameter types for initializing a SpaceObject.
+            Could be "tle", "oph" or "osc".
+    Returns:
+        (Environment): environment with given in file parameteres.
+    """
     with open(path, 'r') as satellites:
         lines = satellites.readlines()
 
