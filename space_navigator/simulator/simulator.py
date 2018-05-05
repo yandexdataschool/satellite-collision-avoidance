@@ -53,13 +53,13 @@ class Visualizer:
     """
 
     def __init__(self):
-        self.fig = plt.figure(figsize=[14, 10])
-        self.gs = gridspec.GridSpec(3, 2)
+        self.fig = plt.figure(figsize=[14, 12])
+        self.gs = gridspec.GridSpec(11, 2)
         self.subplot_3d = self.fig.add_subplot(self.gs[:, 0], projection='3d')
         self.subplot_3d.set_aspect("equal")
-        self.subplot_p = self.fig.add_subplot(self.gs[0, 1])
-        self.subplot_f = self.fig.add_subplot(self.gs[1, 1])
-        self.subplot_r = self.fig.add_subplot(self.gs[2, 1])
+        self.subplot_p = self.fig.add_subplot(self.gs[:3, 1])
+        self.subplot_f = self.fig.add_subplot(self.gs[4:7, 1])
+        self.subplot_r = self.fig.add_subplot(self.gs[8:, 1])
 
     def run(self):
         plt.ion()
@@ -90,7 +90,7 @@ class Visualizer:
         self.subplot_3d.text2D(-0.3, 1.05, s,
                                transform=self.subplot_3d.transAxes)
 
-    def plot_prob_fuel(self, time_arr, prob_arr, fuel_cons_arr, reward_arr):
+    def plot_prob_fuel_reward(self, time_arr, prob_arr, fuel_cons_arr, reward_arr):
         self.subplot_p.step(time_arr, prob_arr)
         self.subplot_p.set_title('Total collision probability')
         self.subplot_p.grid(True)
@@ -104,7 +104,7 @@ class Visualizer:
         self.subplot_r.step(time_arr, reward_arr)
         self.subplot_r.set_title('Total reward')
         self.subplot_r.grid(True)
-        self.subplot_f.set_ylabel('reward')
+        self.subplot_r.set_ylabel('reward')
         self.subplot_r.set_xlabel('time (mjd2000)')
 
 
@@ -198,7 +198,7 @@ class Simulator:
                     self.prob_arr.append(p)
                     self.fuel_cons_arr.append(f)
                     self.reward_arr.append(r)
-                self.plot_prob_fuel()
+                self.plot_prob_fuel_reward()
                 self.vis.pause_and_clear()
                 # self.env.reward and self.env.total_collision_probability -
                 # without update.
@@ -253,6 +253,6 @@ class Simulator:
                 self.env.debris[i].satellite, t=self.curr_time,
                 size=25, color=colors[i])
 
-    def plot_prob_fuel(self):
-        self.vis.plot_prob_fuel(
+    def plot_prob_fuel_reward(self):
+        self.vis.plot_prob_fuel_reward(
             self.time_arr, self.prob_arr, self.fuel_cons_arr, self.reward_arr)
