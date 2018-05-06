@@ -12,3 +12,7 @@ class BaseAgent:
     def get_action(self, state):
         """"""
         pass
+
+    def get_random_params(self, **args):
+    	""""""
+    	pass

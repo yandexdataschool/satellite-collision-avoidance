@@ -113,20 +113,21 @@ class Simulator:
     and starts agent-environment collaboration.
     """
 
-    def __init__(self, agent, environment, update_r_p_step=None, print_out=True):
+    def __init__(self, agent, environment, update_r_p_step=None, print_out=False):
         """
         Args:
             agent (api.Agent, agent, to do actions in environment.
             environment (api.Environment): the initial space environment.
             start_time (pk.epoch): start epoch of simulation.
-            update_r_p_step (int): update_r_p_step (int): update reward and probability step;
-                if update_r_p_step == None, reward and probability are updated only by agent).
+            update_r_p_step (int): update reward and probability step;
+                (if update_r_p_step == None, reward and probability are updated only by agent).
             print_out (bool): print out some parameters and results (reward and probability).
         """
 
         self.agent = agent
         self.env = environment
-        self.start_time = self.env.state["epoch"]
+        self.start_time = self.env.init_params["start_time"]
+        self.end_time = self.env.init_params["end_time"]
         self.curr_time = self.start_time
 
         self.logger = logging.getLogger('simulator.Simulator')
@@ -139,10 +140,10 @@ class Simulator:
         self.fuel_cons_arr = None
         self.reward_arr = None
 
-    def run(self, end_time, step=0.001, visualize=True):
+    def run(self, step=0.001, visualize=False):
         """
         Args:
-            end_time (float): end time of simulation provided as mjd2000.
+            # end_time (float): end time of simulation provided as mjd2000. 
             step (float): time step in simulation.
             visualize (bool): whether show the simulation or not.
 
@@ -161,14 +162,14 @@ class Simulator:
 
         if self.print_out:
             print("Simulation started.\n\nStart time: {} \t End time: {} \t Simulation step:{}\n".format(
-                self.start_time.mjd2000, end_time, step))
+                self.start_time.mjd2000, self.end_time.mjd2000, step))
             print("Protected SpaceObject:\n{}".format(
                 self.env.protected.satellite))
             print("Debris objects:\n")
             for spaceObject in self.env.debris:
                 print(spaceObject.satellite)
 
-        while self.curr_time.mjd2000 <= end_time:
+        while self.curr_time.mjd2000 <= self.end_time.mjd2000:
             self.env.propagate_forward(
                 self.curr_time.mjd2000, self.update_r_p_step)
 

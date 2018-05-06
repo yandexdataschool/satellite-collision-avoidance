@@ -10,11 +10,8 @@ import pykep as pk
 from space_navigator.api import Environment
 from space_navigator.simulator import Simulator
 from space_navigator.agent import TableAgent as Agent
-from space_navigator.utils import read_space_objects, read_environment
+from space_navigator.utils import read_environment
 
-
-START_TIME = 6599.95
-END_TIME = 6600.05
 SIMULATION_STEP = 0.0001
 
 
@@ -30,6 +27,8 @@ def main(args):
                         default=20, required=False)
     parser.add_argument("-print", "--print_out", type=str,
                         default="True", required=False)
+    parser.add_argument("-env", "--environment", type=str,
+                        default="data/environments/collision.env", required=False)
 
     args = parser.parse_args(args)
 
@@ -44,7 +43,8 @@ def main(args):
     else:
         agent = Agent()
 
-    env = read_environment("data/environments/collision.env")
+    env_path = args.environment
+    env = read_environment(env_path)
 
     simulator = Simulator(
         agent, env, update_r_p_step=update_r_p_step, print_out=print_out)

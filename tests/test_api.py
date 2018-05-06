@@ -95,6 +95,8 @@ class TestEnvironment(unittest.TestCase):
 
     def setUp(self):
         self.start_time = pk.epoch(1, "mjd2000")
+        self.end_time = None
+
         osculating_elements = (7800000, 0.001, 0.017453292519943295, 0, 0, 0)
         mu_central_body, mu_self, radius, safe_radius = 398600800000000, 0.1, 0.1, 0.1
         fuel = 10
@@ -109,7 +111,8 @@ class TestEnvironment(unittest.TestCase):
         self.protected = SpaceObject("protected", "osc", params)
 
     def test_propagate_forward(self):
-        env = Environment(self.protected, [], self.start_time)
+        env = Environment(self.protected, [], self.start_time, self.end_time)
+
         end_times = [
             self.start_time.mjd2000 + MAX_PROPAGATION_STEP * 100,
             self.start_time.mjd2000 + MAX_PROPAGATION_STEP,
@@ -117,9 +120,10 @@ class TestEnvironment(unittest.TestCase):
         ]
 
         for end_time in end_times:
+            env.end_time = pk.epoch(end_time, "mjd2000")
             env.propagate_forward(end_time)
             self.assertEqual(env.state["epoch"].mjd2000, end_time)
-            env = Environment(self.protected, [], self.start_time)
+            env.reset()
 
     def test_update_distances_and_probabilities_prior_to_current_conjunction(self):
         # TODO: implement test after new approach will be added.
@@ -134,7 +138,7 @@ class TestEnvironment(unittest.TestCase):
         self.assertTrue(True)
 
     def test_act_normal(self):
-        env = Environment(self.protected, [], self.start_time)
+        env = Environment(self.protected, [], self.start_time, self.end_time)
 
         time_to_req = 2
         action = np.array([1, 1, 1, time_to_req])
@@ -162,6 +166,10 @@ class TestEnvironment(unittest.TestCase):
 
     def test_act_impossible_action(self):
         # TODO: implement test after decision on proper behavior.
+        self.assertTrue(True)
+
+    def test_reset(self):
+        # TODO: implement test.
         self.assertTrue(True)
 
 

@@ -11,27 +11,8 @@ from ...simulator import Simulator
 from ...agent import TableAgent as Agent
 from ...utils import read_space_objects
 
+from ..train_utils import generate_session
 
-def generate_session(protected, debris, agent, start_time, end_time, step):
-    """Simulation.
-
-    Args:
-        protected (SpaceObject): protected space object in Environment.
-        debris ([SpaceObject, ]): list of other space objects.
-        agent (Agent): agent, to do actions in environment.
-        start_time (float): start time of simulation provided as mjd2000.
-        end_time (float): end time of simulation provided as mjd2000.
-        step (float): time step in simulation.
-
-    Returns:
-        reward: reward of the session.
-
-    """
-    start_time_mjd2000 = pk.epoch(start_time, "mjd2000")
-    env = Environment(copy(protected), copy(debris), start_time_mjd2000)
-    simulator = Simulator(agent, env, update_r_p_step=None, print_out=False)
-    reward = simulator.run(end_time, step, visualize=False)
-    return reward
 
 
 def constrain_action(action, max_fuel_cons):
@@ -153,7 +134,7 @@ class CrossEntropy:
 
         """
 
-        self.env = Environment(copy(protected), copy(debris), start_time)
+        self.env = Environment(copy(protected), copy(debris), start_time, end_time)
         self.protected = protected
         self.debris = debris
         self.start_time = start_time

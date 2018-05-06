@@ -12,6 +12,8 @@ class TableAgent(BaseAgent):
 
         """
         self.action_table = action_table
+        # TODO: add index and not delete actions from table
+        # self.action_idx = 0
 
     def get_action(self, state):
         """ Provides action for protected object.
@@ -39,3 +41,4 @@ class TableAgent(BaseAgent):
         action = self.action_table[0]
         self.action_table = np.delete(self.action_table, 0, axis=0)
         return action
+
