@@ -7,6 +7,7 @@ from copy import copy
 import matplotlib.pyplot as plt
 
 from ..api import Environment
+from ..api import fuel_consumption
 from ..simulator import Simulator
 from ..agent import TableAgent as Agent
 
@@ -15,6 +16,7 @@ def generate_session_with_env(action_table, env):
     """ Play full simulation. 
     Args:
         action_table (np.array((n_actions, action_size)): action table for agent.
+        env (Environment): environment to simulate session with.
 
     Returns:
         reward (float): reward after end of simulation.
@@ -48,6 +50,29 @@ def generate_session(protected, debris, agent, start_time, end_time, step):
     simulator = Simulator(agent, env, update_r_p_step=None, print_out=False)
     reward = simulator.run(step, visualize=False)
     return reward
+
+def constrain_action(action, max_fuel_cons, min_time=None, max_time=None):
+    """Changes the action in accordance with the restrictions.
+
+    Args:
+        action (np.array): action.
+        max_fuel_cons (float): maximum allowable fuel consumption.
+
+    Returns:
+        action (np.array): changed action.
+
+    TODO:
+        time constrain (max and min time to request)
+
+    """
+    fuel_cons = fuel_consumption(action[:3])
+    if fuel_cons > max_fuel_cons:
+        action[:3] *= max_fuel_cons / fuel_cons
+    if min_time is not None and max_time is not None:
+        action[3] = max(min_time, min(max_time, action[3]))
+    else:
+        action[3] = max(0.001, action[3])
+    return action
 
 
 class ProgressPlotter(object):

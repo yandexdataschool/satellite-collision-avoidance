@@ -11,29 +11,7 @@ from ...simulator import Simulator
 from ...agent import TableAgent as Agent
 from ...utils import read_space_objects
 
-from ..train_utils import generate_session
-
-
-
-def constrain_action(action, max_fuel_cons):
-    """Changes the action in accordance with the restrictions.
-
-    Args:
-        action (np.array): action.
-        max_fuel_cons (float): maximum allowable fuel consumption.
-
-    Returns:
-        action (np.array): changed action.
-
-    TODO:
-        time constrain (max and min time to request)
-
-    """
-    fuel_cons = np.linalg.norm(action[:3])
-    if fuel_cons > max_fuel_cons:
-        action[:3] *= max_fuel_cons / fuel_cons
-    action[3] = max(0.001, action[3])
-    return action
+from ..train_utils import generate_session, constrain_action
 
 
 def random_action_table(mu_table, sigma_table, max_fuel_cons, fuel_level):

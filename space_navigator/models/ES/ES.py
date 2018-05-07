@@ -7,7 +7,7 @@ from ...api import Environment, MAX_FUEL_CONSUMPTION
 from ...simulator import Simulator
 from ...agent import TableAgent as Agent
 from ...utils import read_space_objects
-from ..train_utils import ProgressPlotter, ProgressLogger, generate_session_with_env
+from ..train_utils import ProgressPlotter, ProgressLogger, generate_session_with_env, constrain_action
 
 
 def random_weights(weights_shape, max_time, rand_type="uniform"):
@@ -66,6 +66,8 @@ class EvolutionStrategies(object):
             for policy in trange(self.pop_size):
                 N[policy] = random_weights(self.weights_shape, self.max_time, "gauss")
                 w_try = self.weights + self.sigma * N[policy]
+                for action in range(self.n_actions):
+                    w_try[action] = constrain_action(w_try[action], MAX_FUEL_CONSUMPTION, 0, self.max_time)
                 rewards[policy] = generate_session_with_env(w_try, self.env)
                 self.actions[iteration, policy] = w_try
                 # update best reward and policy
