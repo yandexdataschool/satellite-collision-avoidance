@@ -79,8 +79,6 @@ class ProgressPlotter(object):
         fig.savefig(os.path.join(self.base_dir, path), dpi=fig.dpi)
 
 
-
-
 class ProgressLogger(object):
     # TODO: create Logger for reward/iterations/parameteres/
     pass
