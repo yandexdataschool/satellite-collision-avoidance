@@ -18,9 +18,9 @@ Here is the activity model in a **use case**:
 
 ![](data/images/Space_Navigator_scheme.png)
 
-**1** and **2**: Space objects are monitored by ROSCOSCMOS <br />
-**3**: ROSCOSCMOS provides most dangerous objects <br /> 
-**4**: Space Navigator gets data from ROSCOSCMOS <br />
+**1** and **2**: Space objects are monitored by ROSCOSMOS <br />
+**3**: ROSCOSMOS provides most dangerous objects <br /> 
+**4**: Space Navigator gets data from ROSCOSMOS <br />
 **5**: Environment is solved with RL <br />
 **6**: Space Navigator returns optimal collision avoidance maneuver <br />
 
