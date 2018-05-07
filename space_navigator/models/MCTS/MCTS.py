@@ -106,7 +106,7 @@ class DecisionTree:
             fuel_level (float): total fuel level.
 
         """
-        self.env = Environment(copy(protected), copy(debris), start_time)
+        self.env = Environment(copy(protected), copy(debris), start_time, end_time)
         self.protected = protected
         self.debris = debris
         self.start_time = start_time
