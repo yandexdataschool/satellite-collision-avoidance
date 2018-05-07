@@ -98,7 +98,7 @@ python tests/test_api.py
 ## Documentation and tutorials
 
 Tutorial on environment setup and simulator:
-* [Simulator](examples/Notebooks/Simulator_tutorial    .ipynb)
+* [Simulator](examples/Notebooks/Simulator_tutorial.ipynb)
 
 Tutorial on learning an agent: 
 * [MCTC](examples/Notebooks/MCTS_tutorial.ipynb)
