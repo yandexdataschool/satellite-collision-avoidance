@@ -18,9 +18,9 @@ Here is the activity model in a **use case**:
 
 ![](data/images/Space_Navigator_scheme.png)
 
-**1** and **2**: Space objects are monitored by ROSCOSCMOS <br />
-**3**: ROSCOSCMOS provides most dangerous objects <br /> 
-**4**: Space Navigator gets data from ROSCOSCMOS <br />
+**1** and **2**: Space objects are monitored by ROSCOSMOS <br />
+**3**: ROSCOSMOS provides most dangerous objects <br /> 
+**4**: Space Navigator gets data from ROSCOSMOS <br />
 **5**: Environment is solved with RL <br />
 **6**: Space Navigator returns optimal collision avoidance maneuver <br />
 
@@ -54,6 +54,11 @@ We use following libraries:
 Install the package:
 ```
 python setup.py install
+```
+
+or use for development:
+```
+python setup.py develop
 ```
 
 ### Run Examples
@@ -93,7 +98,7 @@ python tests/test_api.py
 ## Documentation and tutorials
 
 Tutorial on environment setup and simulator:
-* [Simulator](examples/Notebooks/Simulator_tutorial    .ipynb)
+* [Simulator](examples/Notebooks/Simulator_tutorial.ipynb)
 
 Tutorial on learning an agent: 
 * [MCTC](examples/Notebooks/MCTS_tutorial.ipynb)
@@ -104,12 +109,12 @@ Tutorial on learning an agent:
 1. [MCTS](space_navigator/models/MCTS/MCTS.md)
 2. [CE](space_navigator/models/CE/CE.md)
 
-## Authors
+<!-- ## Authors
 
 * **Nikita Kazeev** - scientific director, Yandex LAMBDA Factory
 * **Irina Ponomareva** - scientific advisor, TSNIIMASH
 * **Leonid Gremyachi** - MSc in computer science, NRU-HSE, 1st year.
-* **Dubov Dmitry** - BSc in computer science, NRU-HSE, 4th year.
+* **Dubov Dmitry** - BSc in computer science, NRU-HSE, 4th year. -->
 
 <!-- See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
  -->

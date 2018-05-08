@@ -8,8 +8,9 @@
 # so that we can describe any object location at time t after the
 # simulation has been started.
 
-import pykep as pk
 import numpy as np
+import pykep as pk
+from copy import copy
 
 from .api_utils import fuel_consumption, sum_coll_prob, get_dangerous_debris
 from ..collision import CollProbEstimator
@@ -21,7 +22,7 @@ MAX_FUEL_CONSUMPTION = 10
 class Environment:
     """ Environment provides the space environment with space objects: satellites and debris, in it."""
 
-    def __init__(self, protected, debris, start_time):
+    def __init__(self, protected, debris, start_time, end_time):
         """
         Args:
             protected (SpaceObject): protected space object in Environment.
@@ -29,23 +30,28 @@ class Environment:
             start (pk.epoch): initial time of the environment.
 
         """
+        self.init_params = dict(protected=copy(protected), debris=copy(
+            debris), start_time=start_time, end_time=end_time)
+
         self.protected = protected
         self.debris = debris
+
         self.protected_r = self.protected.get_radius()
         self.init_fuel = self.protected.get_fuel()
         self.init_orbital_elements = self.protected.get_orbital_elements()
-        self.debris_r = np.array([d.get_radius() for d in debris])
-        self.next_action = pk.epoch(0, "mjd2000")
-        self.state = dict(epoch=start_time, fuel=self.init_fuel)
         self.n_debris = len(debris)
-        self.crit_distance = 10000  #: Critical convergence distance (meters)
-        self.collision_probability_estimator = CollProbEstimator()
+        self.debris_r = np.array([d.get_radius() for d in debris])
 
+        self.next_action = pk.epoch(0, "mjd2000")
+        self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
+
+        self.crit_distance = 10000  #: Critical convergence distance (meters)
         self.min_distances_in_current_conjunction = np.full(
             (self.n_debris), np.nan)  # np.nan if not in conjunction.
         self.state_for_min_distances_in_current_conjunction = dict()
         self.dangerous_debris_in_current_conjunction = np.array([])
 
+        self.collision_probability_estimator = CollProbEstimator()
         self.collision_probability_prior_to_current_conjunction = np.zeros(
             self.n_debris)
         self.total_collision_probability_array = np.zeros(self.n_debris)
@@ -62,8 +68,8 @@ class Environment:
     def propagate_forward(self, end_time, update_r_p_step=20):
         """ Forward step.
 
-        Args
-:            end_time (float): end time for propagation as mjd2000.
+        Args:
+            end_time (float): end time for propagation as mjd2000.
             update_r_p_step (int): update reward and probability step.
 
         Raises:
@@ -277,6 +283,12 @@ class Environment:
 
     def get_fuel_consumption(self):
         return self.init_fuel - self.protected.get_fuel()
+
+    def reset(self):
+        """ Return Environment to initial state. """
+        self.__init__(self.init_params['protected'], self.init_params['debris'],
+                      self.init_params['start_time'], self.init_params['end_time'])
+        return self.state
 
 
 class SpaceObject:
