@@ -43,12 +43,14 @@ def main(args):
     else:
         agent = Agent()
 
+    print(agent.action_table)
+
     env_path = args.environment
     env = read_environment(env_path)
 
     simulator = Simulator(
-        agent, env, update_r_p_step=update_r_p_step, print_out=print_out)
-    simulator.run(step=step, visualize=visualize)
+        agent, env, step=step, update_r_p_step=update_r_p_step)
+    simulator.run(visualize=visualize, print_out=print_out)
     return
 
 

@@ -307,7 +307,7 @@ class SpaceObject:
 
                 for "tle" type:
                     "tle1" (str): tle line1.
-                     "tle2" (str): tle line2.
+                    "tle2" (str): tle line2.
 
                 for "eph" type:
                     "pos" ([x, y, z]): position (cartesian, meters).
