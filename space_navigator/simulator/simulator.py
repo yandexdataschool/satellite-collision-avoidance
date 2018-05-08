@@ -93,7 +93,7 @@ class Visualizer:
         self.reward_arr.append(reward)
 
         self.traj_dev = traj_dev
-        self.reward_components = reward_components        
+        self.reward_components = reward_components
 
     def plot_planet(self, satellite, t, size, color):
         """ Plot a pykep.planet object. """
@@ -190,7 +190,7 @@ class Simulator:
         iteration = 0
         if visualize:
             self.vis = Visualizer(self.curr_time.mjd2000, self.env.total_collision_probability,
-                                  self.env.get_fuel_consumption(), self.env.get_trajectory_deviation(), 
+                                  self.env.get_fuel_consumption(), self.env.get_trajectory_deviation(),
                                   self.env.reward_components, self.env.reward)
             self.vis.run()
 
@@ -221,7 +221,7 @@ class Simulator:
                 self.vis.plot_earth()
                 if iteration % self.update_r_p_step == 0:
                     self.vis.update_data(self.curr_time.mjd2000, self.env.total_collision_probability,
-                                         self.env.get_fuel_consumption(), self.env.get_trajectory_deviation(), 
+                                         self.env.get_fuel_consumption(), self.env.get_trajectory_deviation(),
                                          self.env.reward_components, self.env.reward)
                 if np.not_equal(action[:3], np.zeros(3)).all():
                     self.vis.plot_action(self.env.protected.position(
@@ -238,7 +238,7 @@ class Simulator:
                 self.vis.plot_iteration(
                     self.curr_time, self.env.last_r_p_update)
 
-            self.curr_time=pk.epoch(
+            self.curr_time = pk.epoch(
                 self.curr_time.mjd2000 + self.step, "mjd2000")
 
             iteration += 1
