@@ -18,6 +18,7 @@ from ..collision import CollProbEstimator
 MAX_PROPAGATION_STEP = 0.000001  # equal to 0.0864 sc.
 MAX_FUEL_CONSUMPTION = 10
 
+
 class Environment:
     """ Environment provides the space environment with space objects: satellites and debris, in it."""
 
@@ -29,7 +30,8 @@ class Environment:
             start (pk.epoch): initial time of the environment.
 
         """
-        self.init_params = dict(protected=copy(protected), debris=copy(debris), start_time=start_time, end_time=end_time)
+        self.init_params = dict(protected=copy(protected), debris=copy(
+            debris), start_time=start_time, end_time=end_time)
 
         self.protected = protected
         self.debris = debris
@@ -38,7 +40,7 @@ class Environment:
         self.init_fuel = self.protected.get_fuel()
         self.protected_r = protected.get_radius()
         self.debris_r = np.array([d.get_radius() for d in debris])
-        
+
         self.next_action = pk.epoch(0, "mjd2000")
         self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
         self.crit_distance = 10000  #: Critical convergence distance (meters)
@@ -261,11 +263,9 @@ class Environment:
 
     def reset(self):
         """ Return Environment to initial state. """
-        self.__init__(self.init_params['protected'], self.init_params['debris'], 
-            self.init_params['start_time'], self.init_params['end_time'])
+        self.__init__(self.init_params['protected'], self.init_params['debris'],
+                      self.init_params['start_time'], self.init_params['end_time'])
         return self.state
-
-
 
 
 class SpaceObject:
@@ -284,7 +284,7 @@ class SpaceObject:
 
                 for "tle" type:
                     "tle1" (str): tle line1.
-                     "tle2" (str): tle line2.
+                    "tle2" (str): tle line2.
 
                 for "eph" type:
                     "pos" ([x, y, z]): position (cartesian, meters).

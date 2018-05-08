@@ -17,7 +17,7 @@ logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
                     filemode='w', format='%(name)s:%(levelname)s\n%(message)s\n')
 
 PAUSE_TIME = 0.0001  # sc
-PAUSE_ACTION_TIME = 1  # sc
+PAUSE_ACTION_TIME = 2  # sc
 ARROW_LENGTH = 3e6  # meters
 EARTH_RADIUS = 6.3781e6  # meters
 
@@ -66,7 +66,7 @@ class Visualizer:
         in real time.
     """
 
-    def __init__(self):
+    def __init__(self, curr_time, total_collision_probability, fuel_cons, reward):
         self.fig = plt.figure(figsize=[14, 10])
         self.gs = gridspec.GridSpec(3, 2)
         self.subplot_3d = self.fig.add_subplot(self.gs[:, 0], projection='3d')
@@ -75,8 +75,20 @@ class Visualizer:
         self.subplot_f = self.fig.add_subplot(self.gs[1, 1])
         self.subplot_r = self.fig.add_subplot(self.gs[2, 1])
 
+        # initialize arrays for plots
+        self.time_arr = [curr_time]
+        self.prob_arr = [total_collision_probability]
+        self.fuel_cons_arr = [fuel_cons]
+        self.reward_arr = [reward]
+
     def run(self):
         plt.ion()
+
+    def update_data(self, curr_time, prob, fuel_cons, reward):
+        self.time_arr.append(curr_time)
+        self.prob_arr.append(prob)
+        self.fuel_cons_arr.append(fuel_cons)
+        self.reward_arr.append(reward)
 
     def plot_planet(self, satellite, t, size, color):
         """ Plot a pykep.planet object. """
@@ -101,32 +113,30 @@ class Visualizer:
         self.subplot_f.cla()
         self.subplot_r.cla()
 
-    def plot_iteration(self, epoch, last_update, collision_prob, fuel_cons, reward):
+    def plot_iteration(self, epoch, last_update):
         s = '  Epoch: {}\nUpdate: {}\nColl Prob: {:.7}     Fuel Cons: {:.5}     Reward: {:.5}'.format(
-            epoch, last_update, collision_prob, fuel_cons, reward)
+            epoch, last_update, self.prob_arr[-1], self.fuel_cons_arr[-1], self.reward_arr[-1])
         self.subplot_3d.text2D(-0.3, 1.05, s,
                                transform=self.subplot_3d.transAxes)
 
-    def plot_prob_fuel(self, time_arr, prob_arr, fuel_cons_arr, reward_arr):
-        self.subplot_p.step(time_arr, prob_arr)
-        self.subplot_p.set_title('Total collision probability')
-        self.subplot_p.grid(True)
-        self.subplot_p.set_ylabel('prob')
+    def plot_prob_fuel(self):
+        self.make_step_on_graph(self.subplot_p, self.time_arr, self.prob_arr,
+                                title='Total collision probability', ylabel='prob')
+        self.make_step_on_graph(self.subplot_f, self.time_arr, self.fuel_cons_arr,
+                                title='Total fuel consumption', ylabel='fuel (dV)')
+        self.make_step_on_graph(self.subplot_r, self.time_arr, self.reward_arr,
+                                title='Total reward', ylabel='reward', xlabel='time (mjd2000)')
 
-        self.subplot_f.step(time_arr, fuel_cons_arr)
-        self.subplot_f.set_title('Total fuel consumption')
-        self.subplot_f.grid(True)
-        self.subplot_f.set_ylabel('fuel (dV)')
-
-        self.subplot_r.step(time_arr, reward_arr)
-        self.subplot_r.set_title('Total reward')
-        self.subplot_r.grid(True)
-        self.subplot_f.set_ylabel('reward')
-        self.subplot_r.set_xlabel('time (mjd2000)')
+    def make_step_on_graph(self, ax, time, data, title, ylabel, xlabel=None):
+        ax.step(time, data)
+        ax.set_title(title)
+        ax.grid(True)
+        ax.set_ylabel(ylabel)
+        if xlabel is not None:
+            ax.set_xlabel(xlabel)
 
     def plot_action(self, pos, action):
         draw_action(self.subplot_3d, pos, action)
-        self.pause(PAUSE_ACTION_TIME)
 
 
 class Simulator:
@@ -134,12 +144,12 @@ class Simulator:
     and starts agent-environment collaboration.
     """
 
-    def __init__(self, agent, environment, update_r_p_step=None, print_out=False):
+    def __init__(self, agent, environment, step=0.001, update_r_p_step=None):
         """
         Args:
             agent (api.Agent, agent, to do actions in environment.
             environment (api.Environment): the initial space environment.
-            start_time (pk.epoch): start epoch of simulation.
+            step (float): time step in simulation.
             update_r_p_step (int): update reward and probability step;
                 (if update_r_p_step == None, reward and probability are updated only by agent).
             print_out (bool): print out some parameters and results (reward and probability).
@@ -152,20 +162,14 @@ class Simulator:
         self.curr_time = self.start_time
 
         self.logger = logging.getLogger('simulator.Simulator')
-        self.print_out = print_out
+        self.step = step
         self.update_r_p_step = update_r_p_step
 
         self.vis = None
-        self.time_arr = None
-        self.prob_arr = None
-        self.fuel_cons_arr = None
-        self.reward_arr = None
 
-    def run(self, step=0.001, visualize=False):
+    def run(self, visualize=False, print_out=False):
         """
         Args:
-            # end_time (float): end time of simulation provided as mjd2000. 
-            step (float): time step in simulation.
             visualize (bool): whether show the simulation or not.
 
         Returns:
@@ -175,21 +179,12 @@ class Simulator:
         action = np.zeros(4)
         iteration = 0
         if visualize:
-            self.vis = Visualizer()
+            self.vis = Visualizer(self.curr_time.mjd2000, self.env.total_collision_probability,
+                                  self.env.get_fuel_consumption(), self.env.reward)
             self.vis.run()
-            self.time_arr = [self.curr_time.mjd2000]
-            self.prob_arr = [self.env.total_collision_probability]
-            self.fuel_cons_arr = [self.env.get_fuel_consumption()]
-            self.reward_arr = [self.env.reward]
 
-        if self.print_out:
-            print("Simulation started.\n\nStart time: {} \t End time: {} \t Simulation step:{}\n".format(
-                self.start_time.mjd2000, self.end_time.mjd2000, step))
-            print("Protected SpaceObject:\n{}".format(
-                self.env.protected.satellite))
-            print("Debris objects:\n")
-            for spaceObject in self.env.debris:
-                print(spaceObject.satellite)
+        if print_out:
+            self.print_start()
 
         while self.curr_time.mjd2000 <= self.end_time.mjd2000:
             self.env.propagate_forward(
@@ -202,14 +197,8 @@ class Simulator:
                 err = self.env.act(action)
                 if err:
                     self.log_bad_action(err, action)
-                    if visualize and np.not_equal(action[:3], np.zeros(3)).all():
-                        self.vis.plot_action(self.env.protected.position(
-                            self.curr_time)[0], action[:3])
 
                 self.log_reward_action(iteration, r, action)
-
-                # set action to zero after it is done
-                action = np.zeros(4)
 
             self.log_iteration(iteration)
             self.log_protected_position()
@@ -219,33 +208,32 @@ class Simulator:
                 self.plot_protected()
                 self.plot_debris()
                 self.vis.plot_earth()
-                p = self.env.total_collision_probability
-                f = self.env.get_fuel_consumption()
-                r = self.env.reward
                 if iteration % self.update_r_p_step == 0:
-                    self.time_arr.append(self.curr_time.mjd2000)
-                    self.prob_arr.append(p)
-                    self.fuel_cons_arr.append(f)
-                    self.reward_arr.append(r)
-                self.plot_prob_fuel()
+                    self.vis.update_data(self.curr_time.mjd2000, self.env.total_collision_probability,
+                                         self.env.get_fuel_consumption(), self.env.reward)
+                if np.not_equal(action[:3], np.zeros(3)).all():
+                    self.vis.plot_action(self.env.protected.position(
+                        self.curr_time)[0], action[:3])
+                    self.vis.pause(PAUSE_ACTION_TIME)
+                    # set action to zero after it is done
+                    action = np.zeros(4)
+                self.vis.plot_prob_fuel()
                 self.vis.pause(PAUSE_TIME)
                 self.vis.clear()
                 # self.env.reward and self.env.total_collision_probability -
                 # without update.
-
                 self.vis.plot_iteration(
-                    self.curr_time, self.env.last_r_p_update, p, f, r)
+                    self.curr_time, self.env.last_r_p_update)
 
             self.curr_time = pk.epoch(
-                self.curr_time.mjd2000 + step, "mjd2000")
+                self.curr_time.mjd2000 + self.step, "mjd2000")
 
             iteration += 1
 
         self.log_protected_position()
 
-        if self.print_out:
-            print("Simulation ended.\nCollision probability: {}.\nReward: {}.\nFuel consumption: {}.".format(
-                self.env.get_collision_probability(), self.env.get_reward(), self.env.get_fuel_consumption()))
+        if print_out:
+            self.print_end()
 
         return self.env.get_reward()
 
@@ -283,6 +271,15 @@ class Simulator:
                 self.env.debris[i].satellite, t=self.curr_time,
                 size=25, color=colors[i])
 
-    def plot_prob_fuel(self):
-        self.vis.plot_prob_fuel(
-            self.time_arr, self.prob_arr, self.fuel_cons_arr, self.reward_arr)
+    def print_start(self):
+        print("Simulation started.\n\nStart time: {} \t End time: {} \t Simulation step:{}\n".format(
+            self.start_time.mjd2000, self.end_time.mjd2000, self.step))
+        print("Protected SpaceObject:\n{}".format(
+            self.env.protected.satellite))
+        print("Debris objects:\n")
+        for spaceObject in self.env.debris:
+            print(spaceObject.satellite)
+
+    def print_end(self):
+        print("Simulation ended.\nCollision probability: {}.\nReward: {}.\nFuel consumption: {}.".format(
+            self.env.get_collision_probability(), self.env.get_reward(), self.env.get_fuel_consumption()))
