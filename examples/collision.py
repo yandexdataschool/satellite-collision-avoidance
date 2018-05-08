@@ -43,6 +43,8 @@ def main(args):
     else:
         agent = Agent()
 
+    print(agent.action_table)
+
     env_path = args.environment
     env = read_environment(env_path)
 

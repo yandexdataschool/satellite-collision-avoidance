@@ -4,10 +4,10 @@
 import logging
 
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.gridspec as gridspec
-import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+from mpl_toolkits.mplot3d import Axes3D
 
 import pykep as pk
 from pykep.orbit_plots import plot_planet
@@ -16,7 +16,9 @@ from pykep.orbit_plots import plot_planet
 logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
                     filemode='w', format='%(name)s:%(levelname)s\n%(message)s\n')
 
-PAUSE_TIME = 0.0001
+PAUSE_TIME = 0.0001  # sc
+PAUSE_ACTION_TIME = 1  # sc
+ARROW_LENGTH = 3e6  # meters
 EARTH_RADIUS = 6.3781e6  # meters
 
 
@@ -36,6 +38,18 @@ def draw_sphere(axis, centre, radius, wireframe_params={}):
     y = radius * np.sin(u) * np.sin(v) + centre[1]
     z = radius * np.cos(v) + centre[2]
     return axis.plot_wireframe(x, y, z, **wireframe_params)
+
+
+def draw_action(axis, pos, dV):
+    """ Draws action.
+    Args:
+        axis (matplotlib.axes._subplots.Axes3DSubplot): axis to plot on
+        pos ([x, y, z]): position of protecred object
+        dV ([dVx, dVy, dVz]): action
+    """
+    x, y, z = pos
+    dVx, dVy, dVz = dV
+    return axis.quiver(x, y, z, x + dVx, y + dVy, z + dVz, length=ARROW_LENGTH, normalize=True)
 
 
 def strf_position(satellite, epoch):
@@ -75,10 +89,13 @@ class Visualizer:
             "color": "b", "lw": 0.5, "alpha": 0.2})
         plt.legend()
 
-    def pause_and_clear(self):
-        """ Pause the frame to watch it. Clear axis for next frame. """
+    def pause(self, pause_time):
+        """ Pause the frame to watch it. """
         plt.legend()
-        plt.pause(PAUSE_TIME)
+        plt.pause(pause_time)
+
+    def clear(self):
+        """ Clear axis for next frame. """
         self.subplot_3d.cla()
         self.subplot_p.cla()
         self.subplot_f.cla()
@@ -106,6 +123,10 @@ class Visualizer:
         self.subplot_r.grid(True)
         self.subplot_f.set_ylabel('reward')
         self.subplot_r.set_xlabel('time (mjd2000)')
+
+    def plot_action(self, pos, action):
+        draw_action(self.subplot_3d, pos, action)
+        self.pause(PAUSE_ACTION_TIME)
 
 
 class Simulator:
@@ -151,6 +172,7 @@ class Simulator:
             reward (self.env.get_reward()): reward of session.
 
         """
+        action = np.zeros(4)
         iteration = 0
         if visualize:
             self.vis = Visualizer()
@@ -180,8 +202,14 @@ class Simulator:
                 err = self.env.act(action)
                 if err:
                     self.log_bad_action(err, action)
+                    if visualize and np.not_equal(action[:3], np.zeros(3)).all():
+                        self.vis.plot_action(self.env.protected.position(
+                            self.curr_time)[0], action[:3])
 
                 self.log_reward_action(iteration, r, action)
+
+                # set action to zero after it is done
+                action = np.zeros(4)
 
             self.log_iteration(iteration)
             self.log_protected_position()
@@ -200,7 +228,8 @@ class Simulator:
                     self.fuel_cons_arr.append(f)
                     self.reward_arr.append(r)
                 self.plot_prob_fuel()
-                self.vis.pause_and_clear()
+                self.vis.pause(PAUSE_TIME)
+                self.vis.clear()
                 # self.env.reward and self.env.total_collision_probability -
                 # without update.
 
