@@ -35,7 +35,7 @@ def main(args):
     parser.add_argument("-s", "--step", type=float,
                         default=SIMULATION_STEP, required=False)
     parser.add_argument("-save_path", "--save_action_table_path", type=str,
-                        default="data/action_table_CE.csv", required=False)
+                        default="training/agents_tables/CE/action_table_CE.csv", required=False)
     parser.add_argument("-print", "--print_out", type=str,
                         default="False", required=False)
     parser.add_argument("-progress", "--show_progress", type=str,
