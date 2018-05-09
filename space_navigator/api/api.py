@@ -230,7 +230,7 @@ class Environment:
         deviation = np.sum(diff * np.array(singnificance))
         return deviation
 
-    def get_reward(self, coll_prob_C=10000, traj_C=1, fuel_C=1,
+    def get_reward(self, coll_prob_C=10000, traj_C=1., fuel_C=1.,
                    dangerous_prob=10e-4, get_components=False):
         """ Update and return total reward from the environment state.
 
