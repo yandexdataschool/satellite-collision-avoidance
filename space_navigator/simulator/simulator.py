@@ -151,7 +151,7 @@ class Visualizer:
 
 class Simulator:
     """ Simulator allows to start the simulation of provided environment,
-    and starts agent-environment collaboration.
+        and starts agent-environment collaboration.
     """
 
     def __init__(self, agent, environment, step=0.001, update_r_p_step=None):
@@ -181,9 +181,10 @@ class Simulator:
         """
         Args:
             visualize (bool): whether show the simulation or not.
+            print_out (bool): whether show the print out or not.
 
         Returns:
-            reward (self.env.get_reward()): reward of session.
+            reward (float): reward of session.
 
         """
         action = np.zeros(4)
