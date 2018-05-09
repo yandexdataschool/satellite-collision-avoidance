@@ -64,10 +64,12 @@ class EvolutionStrategies(object):
             rewards = np.zeros(self.pop_size)
             N = np.zeros((self.pop_size, self.n_actions, self.action_size))
             for policy in trange(self.pop_size):
-                N[policy] = random_weights(self.weights_shape, self.max_time, "gauss")
+                N[policy] = random_weights(
+                    self.weights_shape, self.max_time, "gauss")
                 w_try = self.weights + self.sigma * N[policy]
                 for action in range(self.n_actions):
-                    w_try[action] = constrain_action(w_try[action], MAX_FUEL_CONSUMPTION, 0, self.max_time)
+                    w_try[action] = constrain_action(
+                        w_try[action], MAX_FUEL_CONSUMPTION, 0, self.max_time)
                 rewards[policy] = generate_session_with_env(w_try, self.env)
                 self.actions[iteration, policy] = w_try
                 # update best reward and policy

@@ -112,7 +112,8 @@ class CrossEntropy:
 
         """
 
-        self.env = Environment(copy(protected), copy(debris), start_time, end_time)
+        self.env = Environment(copy(protected), copy(
+            debris), start_time, end_time)
         self.protected = protected
         self.debris = debris
         self.start_time = start_time
