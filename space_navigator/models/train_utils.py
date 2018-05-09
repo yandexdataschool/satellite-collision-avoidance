@@ -47,8 +47,8 @@ def generate_session(protected, debris, agent, start_time, end_time, step):
     end_time_mjd2000 = pk.epoch(end_time, "mjd2000")
     env = Environment(copy(protected), copy(debris),
                       start_time_mjd2000, end_time_mjd2000)
-    simulator = Simulator(agent, env, update_r_p_step=None, print_out=False)
-    reward = simulator.run(step, visualize=False)
+    simulator = Simulator(agent, env,step=step, update_r_p_step=None)
+    reward = simulator.run()
     return reward
 
 def constrain_action(action, max_fuel_cons, min_time=None, max_time=None):
