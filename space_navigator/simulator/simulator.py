@@ -221,9 +221,9 @@ class Simulator:
                 self.plot_debris()
                 self.vis.plot_earth()
                 if iteration % self.update_r_p_step == 0:
-                    self.vis.update_data(self.curr_time.mjd2000, self.env.total_collision_probability,
+                    self.vis.update_data(self.curr_time.mjd2000, self.env.get_total_collision_probability(),
                                          self.env.get_fuel_consumption(), self.env.get_trajectory_deviation(),
-                                         self.env.reward_components, self.env.reward)
+                                         self.env.get_reward_components(), self.env.get_reward())
                 if np.not_equal(action[:3], np.zeros(3)).all():
                     self.vis.plot_action(self.env.protected.position(
                         self.curr_time)[0], action[:3])
