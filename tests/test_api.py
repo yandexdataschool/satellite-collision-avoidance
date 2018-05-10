@@ -4,10 +4,10 @@ import unittest
 import pykep as pk
 import numpy as np
 
-from api import Environment, SpaceObject
-from api import fuel_consumption, sum_coll_prob, get_dangerous_debris
-from api import MAX_PROPAGATION_STEP, MAX_FUEL_CONSUMPTION
-from api import CollProbEstimation
+from space_navigator.api import Environment, SpaceObject
+from space_navigator.api import fuel_consumption, sum_coll_prob, get_dangerous_debris
+from space_navigator.api import MAX_PROPAGATION_STEP
+from space_navigator.collision import CollProbEstimator
 
 
 class TestBasicFunctions(unittest.TestCase):
@@ -63,7 +63,7 @@ class TestBasicFunctions(unittest.TestCase):
 class TestCollProbEstimation(unittest.TestCase):
 
     def test_ChenBai_approach(self):
-        estimator = CollProbEstimation()
+        estimator = CollProbEstimator()
         # collision cross-section radii of ISS and the debris
         rV1 = np.array([
             3126018.8, 5227146.1, -2891302.9, -3298.0, 4758.7, 5054.3
@@ -95,6 +95,8 @@ class TestEnvironment(unittest.TestCase):
 
     def setUp(self):
         self.start_time = pk.epoch(1, "mjd2000")
+        self.end_time = None
+
         osculating_elements = (7800000, 0.001, 0.017453292519943295, 0, 0, 0)
         mu_central_body, mu_self, radius, safe_radius = 398600800000000, 0.1, 0.1, 0.1
         fuel = 10
@@ -109,7 +111,8 @@ class TestEnvironment(unittest.TestCase):
         self.protected = SpaceObject("protected", "osc", params)
 
     def test_propagate_forward(self):
-        env = Environment(self.protected, [], self.start_time)
+        env = Environment(self.protected, [], self.start_time, self.end_time)
+
         end_times = [
             self.start_time.mjd2000 + MAX_PROPAGATION_STEP * 100,
             self.start_time.mjd2000 + MAX_PROPAGATION_STEP,
@@ -117,13 +120,13 @@ class TestEnvironment(unittest.TestCase):
         ]
 
         for end_time in end_times:
+            env.end_time = pk.epoch(end_time, "mjd2000")
             env.propagate_forward(end_time)
             self.assertEqual(env.state["epoch"].mjd2000, end_time)
-            env = Environment(self.protected, [], self.start_time)
+            env.reset()
 
     def test_update_distances_and_probabilities_prior_to_current_conjunction(self):
-        env = Environment(self.protected, [], self.start_time)
-
+        # TODO: implement test after new approach will be added.
         self.assertTrue(True)
 
     def test_get_collision_probability(self):
@@ -135,10 +138,10 @@ class TestEnvironment(unittest.TestCase):
         self.assertTrue(True)
 
     def test_act_normal(self):
-        env = Environment(self.protected, [], self.start_time)
+        env = Environment(self.protected, [], self.start_time, self.end_time)
 
         time_to_req = 2
-        action = np.array([1, 1, 1, self.start_time.mjd2000, time_to_req])
+        action = np.array([1, 1, 1, time_to_req])
         dV = action[:3]
         fuel_cons = fuel_consumption(dV)
 
@@ -165,6 +168,10 @@ class TestEnvironment(unittest.TestCase):
         # TODO: implement test after decision on proper behavior.
         self.assertTrue(True)
 
+    def test_reset(self):
+        # TODO: implement test.
+        self.assertTrue(True)
+
 
 class TestSpaceObject(unittest.TestCase):
 
@@ -186,7 +193,7 @@ class TestSpaceObject(unittest.TestCase):
         satellite = SpaceObject("satellite", "osc", self.params)
 
         time_to_req = 2
-        action = np.array([1, 1, 1, self.start_time.mjd2000, time_to_req])
+        action = np.array([1, 1, 1, time_to_req])
         dV = action[:3]
         fuel_cons = fuel_consumption(dV)
 
@@ -198,7 +205,7 @@ class TestSpaceObject(unittest.TestCase):
             0.0, 6.174706362516025, 0.10819939983993268
         )
 
-        satellite.maneuver(action[:4])
+        satellite.maneuver(action[:3], self.start_time)
 
         self.assertEqual(want_osculating_elements,
                          satellite.satellite.osculating_elements(self.start_time))
