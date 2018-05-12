@@ -229,7 +229,7 @@ class Environment:
         deviation = np.sum(diff * np.array(singnificance))
         self.trajectory_deviation = deviation
 
-    def update_reward(self, coll_prob_C=1, traj_C=1, fuel_C=1,
+    def update_reward(self, coll_prob_C=1., traj_C=1., fuel_C=1.,
                       dangerous_prob=10e-4):
         """Update reward and reward components.
 
