@@ -65,7 +65,7 @@ class Environment:
         # : int: number of propagate forward iterations
         # since last update collision probability and reward.
         self.pf_iterations_since_update = 0
-        self.update_all()
+        self.update_all_reward_components()
 
     def propagate_forward(self, end_time, update_r_p_step=20):
         """ Forward step.
@@ -117,7 +117,7 @@ class Environment:
         self.pf_iterations_since_update += 1
 
         if self.pf_iterations_since_update == update_r_p_step:
-            self.update_all()
+            self.update_all_reward_components()
 
     def update_distances_and_probabilities_prior_to_current_conjunction(self):
         """ Update the distances and collision probabilities prior to current conjunction.
@@ -251,7 +251,7 @@ class Environment:
         self.reward_components = (coll_prob_r, fuel_r, traj_r)
         self.reward = sum(self.reward_components)
 
-    def update_all(self):
+    def update_all_reward_components(self):
         """Update total collision probability, trajectory deviation, reward components and reward."""
         self.update_total_collision_probability()
         self.update_trajectory_deviation()
