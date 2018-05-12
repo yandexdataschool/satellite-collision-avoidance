@@ -229,7 +229,7 @@ class Environment:
         deviation = np.sum(diff * np.array(singnificance))
         self.trajectory_deviation = deviation
 
-    def update_reward(self, coll_prob_C=10000, traj_C=1., fuel_C=1.,
+    def update_reward(self, coll_prob_C=1, traj_C=1, fuel_C=1,
                       dangerous_prob=10e-4):
         """Update reward and reward components.
 
@@ -243,7 +243,8 @@ class Environment:
         ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
         # collision probability reward - some kind of ELU function
         # of collision probability
-        coll_prob_r = -(ELU((coll_prob - dangerous_prob) * coll_prob_C) + 1)
+        coll_prob_r = -coll_prob_C * \
+            (ELU((coll_prob - dangerous_prob) * 10000) + 1)
         fuel_r = - fuel_C * (self.init_fuel - self.protected.get_fuel())
         traj_r = - traj_C * self.get_trajectory_deviation()
 
