@@ -106,10 +106,12 @@ class DecisionTree:
             fuel_level (float): total fuel level.
 
         TODO:
-            get_best_actions_if_current_passed using get_best_current_action
-            get_best_actions_if_current_passed_with_return using get_best_current_action_with_return
-            log
-            generate_session_with_env
+            get_best_actions_if_current_passed using get_best_current_action.
+            get_best_actions_if_current_passed_with_return using get_best_current_action_with_return.
+            generate_session_with_env.
+            log, parallel, tests.
+            model description: readme and notebook tutorials.
+            better print out.
 
         """
         self.env = Environment(copy(protected), copy(
@@ -135,21 +137,10 @@ class DecisionTree:
             print_out (bool): print information during the training.
 
         TODO:
-            MCTS strategy (not just step-by-step)?
-            deal with bias
-            don't generate whole session all the time
-            time to req from previous action learn after learn action
-            choose several best actions?
+            don't generate whole session all the time.
+            time to req from previous action learn after learn action?
             do not finish the simulation?
-            good print_out or remove it
-            parallel
-            log
-            test
-            good name for method - is it MCTS
-            add min time to req?
-            model description!
-            combine get_best_current_action and get_best_actions_if_current_passed into one function.
-
+            if n_steps_ahead=0 skip action probability => 0
         """
         if print_out:
             self.print_start_train()
@@ -198,13 +189,11 @@ class DecisionTree:
 
         Args:
             n_iterations (int): number of iterations for choice an action.
-            n_steps_ahead (int): number of actions ahead to evaluate.
             print_out (bool): print information during the training.
 
         TODO:
-            the number of turns around the orbit.
+            the number of turns around the orbit?
             see self.train().
-            return after N orbits.
         """
         if print_out:
             self.print_start_train()
@@ -292,11 +281,11 @@ class DecisionTree:
             print_out (bool): print information during the training.
 
         Returns:
-            best_action (np.array with shape ): best action action among considered.
+            best_actions (np.array with shape=(2, 4)): best actions (maneuver with reverse) among considered.
             best_reward (float): reward of the session that contained the best action.
 
         TODO:
-            better getting of period
+            better getting of period.
 
         """
         best_reward = -float("inf")
@@ -331,9 +320,9 @@ class DecisionTree:
                 print("r:", r, '\n')
             if r > best_reward:
                 best_reward = r
-                best_action = temp_action_table
+                best_actions = temp_action_table
 
-        return best_action, best_reward
+        return best_actions, best_reward
 
     def get_best_actions_if_current_passed(self, n_iterations, n_steps_ahead, print_out):
         """Returns the best of random actions with given parameters, provided that firts action skipped.
@@ -346,7 +335,7 @@ class DecisionTree:
         Returns:
             best_action (np.array): best action action among considered (empty action just with time to request).
             best_reward (float): reward of the session that contained the best action.
-            best_next_action (np.array): best next action action among considered.
+            best_next_action (np.array): best next action among considered.
 
         """
         best_reward = -float("inf")
@@ -383,11 +372,12 @@ class DecisionTree:
         Returns:
             best_action (np.array): best action action among considered (empty action just with time to request).
             best_reward (float): reward of the session that contained the best action.
-            best_next_action (np.array): best next action action among considered.
+            best_next_actions (np.array with shape=(2, 4)): best next actions (maneuver with reverse) among considered.
+
 
         TODO:
             compair reward with get_best_current_action_with_return.
-            better getting of period
+            better getting of period.
 
         """
         best_reward = -float("inf")
@@ -422,10 +412,10 @@ class DecisionTree:
                 print("r:", r, '\n')
             if r > best_reward:
                 best_action = temp_action_table[0]
-                best_next_action = temp_action_table[1:]
+                best_next_actions = temp_action_table[1:]
                 best_reward = r
 
-        return best_action, best_reward, best_next_action
+        return best_action, best_reward, best_next_actions
 
     def get_action_table(self):
         return self.action_table
