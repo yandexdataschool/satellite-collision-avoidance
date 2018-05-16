@@ -24,7 +24,7 @@ def main(args):
                         default=SIMULATION_STEP, required=False)
     parser.add_argument("-save_path", "--save_action_table_path", type=str,
                         default="training/agents_tables/MCTS/action_table_MCTS_simple.csv", required=False)
-    parser.add_argument("-p", "--print_out", type=str,
+    parser.add_argument("-print", "--print_out", type=str,
                         default="False", required=False)
     parser.add_argument("-env", "--environment", type=str,
                         default="data/environments/collision.osc", required=False)
@@ -46,7 +46,7 @@ def main(args):
 
     action_table = DecisionTree(
         protected, debris, start_time, end_time, step, max_fuel_cons, fuel_level)
-    action_table.train_simple(n_iterations, print_out)
+    action_table.train(n_iterations, n_steps_ahead=0, print_out=print_out)
     action_table.save_action_table(save_action_table_path)
 
     return

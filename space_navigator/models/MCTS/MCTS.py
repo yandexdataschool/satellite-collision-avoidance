@@ -108,7 +108,6 @@ class DecisionTree:
         TODO:
             get_best_actions_if_current_passed using get_best_current_action
             get_best_actions_if_current_passed_with_return using get_best_current_action_with_return
-            train_simple, train, train_with_return => train?
             log
             generate_session_with_env
 
@@ -126,63 +125,6 @@ class DecisionTree:
         self.action_table = np.empty((0, 4))
         self.total_reward = None
         self.max_time_to_req = max_time_to_req
-
-    def train_simple(self, n_iterations=10, print_out=False):
-        """Training agent policy (self.action_table).
-
-        Args:
-            n_iterations (int): number of iterations for choice an action.
-            print_out (bool): print information during the training.
-
-        TODO:
-            describe train_simple and train difference
-            deal with bias
-            fuel construction for whole table
-            check max_fuel_cons
-            don't generate whole session all the time
-            time to req from previous action learn after learn action
-            choose several best actions?
-            do not finish the simulation?
-            good print_out or remove it
-            parallel
-            log
-            test
-
-        """
-        if print_out:
-            self.print_start_train()
-        while (self.investigated_time < self.end_time) & (self.fuel_level > 0):
-            reward = -float("inf")
-            fuel = min(self.max_fuel_cons, self.fuel_level)
-            actions = get_random_actions(
-                n_iterations, self.max_time_to_req, self.max_fuel_cons, None, True, 0, 0)
-            print("actions", actions)
-            for a in actions:
-                temp_action_table = add_action_to_action_table(
-                    self.action_table, a)
-                agent = Agent(temp_action_table)
-                r = generate_session(
-                    self.protected, self.debris, agent, self.start_time, self.end_time, self.step)
-                if print_out:
-                    print("action:", a)
-                    print("r:", r, '\n')
-                if r > reward:
-                    best_action = a
-                    reward = r
-
-            self.fuel_level -= np.linalg.norm(best_action[:3])
-            self.action_table = add_action_to_action_table(
-                self.action_table, best_action)
-            if print_out:
-                print("inv time:", self.investigated_time)
-                print("best r:", reward, '\n',
-                      "best a:", best_action, '\n',
-                      "fuel level:", self.fuel_level, '\n',
-                      "total AT:\n", self.action_table, '\n\n\n')
-            self.investigated_time += best_action[3]
-
-        if print_out:
-            self.print_end_train()
 
     def train(self, n_iterations=10, n_steps_ahead=2, print_out=False):
         """Training agent policy (self.action_table).
@@ -359,16 +301,6 @@ class DecisionTree:
         """
         best_reward = -float("inf")
         for i in range(n_iterations):
-            # TODO - delete
-            """
-            сделать маневр, проиграть сессию до маневра, вернуть время обращения, прикрутить к таблице второй маневр и пока так оставить.
-            потом поговорим и мб сделаем лучше.
-
-            или запилить нового агента, который сам возвращается после витка
-            вообще наверное лучше в API такую ф-ю добавить, чтоб просто через виток сам возвращался
-            и тогда просто достаточно все будет
-            то есть сде
-            """
             # random maneuver
             temp_action_table = get_random_actions(
                 n_rnd_actions=1,
@@ -378,7 +310,6 @@ class DecisionTree:
                 inaction=False,
                 p_skip=0,
                 p_skip_coef=0)
-            # TODO time
             # add reverse maneuver
             action_table = np.vstack(
                 (self.action_table, temp_action_table))
@@ -456,20 +387,11 @@ class DecisionTree:
 
         TODO:
             compair reward with get_best_current_action_with_return.
+            better getting of period
 
         """
         best_reward = -float("inf")
         for i in range(n_iterations):
-            # TODO - delete
-            """
-            сделать маневр, проиграть сессию до маневра, вернуть время обращения, прикрутить к таблице второй маневр и пока так оставить.
-            потом поговорим и мб сделаем лучше.
-
-            или запилить нового агента, который сам возвращается после витка
-            вообще наверное лучше в API такую ф-ю добавить, чтоб просто через виток сам возвращался
-            и тогда просто достаточно все будет
-            то есть сде
-            """
             # random maneuver
             temp_action_table = get_random_actions(
                 n_rnd_actions=2,
@@ -479,7 +401,6 @@ class DecisionTree:
                 inaction=True,
                 p_skip=0,
                 p_skip_coef=0)
-            # TODO time
             # add reverse maneuver
             action_table = np.vstack(
                 (self.action_table, temp_action_table))
