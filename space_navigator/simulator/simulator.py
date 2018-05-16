@@ -119,13 +119,12 @@ class Visualizer:
         self.subplot_r.cla()
 
     def plot_iteration(self, epoch, last_update):
-        s0 = '  Epoch: {}\nUpdate: {}'.format(epoch, last_update)
-        s1 = '\n\nColl Prob: {:.7}     Fuel Cons: {:.5}     Traj Dev coef: {:.5}'.format(
+        s = '  Epoch: {}\nUpdate: {}'.format(epoch, last_update)
+        s += '\n\nColl Prob: {:.7}     Fuel Cons: {:.5}     Traj Dev coef: {:.5}'.format(
             self.prob_arr[-1], self.fuel_cons_arr[-1], self.traj_dev)
-        s2 = '\n\nReward components:\nColl Prob R: {:.5}     Fuel Cons R: {:.5}     Traj Dev coef R: {:.5}\
+        s += '\n\nReward components:\nColl Prob R: {:.5}     Fuel Cons R: {:.5}     Traj Dev coef R: {:.5}\
             \nTotal Reward: {:.5}'.format(
             self.reward_components[0], self.reward_components[1], self.reward_components[2], self.reward_arr[-1])
-        s = s0 + s1 + s2
         self.subplot_3d.text2D(-0.3, 1.05, s,
                                transform=self.subplot_3d.transAxes)
 
@@ -244,6 +243,7 @@ class Simulator:
 
             iteration += 1
 
+        self.env.update_all_reward_components()
         self.log_protected_position()
 
         if print_out:
@@ -295,5 +295,12 @@ class Simulator:
             print(spaceObject.satellite)
 
     def print_end(self):
-        print("Simulation ended.\nCollision probability: {}.\nReward: {}.\nFuel consumption: {}.".format(
-            self.env.get_collision_probability(), self.env.get_reward(), self.env.get_fuel_consumption()))
+        reward_components = self.env.get_reward_components()
+        s = "Simulation ended.\n\nCollision probability: {:.5}\nFuel consumption: {:.5}\
+            \nTrajectory deviation coefficient: {:.5}".format(
+            self.env.get_total_collision_probability(), self.env.get_fuel_consumption(),
+            self.env.get_trajectory_deviation())
+        s += '\n\nReward components:\nColl Prob R: {:.5}     Fuel Cons R: {:.5}     Traj Dev coef R: {:.5}\
+            \nTotal Reward: {:.5}'.format(
+            reward_components[0], reward_components[1], reward_components[2], self.env.get_reward())
+        print(s)
