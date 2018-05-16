@@ -422,3 +422,9 @@ class SpaceObject:
 
     def get_orbital_elements(self):
         return self.satellite.orbital_elements
+
+    def get_orbital_period(self):
+        a = self.get_orbital_elements()[0]  # meters.
+        mu = pk.MU_EARTH  # meters^3 / sc^2.
+        T = 2 * np.pi * (a**3 / mu)**0.5 / 86400  # days.
+        return T
