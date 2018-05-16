@@ -28,7 +28,7 @@ def generate_session_with_env(action_table, env):
     return reward
 
 
-def generate_session(protected, debris, agent, start_time, end_time, step):
+def generate_session(protected, debris, agent, start_time, end_time, step, return_env=False):
     """Simulation.
 
     Args:
@@ -38,6 +38,7 @@ def generate_session(protected, debris, agent, start_time, end_time, step):
         start_time (float): start time of simulation provided as mjd2000.
         end_time (float): end time of simulation provided as mjd2000.
         step (float): time step in simulation.
+        return_env (bool): return the environment at the end of the session.
 
     Returns:
         reward: reward of the session.
@@ -45,11 +46,15 @@ def generate_session(protected, debris, agent, start_time, end_time, step):
     """
     start_time_mjd2000 = pk.epoch(start_time, "mjd2000")
     end_time_mjd2000 = pk.epoch(end_time, "mjd2000")
-    env = Environment(copy(protected), copy(debris),
+    protected_copy, debris_copy = copy(protected), copy(debris)
+    env = Environment(protected_copy, debris_copy,
                       start_time_mjd2000, end_time_mjd2000)
-    simulator = Simulator(agent, env,step=step, update_r_p_step=None)
+    simulator = Simulator(agent, env, step=step, update_r_p_step=None)
     reward = simulator.run()
+    if return_env:
+        return reward, env
     return reward
+
 
 def constrain_action(action, max_fuel_cons, min_time=None, max_time=None):
     """Changes the action in accordance with the restrictions.
