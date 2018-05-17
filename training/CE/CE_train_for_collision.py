@@ -23,7 +23,7 @@ def main(args):
     parser.add_argument("-n_b", "--n_best_actions", type=int,
                         default=1, required=False)
     parser.add_argument("-lr", "--learning_rate", type=float,
-                        default=0.7, required=False)
+                        default=0.9, required=False)
     parser.add_argument("-s_coef", "--sigma_coef", type=float,
                         default=0.9, required=False)
     parser.add_argument("-lr_coef", "--learning_rate_coef", type=float,
