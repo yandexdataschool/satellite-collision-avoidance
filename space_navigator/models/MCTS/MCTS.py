@@ -137,6 +137,9 @@ class DecisionTree:
             print_out (bool): print information during the training.
 
         TODO:
+            if n_steps_ahead > 0:
+                evaluate action by more than one sessions.
+                do some tree with exploration like MCTS?
             don't generate whole session all the time.
             time to req from previous action learn after learn action?
             do not finish the simulation?
