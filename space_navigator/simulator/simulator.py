@@ -147,6 +147,22 @@ class Visualizer:
     def plot_action(self, pos, action):
         draw_action(self.subplot_3d, pos, action)
 
+    def save_graphics(self):
+        fig = plt.figure(figsize=[7, 12])
+        gs = gridspec.GridSpec(11, 1)
+        subplot_p = fig.add_subplot(gs[:3, 0])
+        subplot_f = fig.add_subplot(gs[4:7, 0])
+        subplot_r = fig.add_subplot(gs[8:, 0])
+
+        self.make_step_on_graph(subplot_p, self.time_arr, self.prob_arr,
+                                title='Total collision probability', ylabel='prob')
+        self.make_step_on_graph(subplot_f, self.time_arr, self.fuel_cons_arr,
+                                title='Total fuel consumption', ylabel='fuel (dV)')
+        self.make_step_on_graph(subplot_r, self.time_arr, self.reward_arr,
+                                title='Total reward', ylabel='reward', xlabel='time (mjd2000)')
+
+        fig.savefig("simulation_graphics.png")
+
 
 class Simulator:
     """ Simulator allows to start the simulation of provided environment,
@@ -220,9 +236,7 @@ class Simulator:
                 self.plot_debris()
                 self.vis.plot_earth()
                 if iteration % self.update_r_p_step == 0:
-                    self.vis.update_data(self.curr_time.mjd2000, self.env.get_total_collision_probability(),
-                                         self.env.get_fuel_consumption(), self.env.get_trajectory_deviation(),
-                                         self.env.get_reward_components(), self.env.get_reward())
+                    self.update_vis_data()
                 if np.not_equal(action[:3], np.zeros(3)).all():
                     self.vis.plot_action(self.env.protected.position(
                         self.curr_time)[0], action[:3])
@@ -246,6 +260,9 @@ class Simulator:
         self.env.update_all_reward_components()
         self.log_protected_position()
 
+        if visualize:
+            self.update_vis_data()
+            self.vis.save_graphics()
         if print_out:
             self.print_end()
 
@@ -284,6 +301,12 @@ class Simulator:
             self.vis.plot_planet(
                 self.env.debris[i].satellite, t=self.curr_time,
                 size=25, color=colors[i])
+
+    def update_vis_data(self):
+        self.vis.update_data(
+            self.curr_time.mjd2000, self.env.get_total_collision_probability(),
+            self.env.get_fuel_consumption(), self.env.get_trajectory_deviation(),
+            self.env.get_reward_components(), self.env.get_reward())
 
     def print_start(self):
         print("Simulation started.\n\nStart time: {} \t End time: {} \t Simulation step:{}\n".format(
