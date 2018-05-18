@@ -55,7 +55,7 @@ class Environment:
         self.collision_probability_estimator = CollProbEstimator()
         self.collision_probability_prior_to_current_conjunction = np.zeros(
             self.n_debris)
-        self.total_collision_probability_array = np.zeros(self.n_debris)
+        self.total_collision_probability_arr = np.zeros(self.n_debris)
         self.total_collision_probability = None
 
         self.reward_components = None
@@ -196,7 +196,7 @@ class Environment:
                 )
                 for d in self.dangerous_debris_in_current_conjunction
             ])
-            self.total_collision_probability_array[self.dangerous_debris_in_current_conjunction] = sum_coll_prob(
+            self.total_collision_probability_arr[self.dangerous_debris_in_current_conjunction] = sum_coll_prob(
                 np.vstack([
                     self.collision_probability_prior_to_current_conjunction[
                         self.dangerous_debris_in_current_conjunction],
@@ -204,10 +204,10 @@ class Environment:
                 ])
             )
         else:
-            self.total_collision_probability_array = self.collision_probability_prior_to_current_conjunction
+            self.total_collision_probability_arr = self.collision_probability_prior_to_current_conjunction
 
         self.total_collision_probability = sum_coll_prob(
-            self.total_collision_probability_array
+            self.total_collision_probability_arr
         )
 
     def update_trajectory_deviation(self, singnificance=(0.01, 1, 1, 1, 1, 0)):
@@ -221,7 +221,7 @@ class Environment:
                 w (Argument of periapsis), M (mean anomaly): radians.
 
         Args:
-            singnificance (tuple): array of multipliers for orbital parameter differences.
+            singnificance (tuple): multipliers for orbital parameter differences.
 
         """
         diff = np.abs(
