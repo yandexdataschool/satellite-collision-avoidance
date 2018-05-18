@@ -187,7 +187,7 @@ class DecisionTree:
         if print_out:
             self.print_end_train()
 
-    def train_with_return(self, n_iterations=10, print_out=False):
+    def train_with_reverse(self, n_iterations=10, print_out=False):
         """Training agent policy (self.action_table).
 
         Args:
