@@ -68,19 +68,19 @@ class Visualizer:
 
     def __init__(self, curr_time, total_collision_probability, fuel_cons, traj_dev, reward_components, reward):
         self.fig = plt.figure(figsize=[14, 12])
-        self.gs = gridspec.GridSpec(11, 2)
+        self.gs = gridspec.GridSpec(15, 2)
         self.subplot_3d = self.fig.add_subplot(self.gs[:, 0], projection='3d')
         self.subplot_3d.set_aspect("equal")
         self.subplot_p = self.fig.add_subplot(self.gs[:3, 1])
         self.subplot_f = self.fig.add_subplot(self.gs[4:7, 1])
-        self.subplot_r = self.fig.add_subplot(self.gs[8:, 1])
-
+        self.subplot_d = self.fig.add_subplot(self.gs[8:11, 1])
+        self.subplot_r = self.fig.add_subplot(self.gs[12:, 1])
         # initialize data for plots
         self.time_arr = [curr_time]
         self.prob_arr = [total_collision_probability]
         self.fuel_cons_arr = [fuel_cons]
+        self.traj_dev_arr = [traj_dev]
         self.reward_arr = [reward]
-        self.traj_dev = traj_dev
         self.reward_components = reward_components
 
     def run(self):
@@ -90,9 +90,8 @@ class Visualizer:
         self.time_arr.append(curr_time)
         self.prob_arr.append(prob)
         self.fuel_cons_arr.append(fuel_cons)
+        self.traj_dev_arr.append(traj_dev)
         self.reward_arr.append(reward)
-
-        self.traj_dev = traj_dev
         self.reward_components = reward_components
 
     def plot_planet(self, satellite, t, size, color):
@@ -116,12 +115,13 @@ class Visualizer:
         self.subplot_3d.cla()
         self.subplot_p.cla()
         self.subplot_f.cla()
+        self.subplot_d.cla()
         self.subplot_r.cla()
 
     def plot_iteration(self, epoch, last_update):
         s = '  Epoch: {}\nUpdate: {}'.format(epoch, last_update)
         s += '\n\nColl Prob: {:.7}     Fuel Cons: {:.5}     Traj Dev coef: {:.5}'.format(
-            self.prob_arr[-1], self.fuel_cons_arr[-1], self.traj_dev)
+            self.prob_arr[-1], self.fuel_cons_arr[-1], self.traj_dev_arr[-1])
         s += '\n\nReward components:\nColl Prob R: {:.5}     Fuel Cons R: {:.5}     Traj Dev coef R: {:.5}\
             \nTotal Reward: {:.5}'.format(
             self.reward_components[0], self.reward_components[1], self.reward_components[2], self.reward_arr[-1])
@@ -133,6 +133,8 @@ class Visualizer:
                                 title='Total collision probability', ylabel='prob')
         self.make_step_on_graph(self.subplot_f, self.time_arr, self.fuel_cons_arr,
                                 title='Total fuel consumption', ylabel='fuel (dV)')
+        self.make_step_on_graph(self.subplot_d, self.time_arr, self.traj_dev_arr,
+                                title='Trajectory deviation coefficient', ylabel='traj dev coef')
         self.make_step_on_graph(self.subplot_r, self.time_arr, self.reward_arr,
                                 title='Total reward', ylabel='reward', xlabel='time (mjd2000)')
 
@@ -149,15 +151,18 @@ class Visualizer:
 
     def save_graphics(self):
         fig = plt.figure(figsize=[7, 12])
-        gs = gridspec.GridSpec(11, 1)
+        gs = gridspec.GridSpec(15, 1)
         subplot_p = fig.add_subplot(gs[:3, 0])
         subplot_f = fig.add_subplot(gs[4:7, 0])
-        subplot_r = fig.add_subplot(gs[8:, 0])
+        subplot_d = fig.add_subplot(gs[8:11, 0])
+        subplot_r = fig.add_subplot(gs[12:, 0])
 
         self.make_step_on_graph(subplot_p, self.time_arr, self.prob_arr,
                                 title='Total collision probability', ylabel='prob')
         self.make_step_on_graph(subplot_f, self.time_arr, self.fuel_cons_arr,
                                 title='Total fuel consumption', ylabel='fuel (dV)')
+        self.make_step_on_graph(subplot_d, self.time_arr, self.traj_dev_arr,
+                                title='Trajectory deviation coefficient', ylabel='traj dev coef')
         self.make_step_on_graph(subplot_r, self.time_arr, self.reward_arr,
                                 title='Total reward', ylabel='reward', xlabel='time (mjd2000)')
 
