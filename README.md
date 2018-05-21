@@ -4,22 +4,20 @@
 
 ## Motivation
 
-Since 2004 the amount of space launches has been gradually increased. Currently, there are more than 100 satellites launched into space every year. This number could be expanded rapidly due to such projects as providing global internet by Starlink. The increasing amount of objects in space leads to a higher probability of their collision.
+Since 2004 the number of space launches has been gradually increasing. Currently, there are more than 100 satellites launched into space every year. This number could grow rapidly due to such projects as the constellation providing worldwide internet access internet by OneWeb. The increasing amount of objects in space leads to a higher probability of their collision.
 
-Most cases of collision is currently processed manually. In this project, we investigate methods of **reinforcement learning** to create a system for **automatic maneuver optimization** in order to prevent collisions.
+Most conjunction events are currently processed manually. In this project, we employ state-of-the-art **reinforcement learning** methods to create a system for **automatic maneuver optimization** in order to avoid collisions.
 
 |![](data/images/stuffin_space.png)|
 |:--:| 
 |Space debris reconstrucion from [Stuffin Space project](http://stuffin.space)|
 
-## What is this project about?
-
-Here is the activity model in a **use case**:
+## Flow overview
 
 ![](data/images/Space_Navigator_scheme.png)
 
 **1** and **2**: Space objects are monitored by ROSCOSMOS <br />
-**3**: ROSCOSMOS provides most dangerous objects <br /> 
+**3**: ROSCOSMOS computes conjunction events <br /> 
 **4**: Space Navigator gets data from ROSCOSMOS <br />
 **5**: Environment is solved with RL <br />
 **6**: Space Navigator returns optimal collision avoidance maneuver <br />
@@ -88,7 +86,7 @@ Reward: -4.539992976249074e-05.
 Fuel consumption: 0.0.
 ```
 
-## Running the test
+## Running the tests
 
 Currently there are only tests for api module. Run it with command:
 ```
