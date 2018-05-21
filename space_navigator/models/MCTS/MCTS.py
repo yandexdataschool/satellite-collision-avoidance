@@ -1,4 +1,4 @@
-# Reinforcement Learning - Monte-Carlo Tree Search method.
+# Reinforcement Learning - based on Monte-Carlo Tree Search methods.
 
 import numpy as np
 from copy import copy
@@ -91,7 +91,7 @@ def add_action_to_action_table(action_table, action):
 
 
 class DecisionTree:
-    """MCTS Method for Reinforcement Learning."""
+    """MCTS based method for Reinforcement Learning."""
 
     def __init__(self, protected, debris, start_time, end_time, step,
                  max_fuel_cons, fuel_level, max_time_to_req=0.05):
@@ -104,6 +104,14 @@ class DecisionTree:
             step (float): time step in simulation.
             max_fuel_cons (float): maximum allowable fuel consumption per action.
             fuel_level (float): total fuel level.
+
+        TODO:
+            get_best_actions_if_current_passed using get_best_current_action.
+            get_best_actions_if_current_passed_with_return using get_best_current_action_with_return.
+            generate_session_with_env.
+            log, parallel, tests.
+            model description: readme and notebook tutorials.
+            better print out.
 
         """
         self.env = Environment(copy(protected), copy(
@@ -120,63 +128,6 @@ class DecisionTree:
         self.total_reward = None
         self.max_time_to_req = max_time_to_req
 
-    def train_simple(self, n_iterations=10, print_out=False):
-        """Training agent policy (self.action_table).
-
-        Args:
-            n_iterations (int): number of iterations for choice an action.
-            print_out (bool): print information during the training.
-
-        TODO:
-            describe train_simple and train difference
-            deal with bias
-            fuel construction for whole table
-            check max_fuel_cons
-            don't generate whole session all the time
-            time to req from previous action learn after learn action
-            choose several best actions?
-            do not finish the simulation?
-            good print_out or remove it
-            parallel
-            log
-            test
-
-        """
-        if print_out:
-            self.print_start_train()
-        while (self.investigated_time < self.end_time) & (self.fuel_level > 0):
-            reward = -float("inf")
-            fuel = min(self.max_fuel_cons, self.fuel_level)
-            actions = get_random_actions(
-                n_iterations, self.max_time_to_req, self.max_fuel_cons, None, True, 0, 0)
-            print("actions", actions)
-            for a in actions:
-                temp_action_table = add_action_to_action_table(
-                    self.action_table, a)
-                agent = Agent(temp_action_table)
-                r = generate_session(
-                    self.protected, self.debris, agent, self.start_time, self.end_time, self.step)
-                if print_out:
-                    print("action:", a)
-                    print("r:", r, '\n')
-                if r > reward:
-                    best_action = a
-                    reward = r
-                    self.fuel_level -= np.linalg.norm(best_action[:3])
-
-            self.action_table = add_action_to_action_table(
-                self.action_table, best_action)
-            if print_out:
-                print("inv time:", self.investigated_time)
-                print("best r:", reward, '\n',
-                      "best a:", best_action, '\n',
-                      "fuel level:", self.fuel_level, '\n',
-                      "total AT:\n", self.action_table, '\n\n\n')
-            self.investigated_time += best_action[3]
-
-        if print_out:
-            self.print_end_train()
-
     def train(self, n_iterations=10, n_steps_ahead=2, print_out=False):
         """Training agent policy (self.action_table).
 
@@ -186,21 +137,13 @@ class DecisionTree:
             print_out (bool): print information during the training.
 
         TODO:
-            MCTS strategy (not just step-by-step)?
-            deal with bias
-            don't generate whole session all the time
-            time to req from previous action learn after learn action
-            choose several best actions?
+            if n_steps_ahead > 0:
+                evaluate action by more than one sessions.
+                do some tree with exploration like MCTS?
+            don't generate whole session all the time.
+            time to req from previous action learn after learn action?
             do not finish the simulation?
-            good print_out or remove it
-            parallel
-            log
-            test
-            good name for method - is it MCTS
-            add min time to req?
-            model description!
-            combine get_best_current_action and get_best_actions_if_current_passed into one function.
-
+            if n_steps_ahead=0 skip action probability => 0
         """
         if print_out:
             self.print_start_train()
@@ -244,6 +187,60 @@ class DecisionTree:
         if print_out:
             self.print_end_train()
 
+    def train_with_reverse(self, n_iterations=10, print_out=False):
+        """Training agent policy (self.action_table).
+
+        Args:
+            n_iterations (int): number of iterations for choice an action.
+            print_out (bool): print information during the training.
+
+        TODO:
+            the number of turns around the orbit?
+            see self.train().
+        """
+        if print_out:
+            self.print_start_train()
+        skipped = False
+        while (self.investigated_time < self.end_time) & (self.fuel_level > 0):
+            if not skipped:
+                current_best_action, current_best_reward = self.get_best_current_action_with_return(
+                    n_iterations, print_out=print_out)
+            skip_best_action, skip_best_reward, skip_best_next_action = self.get_best_actions_if_current_passed_with_return(
+                n_iterations, print_out)
+            # it is more advantageous to maneuver.
+            if current_best_reward > skip_best_reward:
+                skipped = False
+                best_action = current_best_action
+            # it is more advantageous to skip the maneuver.
+            # in this case, at the next step the current_best_action is
+            # skip_best_next_action.
+            else:
+                skipped = True
+                best_action = skip_best_action
+                current_best_action, current_best_reward = skip_best_next_action, skip_best_reward
+
+            if self.action_table.size:
+                self.action_table = np.vstack([self.action_table, best_action])
+            else:
+                self.action_table = best_action.reshape((-1, 4))
+
+            self.fuel_level -= np.linalg.norm(best_action[:3])
+            if print_out:
+                print("inv time:", self.investigated_time)
+                print("best cur r:", current_best_reward, '\n',
+                      "best cur a:", current_best_action)
+                print("best skip r:", skip_best_reward, '\n',
+                      "best skip a:", skip_best_action, '\n',
+                      "best skip next a:", skip_best_next_action)
+                print("best action:", best_action, '\n',
+                      "fuel level:", self.fuel_level, '\n',
+                      "skipped:", skipped, '\n',
+                      "total AT:\n", self.action_table, '\n\n\n')
+            self.investigated_time += np.sum(best_action[:, 3])
+
+        if print_out:
+            self.print_end_train()
+
     def get_best_current_action(self, n_iterations, n_steps_ahead, print_out):
         """Returns the best of random actions with given parameters.
 
@@ -279,6 +276,57 @@ class DecisionTree:
 
         return best_action, best_reward
 
+    def get_best_current_action_with_return(self, n_iterations, print_out):
+        """Returns the best of random actions with given parameters including reverse action.
+
+        Args:
+            n_iterations (int): number of iterations for choice an action.
+            print_out (bool): print information during the training.
+
+        Returns:
+            best_actions (np.array with shape=(2, 4)): best actions (maneuver with reverse) among considered.
+            best_reward (float): reward of the session that contained the best action.
+
+        TODO:
+            better getting of period.
+
+        """
+        best_reward = -float("inf")
+        for i in range(n_iterations):
+            # random maneuver
+            temp_action_table = get_random_actions(
+                n_rnd_actions=1,
+                max_time=self.max_time_to_req,
+                max_fuel_cons=self.max_fuel_cons,
+                fuel_level=self.fuel_level / 2,
+                inaction=False,
+                p_skip=0,
+                p_skip_coef=0)
+            # add reverse maneuver
+            action_table = np.vstack(
+                (self.action_table, temp_action_table))
+            agent = Agent(action_table)
+            _, temp_env = generate_session(self.protected, self.debris, agent,
+                                           self.start_time, self.end_time, self.step, return_env=True)
+            temp_action_table[0, 3] = temp_env.protected.get_orbital_period()
+            temp_action_table = np.vstack(
+                (temp_action_table, -temp_action_table))
+            temp_action_table[1, 3] = np.nan
+            action_table = np.vstack(
+                (self.action_table, temp_action_table))
+            agent = Agent(action_table)
+            r = generate_session(
+                self.protected, self.debris, agent, self.start_time, self.end_time, self.step)
+            if print_out:
+                print("current iter:", i)
+                print("AT:", action_table)
+                print("r:", r, '\n')
+            if r > best_reward:
+                best_reward = r
+                best_actions = temp_action_table
+
+        return best_actions, best_reward
+
     def get_best_actions_if_current_passed(self, n_iterations, n_steps_ahead, print_out):
         """Returns the best of random actions with given parameters, provided that firts action skipped.
 
@@ -290,7 +338,7 @@ class DecisionTree:
         Returns:
             best_action (np.array): best action action among considered (empty action just with time to request).
             best_reward (float): reward of the session that contained the best action.
-            best_next_action (np.array): best next action action among considered.
+            best_next_action (np.array): best next action among considered.
 
         """
         best_reward = -float("inf")
@@ -316,6 +364,61 @@ class DecisionTree:
                 best_reward = r
 
         return best_action, best_reward, best_next_action
+
+    def get_best_actions_if_current_passed_with_return(self, n_iterations, print_out):
+        """Returns the best of random actions with given parameters, provided that firts action skipped.
+
+        Args:
+            n_iterations (int): number of iterations for choice an action.
+            print_out (bool): print information during the training.
+
+        Returns:
+            best_action (np.array): best action action among considered (empty action just with time to request).
+            best_reward (float): reward of the session that contained the best action.
+            best_next_actions (np.array with shape=(2, 4)): best next actions (maneuver with reverse) among considered.
+
+
+        TODO:
+            compair reward with get_best_current_action_with_return.
+            better getting of period.
+
+        """
+        best_reward = -float("inf")
+        for i in range(n_iterations):
+            # random maneuver
+            temp_action_table = get_random_actions(
+                n_rnd_actions=2,
+                max_time=self.max_time_to_req,
+                max_fuel_cons=self.max_fuel_cons,
+                fuel_level=self.fuel_level / 2,
+                inaction=True,
+                p_skip=0,
+                p_skip_coef=0)
+            # add reverse maneuver
+            action_table = np.vstack(
+                (self.action_table, temp_action_table))
+            agent = Agent(action_table)
+            _, temp_env = generate_session(self.protected, self.debris, agent,
+                                           self.start_time, self.end_time, self.step, return_env=True)
+            temp_action_table[1, 3] = temp_env.protected.get_orbital_period()
+            temp_action_table = np.vstack(
+                (temp_action_table, -temp_action_table[1]))
+            temp_action_table[2, 3] = np.nan
+            action_table = np.vstack(
+                (self.action_table, temp_action_table))
+            agent = Agent(action_table)
+            r = generate_session(
+                self.protected, self.debris, agent, self.start_time, self.end_time, self.step)
+            if print_out:
+                print("skip iter:", i)
+                print("AT:", action_table)
+                print("r:", r, '\n')
+            if r > best_reward:
+                best_action = temp_action_table[0]
+                best_next_actions = temp_action_table[1:]
+                best_reward = r
+
+        return best_action, best_reward, best_next_actions
 
     def get_action_table(self):
         return self.action_table

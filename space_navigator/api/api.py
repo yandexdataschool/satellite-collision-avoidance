@@ -36,34 +36,36 @@ class Environment:
 
         self.protected = protected
         self.debris = debris
-        self.n_debris = len(debris)
 
+        self.protected_r = self.protected.get_radius()
         self.init_fuel = self.protected.get_fuel()
-        self.protected_r = protected.get_radius()
+        self.init_orbital_elements = self.protected.get_orbital_elements()
+        self.trajectory_deviation = None
+        self.n_debris = len(debris)
         self.debris_r = np.array([d.get_radius() for d in debris])
 
         self.next_action = pk.epoch(0, "mjd2000")
 
         self.crit_distance = 10000  #: Critical convergence distance (meters)
-        self.collision_probability_estimator = CollProbEstimator()
-
         self.min_distances_in_current_conjunction = np.full(
             (self.n_debris), np.nan)  # np.nan if not in conjunction.
         self.state_for_min_distances_in_current_conjunction = dict()
         self.dangerous_debris_in_current_conjunction = np.array([])
 
+        self.collision_probability_estimator = CollProbEstimator()
         self.collision_probability_prior_to_current_conjunction = np.zeros(
             self.n_debris)
-        self.total_collision_probability_array = np.zeros(self.n_debris)
-        self.total_collision_probability = 0.
+        self.total_collision_probability_arr = np.zeros(self.n_debris)
+        self.total_collision_probability = None
 
-        self.whole_trajectory_deviation = 0.
-        self.reward = 0.
+        self.reward_components = None
+        self.reward = None
         # : epoch: Last reward and collision probability update
         self.last_r_p_update = None
         # : int: number of propagate forward iterations
         # since last update collision probability and reward.
         self.pf_iterations_since_update = 0
+        self.update_all_reward_components()
 
         # initiate state with initial positions
         self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
@@ -109,18 +111,15 @@ class Environment:
             epoch = pk.epoch(t, "mjd2000")
             st, debr = self.get_coords_by_epoch(epoch)
             coord = dict(st=st, debr=debr)
-            trajectory_deviation_coef = 0.0
-            self.whole_trajectory_deviation += trajectory_deviation_coef
             self.state = dict(
-                coord=coord, trajectory_deviation_coef=trajectory_deviation_coef,
-                epoch=epoch, fuel=self.protected.get_fuel()
+                coord=coord, epoch=epoch, fuel=self.protected.get_fuel()
             )
             self.update_distances_and_probabilities_prior_to_current_conjunction()
 
         self.pf_iterations_since_update += 1
 
         if self.pf_iterations_since_update == update_r_p_step:
-            self.get_reward()
+            self.update_all_reward_components()
 
     def update_distances_and_probabilities_prior_to_current_conjunction(self):
         """ Update the distances and collision probabilities prior to current conjunction.
@@ -186,8 +185,8 @@ class Environment:
             for d in end_cojunction_debris:
                 del self.state_for_min_distances_in_current_conjunction[d]
 
-    def get_collision_probability(self):
-        """ Update and return total collision probability."""
+    def update_total_collision_probability(self):
+        """ Update total collision probability."""
         if self.dangerous_debris_in_current_conjunction.size:
             collision_probability_in_current_conjunction = np.array([
                 self.collision_probability_estimator.ChenBai_approach(
@@ -199,7 +198,7 @@ class Environment:
                 )
                 for d in self.dangerous_debris_in_current_conjunction
             ])
-            self.total_collision_probability_array[self.dangerous_debris_in_current_conjunction] = sum_coll_prob(
+            self.total_collision_probability_arr[self.dangerous_debris_in_current_conjunction] = sum_coll_prob(
                 np.vstack([
                     self.collision_probability_prior_to_current_conjunction[
                         self.dangerous_debris_in_current_conjunction],
@@ -207,16 +206,34 @@ class Environment:
                 ])
             )
         else:
-            self.total_collision_probability_array = self.collision_probability_prior_to_current_conjunction
+            self.total_collision_probability_arr = self.collision_probability_prior_to_current_conjunction
 
         self.total_collision_probability = sum_coll_prob(
-            self.total_collision_probability_array
+            self.total_collision_probability_arr
         )
-        return self.total_collision_probability
 
-    def get_reward(self, coll_prob_C=10000., traj_C=1., fuel_C=1.,
-                   dangerous_prob=10e-4):
-        """ Update and return total reward from the environment state.
+    def update_trajectory_deviation(self, singnificance=(0.01, 1, 1, 1, 1, 0)):
+        """Update trajectory deviation from init the trajectory.
+
+        Note:
+            six osculating keplerian elements (a,e,i,W,w,M):
+                a (semi-major axis): meters,
+                e (eccentricity): greater than 0,
+                i (inclination), W (Longitude of the ascending node): radians,
+                w (Argument of periapsis), M (mean anomaly): radians.
+
+        Args:
+            singnificance (tuple): multipliers for orbital parameter differences.
+
+        """
+        diff = np.abs(
+            np.array(self.protected.get_orbital_elements()) - np.array(self.init_orbital_elements))
+        deviation = np.sum(diff * np.array(singnificance))
+        self.trajectory_deviation = deviation
+
+    def update_reward(self, coll_prob_C=1., traj_C=1., fuel_C=1.,
+                      dangerous_prob=10e-4):
+        """Update reward and reward components.
 
         Args:
             coll_prob_C, traj_C, fuel_C (float): constants for the singnificance regulation of reward components.
@@ -224,20 +241,26 @@ class Environment:
 
         """
         # reward components
-        coll_prob = self.get_collision_probability()
+        coll_prob = self.get_total_collision_probability()
         ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
         # collision probability reward - some kind of ELU function
         # of collision probability
-        coll_prob_r = -(ELU((coll_prob - dangerous_prob) * coll_prob_C) + 1)
-        traj_r = - traj_C * self.whole_trajectory_deviation
+        coll_prob_r = -coll_prob_C * \
+            (ELU((coll_prob - dangerous_prob) * 10000) + 1)
         fuel_r = - fuel_C * (self.init_fuel - self.protected.get_fuel())
+        traj_r = - traj_C * self.get_trajectory_deviation()
 
         # total reward
-        # TODO - add weights to all reward components
-        self.reward = (coll_prob_r + traj_r + fuel_r)
+        self.reward_components = (coll_prob_r, fuel_r, traj_r)
+        self.reward = sum(self.reward_components)
+
+    def update_all_reward_components(self):
+        """Update total collision probability, trajectory deviation, reward components and reward."""
+        self.update_total_collision_probability()
+        self.update_trajectory_deviation()
+        self.update_reward()
         self.last_r_p_update = self.state["epoch"]
         self.pf_iterations_since_update = 0
-        return self.reward
 
     def act(self, action):
         """ Change velocity for protected object.
@@ -253,6 +276,18 @@ class Environment:
         if not error:
             self.state["fuel"] -= fuel_cons
         return error
+
+    def get_total_collision_probability(self):
+        return self.total_collision_probability
+
+    def get_trajectory_deviation(self):
+        return self.trajectory_deviation
+
+    def get_reward_components(self):
+        return self.reward_components
+
+    def get_reward(self):
+        return self.reward
 
     def get_next_action(self):
         return self.next_action
@@ -405,3 +440,12 @@ class SpaceObject:
 
     def get_radius(self):
         return self.satellite.radius
+
+    def get_orbital_elements(self):
+        return self.satellite.orbital_elements
+
+    def get_orbital_period(self):
+        a = self.get_orbital_elements()[0]  # meters.
+        mu = pk.MU_EARTH  # meters^3 / sc^2.
+        T = 2 * np.pi * (a**3 / mu)**0.5 / 86400  # days.
+        return T
