@@ -65,16 +65,16 @@ class Environment:
         # : int: number of propagate forward iterations
         # since last update collision probability and reward.
         self.pf_iterations_since_update = 0
-        self.update_all_reward_components()
 
         # initiate state with initial positions
         self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
         st, debr = self.get_coords_by_epoch(start_time)
         coord = dict(st=st, debr=debr)
         self.state = dict(
-            coord=coord, trajectory_deviation_coef=self.whole_trajectory_deviation,
-            epoch=start_time, fuel=self.protected.get_fuel()
+            coord=coord, epoch=start_time, fuel=self.protected.get_fuel()
         )
+
+        self.update_all_reward_components()
 
     def propagate_forward(self, end_time, update_r_p_step=20):
         """ Forward step.

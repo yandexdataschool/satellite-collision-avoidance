@@ -226,8 +226,8 @@ class Simulator:
                 self.curr_time.mjd2000, self.update_r_p_step)
 
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
-                # s = self.env.get_state()
-                s = self.env.get_numpy_state()
+                s = self.env.get_state()
+                # s = self.env.get_numpy_state()
                 action = self.agent.get_action(s)
                 r = self.env.get_reward()
                 err = self.env.act(action)
@@ -249,14 +249,7 @@ class Simulator:
                 self.vis.plot_earth()
                 if iteration % self.update_r_p_step == 0:
                     self.update_vis_data()
-                if np.not_equal(action[:3], np.zeros(3)).all():
-                    self.vis.plot_action(self.env.protected.position(
-                        self.curr_time)[0], action[:3])
-                    self.vis.pause(PAUSE_ACTION_TIME)
-                    # set action to zero after it is done
-                    action = np.zeros(4)
-                self.vis.plot_prob_fuel_reward()
-                self.vis.pause(PAUSE_TIME)
+
                 if np.not_equal(self.vis.dV_plot, np.zeros(3)).all():
                     self.vis.plot_action(
                         self.env.protected.position(self.curr_time)[0])

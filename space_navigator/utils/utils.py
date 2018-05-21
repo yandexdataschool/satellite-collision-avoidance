@@ -2,6 +2,7 @@ import pykep as pk
 
 from ..api import SpaceObject
 from ..api import Environment
+from ..agent import TableAgent, PytorchAgent
 
 
 def read_space_objects(file, param_type):
