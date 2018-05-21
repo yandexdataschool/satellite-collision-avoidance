@@ -27,7 +27,8 @@ class Environment:
         Args:
             protected (SpaceObject): protected space object in Environment.
             debris ([SpaceObject, ]): list of other space objects.
-            start (pk.epoch): initial time of the environment.
+            start_time (pk.epoch): initial time of the environment.
+            end_time (pk.epoch): end time of the environment.
 
         """
         self.init_params = dict(protected=copy(protected), debris=copy(
@@ -42,7 +43,7 @@ class Environment:
         self.debris_r = np.array([d.get_radius() for d in debris])
 
         self.next_action = pk.epoch(0, "mjd2000")
-        self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
+
         self.crit_distance = 10000  #: Critical convergence distance (meters)
         self.collision_probability_estimator = CollProbEstimator()
 
@@ -63,6 +64,15 @@ class Environment:
         # : int: number of propagate forward iterations
         # since last update collision probability and reward.
         self.pf_iterations_since_update = 0
+
+        # initiate state with initial positions
+        self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
+        st, debr = self.get_coords_by_epoch(start_time)
+        coord = dict(st=st, debr=debr)
+        self.state = dict(
+            coord=coord, trajectory_deviation_coef=self.whole_trajectory_deviation,
+            epoch=start_time, fuel=self.protected.get_fuel()
+        )
 
     def propagate_forward(self, end_time, update_r_p_step=20):
         """ Forward step.
@@ -97,14 +107,7 @@ class Environment:
 
         for t in propagation_grid:
             epoch = pk.epoch(t, "mjd2000")
-            st_pos, st_v = self.protected.position(epoch)
-            st = np.hstack((np.array(st_pos), np.array(st_v)))[np.newaxis, ...]
-            n_items = len(self.debris)
-            debr = np.zeros((n_items, 6))
-            for i in range(n_items):
-                pos, v = self.debris[i].position(epoch)
-                debr[i] = np.array(pos + v)
-
+            st, debr = self.get_coords_by_epoch(epoch)
             coord = dict(st=st, debr=debr)
             trajectory_deviation_coef = 0.0
             self.whole_trajectory_deviation += trajectory_deviation_coef
@@ -258,8 +261,27 @@ class Environment:
         """ Provides environment state. """
         return self.state
 
+    def get_numpy_state(self):
+        """ Provides environment state as object position in numpy array.  """
+        numpy_state = np.vstack((
+            self.state['coord']['st'][:, :3],
+            self.state['coord']['debr'][:, :3],)
+        )
+        return numpy_state
+
     def get_fuel_consumption(self):
         return self.init_fuel - self.protected.get_fuel()
+
+    def get_coords_by_epoch(self, epoch):
+        st_pos, st_v = self.protected.position(epoch)
+        st = np.hstack((np.array(st_pos), np.array(st_v)))[np.newaxis, ...]
+        n_items = len(self.debris)
+        debr = np.zeros((n_items, 6))
+        for i in range(n_items):
+            pos, v = self.debris[i].position(epoch)
+            debr[i] = np.array(pos + v)
+
+        return st, debr
 
     def reset(self):
         """ Return Environment to initial state. """

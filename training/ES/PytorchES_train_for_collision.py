@@ -9,7 +9,7 @@ import pykep as pk
 from space_navigator.api import MAX_FUEL_CONSUMPTION
 from space_navigator.api import Environment
 from space_navigator.models import ProgressPlotter
-from space_navigator.models.ES import EvolutionStrategies
+from space_navigator.models.ES import PytorchES
 from space_navigator.utils import read_environment
 
 
@@ -58,6 +58,7 @@ def main(args):
     learning_rate, decay, sigma_coef,  = args.learning_rate, args.decay, args.sigma_coef
 
     step = args.step
+    table_path = args.save_action_table_path
     print_out = args.print_out.lower() == "true"
     show_progress = args.show_progress.lower() == "true"
     output_path = args.output_path
@@ -66,15 +67,9 @@ def main(args):
     env_path = args.environment
     env = read_environment(env_path)
 
-    # ES parameteres
-    weights_shape = (n_actions, ACTION_SIZE)
-    sigma_table = np.full(weights_shape, sigma_coef)
-    sigma_table[:, -1] = step
-
-    model = EvolutionStrategies(env, step, weights_shape,
-                             population_size=population_size, sigma=sigma_table, learning_rate=learning_rate, decay=decay)
+    model = EvolutionStrategies(env, step, num_inputs=num_inputs, num_outputs=num_outputs, population_size=population_size, sigma=sigma_coef, learning_rate=learning_rate, decay=decay)
     model.train(iterations, print_out=print_out)
-    model.save(output_path)
+    model.save(table_path)
 
     if show_progress:
         plotter = ProgressPlotter(output_path, model)

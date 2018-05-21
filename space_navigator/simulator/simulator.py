@@ -81,6 +81,9 @@ class Visualizer:
         self.fuel_cons_arr = [fuel_cons]
         self.reward_arr = [reward]
 
+        # initialize zero action
+        self.dV_plot = np.zeros(3)
+
     def run(self):
         plt.ion()
 
@@ -135,8 +138,9 @@ class Visualizer:
         if xlabel is not None:
             ax.set_xlabel(xlabel)
 
-    def plot_action(self, pos, action):
-        draw_action(self.subplot_3d, pos, action)
+    def plot_action(self, pos):
+        draw_action(self.subplot_3d, pos, self.dV_plot)
+        self.dV_plot = np.zeros(3)
 
 
 class Simulator:
@@ -177,7 +181,6 @@ class Simulator:
             reward (float): reward of session.
 
         """
-        action = np.zeros(4)
         iteration = 0
         if visualize:
             self.vis = Visualizer(self.curr_time.mjd2000, self.env.total_collision_probability,
@@ -192,12 +195,16 @@ class Simulator:
                 self.curr_time.mjd2000, self.update_r_p_step)
 
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
-                s = self.env.get_state()
+                # s = self.env.get_state()
+                s = self.env.get_numpy_state()
                 action = self.agent.get_action(s)
                 r = self.env.get_reward()
                 err = self.env.act(action)
                 if err:
                     self.log_bad_action(err, action)
+
+                if visualize and not err:
+                    self.vis.dV_plot = action[:3]
 
                 self.log_reward_action(iteration, r, action)
 
@@ -212,14 +219,12 @@ class Simulator:
                 if iteration % self.update_r_p_step == 0:
                     self.vis.update_data(self.curr_time.mjd2000, self.env.total_collision_probability,
                                          self.env.get_fuel_consumption(), self.env.reward)
-                if np.not_equal(action[:3], np.zeros(3)).all():
-                    self.vis.plot_action(self.env.protected.position(
-                        self.curr_time)[0], action[:3])
-                    self.vis.pause(PAUSE_ACTION_TIME)
-                    # set action to zero after it is done
-                    action = np.zeros(4)
                 self.vis.plot_prob_fuel()
                 self.vis.pause(PAUSE_TIME)
+                if np.not_equal(self.vis.dV_plot, np.zeros(3)).all():
+                    self.vis.plot_action(
+                        self.env.protected.position(self.curr_time)[0])
+                    self.vis.pause(PAUSE_ACTION_TIME)
                 self.vis.clear()
                 # self.env.reward and self.env.total_collision_probability -
                 # without update.

@@ -42,3 +42,6 @@ class TableAgent(BaseAgent):
         self.action_table = np.delete(self.action_table, 0, axis=0)
         return action
 
+    def get_action_table(self):
+        return self.action_table
+

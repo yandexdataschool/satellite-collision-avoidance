@@ -113,3 +113,18 @@ def read_environment(path):
 
     return Environment(protected, debris, start_time, end_time)
 
+def get_agent(agent_type, model_path=''):
+    """ ... """
+    if agent_type == 'table':
+        if model_path:
+            action_table = np.loadtxt(model, delimiter=',')
+            agent = TableAgent(action_table)
+        else:
+            agent = TableAgent()
+    elif agent_type == 'pytorch':
+        agent = PytorchAgent(6, 4)
+        if model_path:
+            agent.load_state_dict(torch.load(model))
+    else:
+        raise ValueError("Invalid agent type")
+    return agent
