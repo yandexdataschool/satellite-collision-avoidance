@@ -15,7 +15,7 @@ END_TIME = 6600.05
 def main(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("-n_i", "--n_iterations", type=int,
-                        default=10, required=False)
+                        default=200, required=False)
     parser.add_argument("-start", "--start_time", type=float,
                         default=START_TIME, required=False)
     parser.add_argument("-end", "--end_time", type=float,
