@@ -1,4 +1,7 @@
+import numpy as np
 import pykep as pk
+
+import torch
 
 from ..api import SpaceObject
 from ..api import Environment
@@ -114,18 +117,19 @@ def read_environment(path):
 
     return Environment(protected, debris, start_time, end_time)
 
-def get_agent(agent_type, model_path=''):
+
+def get_agent(agent_type, model_path='', num_inputs=6, num_outputs=4, hidden_size=64):
     """ ... """
     if agent_type == 'table':
         if model_path:
-            action_table = np.loadtxt(model, delimiter=',')
+            action_table = np.loadtxt(model_path, delimiter=',')
             agent = TableAgent(action_table)
         else:
             agent = TableAgent()
     elif agent_type == 'pytorch':
-        agent = PytorchAgent(6, 4)
+        agent = PytorchAgent(num_inputs, num_outputs, hidden_size)
         if model_path:
-            agent.load_state_dict(torch.load(model))
+            agent.load_state_dict(torch.load(model_path))
     else:
         raise ValueError("Invalid agent type")
     return agent

@@ -7,7 +7,10 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from matplotlib.transforms import Bbox
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.patches import FancyArrowPatch
+from mpl_toolkits.mplot3d import proj3d
 
 import pykep as pk
 from pykep.orbit_plots import plot_planet
@@ -18,8 +21,23 @@ logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
 
 PAUSE_TIME = 0.0001  # sc
 PAUSE_ACTION_TIME = 2  # sc
-ARROW_LENGTH = 3e6  # meters
+ARROW_LENGTH = 4e6  # meters
 EARTH_RADIUS = 6.3781e6  # meters
+
+
+
+def full_extent(ax, pad=0.0):
+    """Get the full extent of an axes, including axes labels, tick labels, and
+    titles."""
+    # For text objects, we need to draw the figure first, otherwise the extents
+    # are undefined.
+    ax.figure.canvas.draw()
+    items = ax.get_xticklabels() + ax.get_yticklabels()
+#    items += [ax, ax.title, ax.xaxis.label, ax.yaxis.label]
+    items += [ax, ax.title]
+    bbox = Bbox.union([item.get_window_extent() for item in items])
+
+    return bbox.expanded(1.0 + pad, 1.0 + pad)
 
 
 def draw_sphere(axis, centre, radius, wireframe_params={}):
@@ -39,7 +57,6 @@ def draw_sphere(axis, centre, radius, wireframe_params={}):
     z = radius * np.cos(v) + centre[2]
     return axis.plot_wireframe(x, y, z, **wireframe_params)
 
-
 def draw_action(axis, pos, dV):
     """ Draws action.
     Args:
@@ -49,8 +66,8 @@ def draw_action(axis, pos, dV):
     """
     x, y, z = pos
     dVx, dVy, dVz = dV
-    return axis.quiver(x, y, z, x + dVx, y + dVy, z + dVz, length=ARROW_LENGTH, normalize=True)
 
+    return axis.quiver(x, y, z, dVx, dVy, dVz, length=ARROW_LENGTH, normalize=True)
 
 def strf_position(satellite, epoch):
     """ Print SpaceObject position at epoch. """
@@ -149,8 +166,15 @@ class Visualizer:
         if xlabel is not None:
             ax.set_xlabel(xlabel)
 
-    def plot_action(self, pos):
+    def plot_action(self, pos, time):
         draw_action(self.subplot_3d, pos, self.dV_plot)
+
+        # create bbox for 3d subplot only
+        extent = full_extent(self.subplot_3d).transformed(
+            self.fig.dpi_scale_trans.inverted())
+
+        self.fig.savefig(f'action_{self.dV_plot}_{time}.png', bbox_inches=extent)
+        # set plotted action to zero
         self.dV_plot = np.zeros(3)
 
     def save_graphics(self):
@@ -227,7 +251,6 @@ class Simulator:
 
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
                 s = self.env.get_state()
-                # s = self.env.get_numpy_state()
                 action = self.agent.get_action(s)
                 r = self.env.get_reward()
                 err = self.env.act(action)
@@ -252,8 +275,10 @@ class Simulator:
 
                 if np.not_equal(self.vis.dV_plot, np.zeros(3)).all():
                     self.vis.plot_action(
-                        self.env.protected.position(self.curr_time)[0])
+                        self.env.protected.position(self.curr_time)[0], self.curr_time)
                     self.vis.pause(PAUSE_ACTION_TIME)
+                self.vis.plot_prob_fuel_reward()
+                self.vis.pause(PAUSE_TIME)
                 self.vis.clear()
 
                 # self.env.reward and self.env.total_collision_probability -

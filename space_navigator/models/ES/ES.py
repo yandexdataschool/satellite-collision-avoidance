@@ -8,10 +8,10 @@ from ...agent import TableAgent
 from ..train_utils import ProgressPlotter, ProgressLogger, generate_session_with_env, constrain_action
 
 
-# np.random.seed(0)
+np.random.seed(0)
 
 def random_weights(weights_shape, max_time, rand_type="uniform"):
-    """ Constrain time_to_request column in action table. """
+    """ Provide random_weights, with constrained time_to_request column in action table. """
     if rand_type == "uniform":
         weights = np.random.uniform(-0.1, 0.1, weights_shape)
     elif rand_type == "gauss":
@@ -23,7 +23,7 @@ def random_weights(weights_shape, max_time, rand_type="uniform"):
 
 
 class EvolutionStrategies(object):
-    """ ... """
+    """EvolutionStrategies implements evolution strategies optimization method for action table. """
 
     def __init__(self, env, step, weights_shape, sigma, population_size=10, learning_rate=0.1, decay=1.0):
         self.env = env
@@ -39,6 +39,7 @@ class EvolutionStrategies(object):
         self.weights_shape = weights_shape
         self.max_time = self.env.init_params[
             'end_time'].mjd2000 - self.env.init_params['start_time'].mjd2000
+
         self.weights = random_weights(weights_shape, self.max_time, "gauss")
 
         self.agent = TableAgent(self.weights)
@@ -51,7 +52,7 @@ class EvolutionStrategies(object):
         # TODO: implement logger for training
         self.logger = ProgressLogger()
 
-    def train(self, iterations, print_out=False, print_step=1):
+    def train(self, iterations, print_out=False):
         if print_out:
             self.print_start_train()
 
@@ -99,7 +100,7 @@ class EvolutionStrategies(object):
             self.print_end_train()
 
     def save(self, path):
-        """ Save model to file. """
+        """ Save model to file by given path. """
         header = "dVx,dVy,dVz,time to request"
         np.savetxt(path, self.weights, delimiter=',', header=header)
 

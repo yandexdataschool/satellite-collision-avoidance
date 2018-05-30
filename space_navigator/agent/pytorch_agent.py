@@ -2,7 +2,6 @@ import os
 import math
 import numpy as np
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,31 +9,46 @@ from torch.autograd import Variable
 
 from . import NNAgent
 
-# IDEAS:
-# * adaptive num actions
 
+def convert_state_to_numpy(state):
+    """ Provides environment state as objects positions in numpy array.
 
-def selu(x):
-    alpha = 1.6732632423543772848170429916717
-    scale = 1.0507009873554804934193349852946
-    return scale * F.elu(x, alpha)
+    Args:
+        state (dict): Environment state as dictionary.
+
+    Returns:
+        numpy_state (np.array): object positions as numpy array.
+    """
+
+    numpy_state = np.vstack((
+        state['coord']['st'][:, :3],
+        state['coord']['debr'][:, :3],)
+    )
+    return numpy_state
 
 
 class PytorchAgent(torch.nn.Module, NNAgent):
 
-    def __init__(self, num_inputs, num_outputs, weights=[]):
-        super(PytorchAgent, self).__init__()
+    def __init__(self, num_inputs, num_outputs, hidden_size, weights=[]):
         """
         Args:
-            action_table (np.array with shape(n_actions, 4)):
-                table of actions with columns ["dVx", "dVy", "dVz", "time to request"].
+            num_inputs (int): number of inputs.
+            num_outputs (int): number of outputs.
+            hidden_size (int): hidden size.
+            weights ([torch.Variable, ]): list of initial weights for net.
 
         """
+        super(PytorchAgent, self).__init__()
         self.num_inputs = num_inputs
         self.num_outputs = num_outputs
-        self.linear1 = nn.Linear(num_inputs, 64)
-        self.linear2 = nn.Linear(64, 64)
-        self.actor_linear = nn.Linear(64, num_outputs)
+        self.hidden_size = hidden_size
+        self.net = nn.Sequential(
+            nn.Linear(num_inputs, hidden_size),
+            nn.SELU(),
+            nn.Linear(hidden_size, hidden_size),
+            nn.SELU(),
+            nn.Linear(hidden_size, num_outputs)
+        )
 
         if len(weights):
             for i, param in enumerate(self.parameters()):
@@ -45,9 +59,7 @@ class PytorchAgent(torch.nn.Module, NNAgent):
 
     def forward(self, inputs):
         inputs = Variable(torch.FloatTensor(inputs)).view(-1, self.num_inputs)
-        x = selu(self.linear1(inputs))
-        x = selu(self.linear2(x))
-        return self.actor_linear(x)
+        return self.net(inputs)
 
     def get_action(self, state):
         """ Provides action for protected object.
@@ -67,14 +79,8 @@ class PytorchAgent(torch.nn.Module, NNAgent):
                 step in time when to request the next action (mjd2000).
 
         """
-        # epoch = state["epoch"].mjd2000
-        # state = 
+        state = convert_state_to_numpy(state)
         action = self.forward(state).data.numpy()[0]
+        action /= np.mean(action)
+        action[-1] = np.nan
         return action
-
-    def get_params(self):
-        """
-        The params that should be trained by ES
-        """
-        return [(k, v) for k, v in zip(self.state_dict().keys(),
-                                       self.state_dict().values())]

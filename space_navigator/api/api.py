@@ -296,14 +296,6 @@ class Environment:
         """ Provides environment state. """
         return self.state
 
-    def get_numpy_state(self):
-        """ Provides environment state as object position in numpy array.  """
-        numpy_state = np.vstack((
-            self.state['coord']['st'][:, :3],
-            self.state['coord']['debr'][:, :3],)
-        )
-        return numpy_state
-
     def get_fuel_consumption(self):
         return self.init_fuel - self.protected.get_fuel()
 

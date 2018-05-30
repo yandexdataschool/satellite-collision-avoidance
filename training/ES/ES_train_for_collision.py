@@ -58,6 +58,7 @@ def main(args):
     learning_rate, decay, sigma_coef,  = args.learning_rate, args.decay, args.sigma_coef
 
     step = args.step
+    save_action_table_path = args.save_action_table_path
     print_out = args.print_out.lower() == "true"
     show_progress = args.show_progress.lower() == "true"
     output_path = args.output_path
@@ -74,12 +75,12 @@ def main(args):
     model = EvolutionStrategies(env, step, weights_shape,
                              population_size=population_size, sigma=sigma_table, learning_rate=learning_rate, decay=decay)
     model.train(iterations, print_out=print_out)
-    model.save(output_path)
+    model.save(save_action_table_path)
 
     if show_progress:
         plotter = ProgressPlotter(output_path, model)
-        plotter.plot_all_rewards("all_rewards.png")
-        plotter.plot_mean_reward_per_iteration("mean_rewards.png")
+        plotter.plot_all_rewards("training/ES/plots/all_rewards.png")
+        plotter.plot_mean_reward_per_iteration("training/ES/plots/mean_rewards.png")
 
     return
 
