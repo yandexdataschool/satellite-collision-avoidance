@@ -52,11 +52,11 @@ class ShowProgress:
         self.fig.show()
         self.fig.canvas.draw()
 
-    def plot(self, batch_rewards, log):  # , :
+    def plot(self, rewards_batch, log):  # , :
         """Displays training progress.
 
         Args:
-            batch_rewards (list of floats): batch of rewards.
+            rewards_batch (list of floats): batch of rewards.
             log ([[mean_reward, max_reward, policy_reward, threshold], ]): training log.
 
         TODO:
@@ -66,7 +66,7 @@ class ShowProgress:
             threshold to subplot 0
             some report on the plot (iteration, n_iterations...)
             reward_range (list): [min_reward, max_reward] for chart?
-            plt.hist(batch_rewards, range=reward_range)? 
+            plt.hist(rewards_batch, range=reward_range)? 
             percentile?
 
         """
@@ -85,20 +85,33 @@ class ShowProgress:
 
         plt.subplot(1, 2, 2)
         plt.cla()
-        plt.hist(batch_rewards)
-        plt.vlines(threshold,  [0], [len(batch_rewards)],
+        plt.hist(rewards_batch)
+        plt.vlines(threshold,  [0], [len(rewards_batch)],
                    label="threshold", color='red')
         plt.legend(loc=2, prop={'size': 10})
         plt.grid()
 
         self.fig.canvas.draw()
 
+    def save_fig(self, log):
+        fig = plt.figure(figsize=[10, 6])
+        mean_rewards = list(zip(*log))[0]
+        max_rewards = list(zip(*log))[1]
+        policy_rewards = list(zip(*log))[2]
+        plt.plot(mean_rewards, label='Mean rewards')
+        plt.plot(max_rewards, label='Max rewards')
+        plt.plot(policy_rewards, label='Policy rewards')
+        plt.legend(loc=2, prop={'size': 10})
+        plt.grid()
+        # fig.canvas.draw()
+        fig.savefig("./training/CE/CE_graphics.png")
+
 
 class CrossEntropy:
     """Cross-Entropy Method for Reinforcement Learning."""
 
     def __init__(self, protected, debris, start_time, end_time, step,
-                 max_fuel_cons=10, fuel_level=20, n_actions=3):
+                 max_fuel_cons=10, fuel_level=10, n_actions=3):
         """
         Agrs:
             protected (SpaceObject): protected space object in Environment.
@@ -109,6 +122,10 @@ class CrossEntropy:
             max_fuel_cons (float): maximum allowable fuel consumption per action.
             fuel_level (float): total fuel level.
             n_actions (int): total number of actions.
+
+        TODO:
+            sigma to args.
+            path to save plots.
 
         """
 
@@ -130,8 +147,8 @@ class CrossEntropy:
         self.sigma_table[-1, -1] = np.nan
         self.max_fuel_cons = max_fuel_cons
 
-    def train(self, n_iterations=10, n_sessions=20, n_best_actions=4,
-              learning_rate=0.7, sigma_coef=0.9, learning_rate_coef=0.9,
+    def train(self, n_iterations=20, n_sessions=100, lr=0.7, percentile=80,
+              sigma_decay=0.98, lr_decay=0.98, percentile_growth=1.005,
               print_out=False, show_progress=False):
         """Training agent policy (self.action_table).
 
@@ -139,14 +156,14 @@ class CrossEntropy:
             n_iterations (int): number of iterations.
             n_sessions (int): number of sessions per iteration.
             n_best_actions (int): number of best actions provided by iteration for update policy.
-            learning_rate (float): learning rate for stability.
-            sigma_coef (float): coefficient of changing sigma per iteration.
-            learning_rate_coef (float): coefficient of changing learning rate per iteration.
+            lr (float): learning rate for stability.
+            sigma_decay (float): coefficient of changing sigma per iteration.
+            lr_decay (float): coefficient of changing learning rate per iteration.
+            percentile_growth (float): coefficient of changing percentile.
             print_out (bool): print information during the training.
             show_progress (bool): show training chart.
 
         TODO:
-            percentile + perc coef
             stop if reward change < epsilon
             careful update
             good print_out or remove it
@@ -164,11 +181,13 @@ class CrossEntropy:
             if print_out:
                 self.print_start_train()
             if show_progress:
+                # TODO - включать начальный reward?
                 progress = ShowProgress()
-                log = [[self.total_reward] * 4]
-                progress.plot([self.total_reward], log)
+                #log = [[self.total_reward] * 4]
+                #progress.plot([self.total_reward], log)
+                log = []
         for i in range(n_iterations):
-            batch_rewards = []
+            rewards_batch = []
             action_tables = []
             for j in range(n_sessions):
                 if print_out:
@@ -179,39 +198,50 @@ class CrossEntropy:
                 action_tables.append(action_table)
                 reward = generate_session(self.protected, self.debris,
                                           agent, self.start_time, self.end_time, self.step)
-                batch_rewards.append(reward)
+                rewards_batch.append(reward)
                 if print_out:
                     print('action_table:\n', action_table)
-                    print('reward:\n', reward)
-            best_rewards_indices = np.argsort(batch_rewards)[-n_best_actions:]
-            best_rewards = np.array(batch_rewards)[best_rewards_indices]
+                    print('reward:\n', reward, '\n')
+            rewards_batch = np.array(rewards_batch)
+            reward_threshold = np.percentile(
+                np.asarray(rewards_batch), percentile)
+            best_rewards_indices = rewards_batch >= reward_threshold
+            best_rewards = np.array(rewards_batch)[best_rewards_indices]
             best_action_tables = np.array(action_tables)[best_rewards_indices]
             new_action_table = np.mean(best_action_tables, axis=0)
             self.action_table = (
-                new_action_table * learning_rate
-                + self.action_table * (1 - learning_rate)
+                new_action_table * lr
+                + self.action_table * (1 - lr)
             )
-            self.sigma_table *= sigma_coef
-            learning_rate *= learning_rate
+            self.sigma_table *= sigma_decay
+            lr *= lr_decay
+            temp_percentile = percentile * percentile_growth
+            if temp_percentile <= 100:
+                percentile = temp_percentile
+
             if print_out | show_progress:
                 self.update_total_reward()
                 if print_out:
+                    print('sigma:\n{}\n; lr: {}; perc: {}'.format(
+                        self.sigma_table, lr, percentile))
                     print('best rewards:', best_rewards)
                     print('new action table:', new_action_table)
                     print('action table:', self.action_table)
                     print('policy reward:', self.get_total_reward(), '\n')
                 if show_progress:
-                    mean_reward = np.mean(batch_rewards)
+                    mean_reward = np.mean(rewards_batch)
                     max_reward = best_rewards[-1]
                     policy_reward = self.get_total_reward()
                     threshold = best_rewards[0]
                     log.append([mean_reward, max_reward,
                                 policy_reward, threshold])
-                    progress.plot(batch_rewards, log)
+                    progress.plot(rewards_batch, log)
         if not (print_out | show_progress):
             self.update_total_reward()
         if print_out:
             self.print_end_train()
+        if show_progress:
+            progress.save_fig(log)
 
     def set_action_table(self, action_table):
         # TODO - try to set MCTS action_table and train (tune) it.
@@ -229,7 +259,7 @@ class CrossEntropy:
         return self.total_reward
 
     def print_start_train(self):
-        print("Start training.\nInitial action table:\n", self.action_table,
+        print("Start training.\n\nInitial action table:\n", self.action_table,
               "\nInitial reward:", self.total_reward, "\n")
 
     def print_end_train(self):

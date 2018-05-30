@@ -93,7 +93,7 @@ class Visualizer:
         self.subplot_d = self.fig.add_subplot(self.gs[8:11, 1])
         self.subplot_r = self.fig.add_subplot(self.gs[12:, 1])
         # initialize data for plots
-        self.time_arr = [curr_time]
+        self.time_arr = [0]
         self.prob_arr = [total_collision_probability]
         self.fuel_cons_arr = [fuel_cons]
         self.traj_dev_arr = [traj_dev]
@@ -192,7 +192,7 @@ class Visualizer:
         self.make_step_on_graph(subplot_d, self.time_arr, self.traj_dev_arr,
                                 title='Trajectory deviation coefficient', ylabel='traj dev coef')
         self.make_step_on_graph(subplot_r, self.time_arr, self.reward_arr,
-                                title='Total reward', ylabel='reward', xlabel='time (mjd2000)')
+                                title='Total reward', ylabel='reward', xlabel='time since simulation starts (mjd2000)')
 
         fig.savefig("simulation_graphics.png")
 
@@ -337,8 +337,10 @@ class Simulator:
                 size=25, color=colors[i])
 
     def update_vis_data(self):
+        # TODO - better time difference
         self.vis.update_data(
-            self.curr_time.mjd2000, self.env.get_total_collision_probability(),
+            self.curr_time.mjd2000 - self.start_time.mjd2000,
+            self.env.get_total_collision_probability(),
             self.env.get_fuel_consumption(), self.env.get_trajectory_deviation(),
             self.env.get_reward_components(), self.env.get_reward())
 
