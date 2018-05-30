@@ -308,7 +308,9 @@ class DecisionTree:
                 (self.action_table, temp_action_table))
             agent = Agent(action_table)
             _, temp_env = generate_session(self.protected, self.debris, agent,
-                                           self.start_time, self.end_time, self.step, return_env=True)
+                                           self.start_time, self.investigated_time + self.step,
+                                           self.step, return_env=True)
+
             temp_action_table[0, 3] = temp_env.protected.get_orbital_period()
             temp_action_table = np.vstack(
                 (temp_action_table, -temp_action_table))
@@ -362,7 +364,9 @@ class DecisionTree:
                 (self.action_table, temp_action_table))
             agent = Agent(action_table)
             _, temp_env = generate_session(self.protected, self.debris, agent,
-                                           self.start_time, self.end_time, self.step, return_env=True)
+                                           self.start_time, self.investigated_time +
+                                           action_table[-2, -1] + self.step,
+                                           self.step, return_env=True)
             temp_action_table[1, 3] = temp_env.protected.get_orbital_period()
             temp_action_table = np.vstack(
                 (temp_action_table, -temp_action_table[1]))

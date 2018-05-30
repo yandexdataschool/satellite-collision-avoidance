@@ -53,7 +53,6 @@ class Baseline:
 
         TODO:
             limit "c" by end_time
-            efficient time_to_req
 
         """
         if print_out:
@@ -71,7 +70,7 @@ class Baseline:
             temp_action_table = np.hstack((dV, np.nan))
             agent = Agent(temp_action_table)
             _, temp_env = generate_session(self.protected, self.debris, agent,
-                                           self.start_time, self.end_time, self.step, return_env=True)
+                                           self.start_time, self.start_time + self.step, self.step, return_env=True)
             time_to_req = temp_env.protected.get_orbital_period()
             temp_action_table = np.vstack((
                 np.hstack((dV, time_to_req)),
