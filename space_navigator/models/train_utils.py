@@ -23,7 +23,7 @@ def generate_session_with_env(action_table, env):
     """
     agent = Agent(action_table)
     simulator = Simulator(agent, env)
-    reward = simulator.run()
+    reward = simulator.run(log=False)
     env.reset()
     return reward
 
@@ -50,7 +50,7 @@ def generate_session(protected, debris, agent, start_time, end_time, step, retur
     env = Environment(protected_copy, debris_copy,
                       start_time_mjd2000, end_time_mjd2000)
     simulator = Simulator(agent, env, step=step, update_r_p_step=None)
-    reward = simulator.run()
+    reward = simulator.run(log=False)
     if return_env:
         return reward, env
     return reward

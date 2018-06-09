@@ -2,6 +2,7 @@
 # and learning proccess of the agent.
 
 import logging
+import time
 
 import numpy as np
 
@@ -191,17 +192,18 @@ class Simulator:
         self.end_time = self.env.init_params["end_time"]
         self.curr_time = self.start_time
 
-        self.logger = logging.getLogger('simulator.Simulator')
+        self.logger = None
         self.step = step
         self.update_r_p_step = update_r_p_step
 
         self.vis = None
 
-    def run(self, visualize=False, print_out=False):
+    def run(self, visualize=False, print_out=False, log=True):
         """
         Args:
             visualize (bool): whether show the simulation or not.
             print_out (bool): whether show the print out or not.
+            log (bool): whether log the simulation or not.
 
         Returns:
             reward (float): reward of session.
@@ -217,6 +219,10 @@ class Simulator:
 
         if print_out:
             self.print_start()
+            simulation_start_time = time.time()
+
+        if log:
+            self.logger = logging.getLogger('simulator.Simulator')
 
         while self.curr_time.mjd2000 <= self.end_time.mjd2000:
             self.env.propagate_forward(
@@ -227,14 +233,16 @@ class Simulator:
                 action = self.agent.get_action(s)
                 r = self.env.get_reward()
                 err = self.env.act(action)
-                if err:
-                    self.log_bad_action(err, action)
+                if log:
+                    if err:
+                        self.log_bad_action(err, action)
 
-                self.log_reward_action(iteration, r, action)
+                    self.log_reward_action(iteration, r, action)
 
-            self.log_iteration(iteration)
-            self.log_protected_position()
-            self.log_debris_positions()
+            if log:
+                self.log_iteration(iteration)
+                self.log_protected_position()
+                self.log_debris_positions()
 
             if visualize:
                 self.plot_protected()
@@ -263,13 +271,14 @@ class Simulator:
             iteration += 1
 
         self.env.update_all_reward_components()
-        self.log_protected_position()
+        if log:
+            self.log_protected_position()
 
         if visualize:
             self.update_vis_data()
             self.vis.save_graphics()
         if print_out:
-            self.print_end()
+            self.print_end(simulation_start_time)
 
         return self.env.get_reward()
 
@@ -324,10 +333,11 @@ class Simulator:
         for spaceObject in self.env.debris:
             print(spaceObject.satellite)
 
-    def print_end(self):
+    def print_end(self, simulation_start_time):
         reward_components = self.env.get_reward_components()
-        s = "Simulation ended.\n\nCollision probability: {:.5}\nFuel consumption: {:.5}\
+        s = "Simulation ended in {:.5} sec.\n\nCollision probability: {:.5}\nFuel consumption: {:.5}\
             \nTrajectory deviation coefficient: {:.5}".format(
+            time.time() - simulation_start_time,
             self.env.get_total_collision_probability(), self.env.get_fuel_consumption(),
             self.env.get_trajectory_deviation())
         s += '\n\nReward components:\nColl Prob R: {:.5}     Fuel Cons R: {:.5}     Traj Dev coef R: {:.5}\
