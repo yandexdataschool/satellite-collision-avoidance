@@ -8,11 +8,24 @@ class BaseAgent:
 
     def __init__(self):
         """"""
+        pass
 
     def get_action(self, state):
         """"""
         pass
 
-    def get_random_params(self, **args):
-    	""""""
-    	pass
+
+class NNAgent(BaseAgent):
+    """docstring for NNAgent"""
+    def __init__(self):
+        """"""
+        pass
+
+    def get_weights(self):
+        """"""
+        pass
+
+    def forward(self):
+        """"""
+        pass
+        

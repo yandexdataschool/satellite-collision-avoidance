@@ -9,15 +9,15 @@ import pykep as pk
 
 from space_navigator.api import Environment
 from space_navigator.simulator import Simulator
-from space_navigator.agent import TableAgent as Agent
-from space_navigator.utils import read_environment
+from space_navigator.agent import TableAgent, PytorchAgent
+from space_navigator.utils import read_environment, get_agent
 
 SIMULATION_STEP = 0.0001
 
 
 def main(args):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-at_path", "--action_table_path", type=str,
+    parser.add_argument("-model", "--model_path", type=str,
                         default=None, required=False)
     parser.add_argument("-v", "--visualize", type=str,
                         default="True", required=False)
@@ -29,22 +29,22 @@ def main(args):
                         default="True", required=False)
     parser.add_argument("-env", "--environment", type=str,
                         default="data/environments/collision.env", required=False)
+    parser.add_argument("-a", "--agent_type", type=str,
+                        default="table", required=False)
 
     args = parser.parse_args(args)
 
-    action_table_path = args.action_table_path
     visualize = args.visualize.lower() == "true"
     print_out = args.print_out.lower() == "true"
     step, update_r_p_step = args.step, args.update_r_p_step
 
-    if action_table_path:
-        action_table = np.loadtxt(action_table_path, delimiter=',')
-        agent = Agent(action_table)
-    else:
-        agent = Agent()
-
     env_path = args.environment
     env = read_environment(env_path)
+
+    model_path = args.model_path
+    agent_type = args.agent_type
+
+    agent = get_agent(agent_type, model_path)
 
     simulator = Simulator(
         agent, env, step=step, update_r_p_step=update_r_p_step)
