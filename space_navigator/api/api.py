@@ -16,7 +16,6 @@ from .api_utils import fuel_consumption, sum_coll_prob, get_dangerous_debris
 from .api_utils import get_lower_estimate_of_time_to_conjunction
 from ..collision import CollProbEstimator
 
-MAX_PROPAGATION_STEP = 0.000001  # equal to 0.0864 sc.
 MAX_FUEL_CONSUMPTION = 10
 
 
@@ -65,22 +64,21 @@ class Environment:
         self.last_r_p_update = None
         # : int: number of propagate forward iterations
         # since last update collision probability and reward.
-        self.pf_iterations_since_update = 0
         self.update_all_reward_components()
 
-    def propagate_forward(self, end_time, n_steps_to_update=None, each_step_propagation=False):
+    def propagate_forward(self, end_time, step=10e-6, each_step_propagation=False):
         """ Forward step.
 
         Args:
             end_time (float): end time for propagation as mjd2000.
-            n_steps_to_update (int): number of steps to updating the
-                collision probability, trajectory_deviation and reward
-                (if update_step == None, updated if necessary).
-            each_step_propagation (bool): whether propagate for each step or not.
+            step (float): propagation time step.
+                By default is equal to 0.000001 (0.0864 sc.).
+            each_step_propagation (bool): whether propagate for each step
+                or skip the steps using a lower estimation of the time to conjunction.
 
         Raises:
             ValueError: if end_time is less then current time of the environment.
-            Exception: if step in propagation_grid is less then MAX_PROPAGATION_STEP.
+            Exception: if step in propagation_grid is less then step.
 
         """
         curr_time = self.state["epoch"].mjd2000
@@ -91,16 +89,16 @@ class Environment:
                 "end_time should be greater or equal to current time")
 
         # Choose number of steps in linspace, s.t.
-        # restep is less then MAX_PROPAGATION_STEP.
+        # restep is less then step.
         number_of_time_steps_plus_one = int(np.ceil(
-            (end_time - curr_time) / MAX_PROPAGATION_STEP) + 1)
+            (end_time - curr_time) / step) + 1)
 
         propagation_grid, retstep = np.linspace(
             curr_time, end_time, number_of_time_steps_plus_one, retstep=True)
 
-        if retstep > MAX_PROPAGATION_STEP:
+        if retstep > step:
             raise Exception(
-                "Step in propagation grid should be <= MAX_PROPAGATION_STEP")
+                "Step in propagation grid should be <= step")
 
         s = 0
         while s < number_of_time_steps_plus_one:
@@ -130,10 +128,7 @@ class Environment:
                 n_steps = min(number_of_time_steps_plus_one - i - 1, n_steps)
                 s += n_steps
 
-        self.pf_iterations_since_update += 1
-
-        if self.pf_iterations_since_update == n_steps_to_update:
-            self.update_all_reward_components()
+        self.update_all_reward_components()
 
     def update_distances_and_probabilities_prior_to_current_conjunction(self):
         """ Update the distances and collision probabilities prior to current conjunction.
