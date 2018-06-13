@@ -13,6 +13,7 @@ import pykep as pk
 from copy import copy
 
 from .api_utils import fuel_consumption, sum_coll_prob, get_dangerous_debris
+from .api_utils import get_lower_estimate_of_time_to_conjunction
 from ..collision import CollProbEstimator
 
 MAX_PROPAGATION_STEP = 0.000001  # equal to 0.0864 sc.
@@ -67,12 +68,15 @@ class Environment:
         self.pf_iterations_since_update = 0
         self.update_all_reward_components()
 
-    def propagate_forward(self, end_time, update_r_p_step=20):
+    def propagate_forward(self, end_time, n_steps_to_update=None, each_step_propagation=False):
         """ Forward step.
 
         Args:
             end_time (float): end time for propagation as mjd2000.
-            update_r_p_step (int): update reward and probability step.
+            n_steps_to_update (int): number of steps to updating the
+                collision probability, trajectory_deviation and reward
+                (if update_step == None, updated if necessary).
+            each_step_propagation (bool): whether propagate for each step or not.
 
         Raises:
             ValueError: if end_time is less then current time of the environment.
@@ -98,7 +102,9 @@ class Environment:
             raise Exception(
                 "Step in propagation grid should be <= MAX_PROPAGATION_STEP")
 
-        for t in propagation_grid:
+        s = 0
+        while s < number_of_time_steps_plus_one:
+            t = propagation_grid[s]
             epoch = pk.epoch(t, "mjd2000")
             st_pos, st_v = self.protected.position(epoch)
             st = np.hstack((np.array(st_pos), np.array(st_v)))[np.newaxis, ...]
@@ -114,9 +120,19 @@ class Environment:
             )
             self.update_distances_and_probabilities_prior_to_current_conjunction()
 
+            # calculation of the number of steps forward
+            if each_step_propagation:
+                s += 1
+            else:
+                time_to_collision_estimation = get_lower_estimate_of_time_to_conjunction(
+                    self.state['coord']['st'], self.state['coord']['debr'], self.crit_distance)
+                n_steps = max(1, int(time_to_collision_estimation / retstep))
+                n_steps = min(number_of_time_steps_plus_one - i - 1, n_steps)
+                s += n_steps
+
         self.pf_iterations_since_update += 1
 
-        if self.pf_iterations_since_update == update_r_p_step:
+        if self.pf_iterations_since_update == n_steps_to_update:
             self.update_all_reward_components()
 
     def update_distances_and_probabilities_prior_to_current_conjunction(self):

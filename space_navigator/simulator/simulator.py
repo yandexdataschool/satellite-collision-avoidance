@@ -175,15 +175,19 @@ class Simulator:
         and starts agent-environment collaboration.
     """
 
-    def __init__(self, agent, environment, step=0.001, update_r_p_step=None):
+    def __init__(self, agent, environment, step=0.001, n_steps_to_update=None, each_step_propagation=False):
         """
         Args:
             agent (api.Agent, agent, to do actions in environment.
             environment (api.Environment): the initial space environment.
             step (float): time step in simulation.
-            update_r_p_step (int): update reward and probability step;
-                (if update_r_p_step == None, reward and probability are updated only by agent).
+            n_steps_to_update (int): number of steps to updating the
+                collision probability, trajectory_deviation and reward
+                (if update_step == None, updated if necessary).
             print_out (bool): print out some parameters and results (reward and probability).
+
+        TODO:
+            check all models using simulator.
         """
 
         self.agent = agent
@@ -192,11 +196,11 @@ class Simulator:
         self.end_time = self.env.init_params["end_time"]
         self.curr_time = self.start_time
 
-        self.logger = None
         self.step = step
-        self.update_r_p_step = update_r_p_step
+        self.n_steps_to_update = n_steps_to_update
 
         self.vis = None
+        self.logger = None
 
     def run(self, visualize=False, print_out=False, log=True):
         """
@@ -226,14 +230,15 @@ class Simulator:
 
         while self.curr_time.mjd2000 <= self.end_time.mjd2000:
             self.env.propagate_forward(
-                self.curr_time.mjd2000, self.update_r_p_step)
+                self.curr_time.mjd2000, self.n_steps_to_update)
 
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
                 s = self.env.get_state()
                 action = self.agent.get_action(s)
-                r = self.env.get_reward()
-                err = self.env.act(action)
                 if log:
+                    self.env.update_all_reward_components()
+                    r = self.env.get_reward()
+                    err = self.env.act(action)
                     if err:
                         self.log_bad_action(err, action)
 
@@ -248,7 +253,7 @@ class Simulator:
                 self.plot_protected()
                 self.plot_debris()
                 self.vis.plot_earth()
-                if iteration % self.update_r_p_step == 0:
+                if iteration % self.n_steps_to_update == 0:
                     self.update_vis_data()
                 if np.not_equal(action[:3], np.zeros(3)).all():
                     self.vis.plot_action(self.env.protected.position(
