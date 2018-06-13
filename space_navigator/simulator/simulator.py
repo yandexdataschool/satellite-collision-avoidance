@@ -228,17 +228,21 @@ class Simulator:
         if log:
             self.logger = logging.getLogger('simulator.Simulator')
 
-        while self.curr_time.mjd2000 <= self.end_time.mjd2000:
+        while True:
             self.env.propagate_forward(
                 self.curr_time.mjd2000, self.n_steps_to_update)
+
+            print("curr:", self.curr_time.mjd2000,
+                  "    next:", self.env.get_next_action().mjd2000,
+                  "    end:", self.end_time.mjd2000)
 
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
                 s = self.env.get_state()
                 action = self.agent.get_action(s)
+                err = self.env.act(action)
                 if log:
                     self.env.update_all_reward_components()
                     r = self.env.get_reward()
-                    err = self.env.act(action)
                     if err:
                         self.log_bad_action(err, action)
 
@@ -270,8 +274,16 @@ class Simulator:
                 self.vis.plot_iteration(
                     self.curr_time, self.env.last_r_p_update)
 
-            self.curr_time = pk.epoch(
-                self.curr_time.mjd2000 + self.step, "mjd2000")
+            next_action_time = self.env.get_next_action().mjd2000
+
+            if self.curr_time.mjd2000 >= self.end_time.mjd2000:
+                break
+
+            if np.isnan(next_action_time) or next_action_time > self.end_time.mjd2000:
+                self.curr_time = self.end_time
+            else:
+                self.curr_time = pk.epoch(
+                    next_action_time, "mjd2000")
 
             iteration += 1
 
