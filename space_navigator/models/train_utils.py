@@ -49,7 +49,7 @@ def generate_session(protected, debris, agent, start_time, end_time, step, retur
     protected_copy, debris_copy = copy(protected), copy(debris)
     env = Environment(protected_copy, debris_copy,
                       start_time_mjd2000, end_time_mjd2000)
-    simulator = Simulator(agent, env, step=step, update_r_p_step=None)
+    simulator = Simulator(agent, env, step)
     reward = simulator.run(log=False)
     if return_env:
         return reward, env

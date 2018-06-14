@@ -13,7 +13,7 @@ from space_navigator.models.ES import EvolutionStrategies
 from space_navigator.utils import read_environment
 
 
-SIMULATION_STEP = 0.0001
+PROPAGATION_STEP = 0.000001
 ACTION_SIZE = 4
 
 
@@ -49,7 +49,7 @@ def main(args):
     parser.add_argument("-env", "--environment", type=str,
                         default="data/environments/collision.env", required=False)
     parser.add_argument("-s", "--step", type=float,
-                    default=SIMULATION_STEP, required=False)
+                        default=PROPAGATION_STEP, required=False)
 
     args = parser.parse_args(args)
 
@@ -74,7 +74,7 @@ def main(args):
     sigma_table[:, -1] = step
 
     model = EvolutionStrategies(env, step, weights_shape,
-                             population_size=population_size, sigma=sigma_table, learning_rate=learning_rate, decay=decay)
+                                population_size=population_size, sigma=sigma_table, learning_rate=learning_rate, decay=decay)
     model.train(iterations, print_out=print_out)
     model.save(table_path)
 

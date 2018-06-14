@@ -8,7 +8,7 @@ from space_navigator.api import MAX_FUEL_CONSUMPTION
 from space_navigator.models.CE import CrossEntropy
 
 START_TIME = 6599.95
-SIMULATION_STEP = 0.0001
+PROPAGATION_STEP = 0.000001
 END_TIME = 6600.05
 
 
@@ -19,9 +19,9 @@ def main(args):
     parser.add_argument("-n_a", "--n_actions", type=int,
                         default=3, required=False)
     parser.add_argument("-n_i", "--n_iterations", type=int,
-                        default=20, required=False)
-    parser.add_argument("-n_s", "--n_sessions", type=int,
                         default=100, required=False)
+    parser.add_argument("-n_s", "--n_sessions", type=int,
+                        default=30, required=False)
     parser.add_argument("-lr", "--learning_rate", type=float,
                         default=0.7, required=False)
     parser.add_argument("-lr_d", "--learning_rate_decay", type=float,
@@ -49,7 +49,7 @@ def main(args):
     parser.add_argument("-end", "--end_time", type=float,
                         default=END_TIME, required=False)
     parser.add_argument("-s", "--step", type=float,
-                        default=SIMULATION_STEP, required=False)
+                        default=PROPAGATION_STEP, required=False)
 
     args = parser.parse_args(args)
 

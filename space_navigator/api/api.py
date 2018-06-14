@@ -67,7 +67,7 @@ class Environment:
         self.update_all_reward_components()
 
     def propagate_forward(self, end_time, step=10e-6, each_step_propagation=False):
-        """ Forward step.
+        """ Forward propagation.
 
         Args:
             end_time (float): end time for propagation as mjd2000.
@@ -268,8 +268,6 @@ class Environment:
         self.update_total_collision_probability()
         self.update_trajectory_deviation()
         self.update_reward()
-        self.last_r_p_update = self.state["epoch"]
-        self.pf_iterations_since_update = 0
 
     def act(self, action):
         """ Change velocity for protected object.
@@ -437,5 +435,5 @@ class SpaceObject:
     def get_orbital_period(self):
         a = self.get_orbital_elements()[0]  # meters.
         mu = pk.MU_EARTH  # meters^3 / sc^2.
-        T = 2 * np.pi * (a**3 / mu)**0.5 / 86400  # days.
+        T = 2 * np.pi * (a**3 / mu)**0.5 / 86400  # mjd2000 (or days).
         return T

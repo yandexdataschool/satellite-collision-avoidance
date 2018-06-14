@@ -119,8 +119,8 @@ class Visualizer:
         self.subplot_d.cla()
         self.subplot_r.cla()
 
-    def plot_iteration(self, epoch, last_update):
-        s = '  Epoch: {}\nUpdate: {}'.format(epoch, last_update)
+    def plot_iteration(self, epoch):
+        s = 'Epoch: {}'.format(epoch)
         s += '\n\nColl Prob: {:.7}     Fuel Cons: {:.5}     Traj Dev coef: {:.5}'.format(
             self.prob_arr[-1], self.fuel_cons_arr[-1], self.traj_dev_arr[-1])
         s += '\n\nReward components:\nColl Prob R: {:.5}     Fuel Cons R: {:.5}     Traj Dev coef R: {:.5}\
@@ -183,9 +183,6 @@ class Simulator:
             step (float): propagation time step.
                 By default is equal to 0.000001 (0.0864 sc.).
 
-        TODO:
-            check all models using simulator.
-            add propagation step from API to simulator?
         """
 
         self.agent = agent
@@ -206,11 +203,11 @@ class Simulator:
             n_steps_vis (int): number of propagation steps in one step of visualization.
             log (bool): whether log the simulation or not.
             each_step_propagation (bool): whether propagate for each step
-                or skip the steps using a lower estimation of the time to conjunction
+                or skip the steps using a lower estimation of the time to conjunction.
             print_out (bool): whether show the print out or not.
 
         Returns:
-            reward (float): reward of session.
+            reward (float): reward of the session.
 
         """
         if visualize:
@@ -265,10 +262,7 @@ class Simulator:
                 self.vis.plot_graphics()
                 self.vis.pause(PAUSE_TIME)
                 self.vis.clear()
-                # self.env.reward and self.env.total_collision_probability -
-                # without update.
-                self.vis.plot_iteration(
-                    self.curr_time, self.env.last_r_p_update)
+                self.vis.plot_iteration(self.curr_time)
 
             if self.curr_time.mjd2000 >= self.end_time.mjd2000:
                 break
@@ -278,11 +272,10 @@ class Simulator:
             if np.isnan(next_action_time) or next_action_time > self.end_time.mjd2000:
                 next_time = self.end_time
             else:
-                next_time = pk.epoch(
-                    next_action_time, "mjd2000")
+                next_time = pk.epoch(next_action_time, "mjd2000")
+
             if visualize:
-                n_steps_to_next_time = int(
-                    next_time.mjd2000 / self.step)
+                n_steps_to_next_time = int(next_time.mjd2000 / self.step)
                 n_steps_to_next_vis = n_steps_vis - n_steps_since_vis
                 if n_steps_to_next_time > n_steps_to_next_vis:
                     next_time = pk.epoch(
@@ -290,12 +283,11 @@ class Simulator:
                     n_steps_since_vis = n_steps_vis
                 else:
                     n_steps_since_vis += n_steps_to_next_time
+            self.curr_time = next_time
 
             if log:
                 # TODO - log next_time
                 iteration += 1
-
-            self.curr_time = next_time
 
         if log:
             self.log_protected_position()
@@ -343,7 +335,6 @@ class Simulator:
                 size=25, color=colors[i])
 
     def update_vis_data(self):
-        # TODO - better time difference
         self.vis.update_data(
             self.curr_time.mjd2000 - self.start_time.mjd2000,
             self.env.get_total_collision_probability(),

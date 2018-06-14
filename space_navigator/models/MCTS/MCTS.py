@@ -128,7 +128,7 @@ class DecisionTree:
         self.total_reward = None
         self.max_time_to_req = max_time_to_req
 
-    def train(self, n_iterations=10, n_steps_ahead=0, n_eval=0, print_out=False):
+    def train(self, n_iterations=10, n_steps_ahead=0, n_eval=1, print_out=False):
         """Training agent policy (self.action_table).
 
         Args:

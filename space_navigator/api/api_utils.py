@@ -72,16 +72,6 @@ def get_lower_estimate_of_time_to_conjunction(protected, debris, crit_distance):
     else:
         V1 = np.linalg.norm(protected[:, 3:])
         V2 = np.linalg.norm(debris[closest_debr, 3:])
-
         sec_to_collision = (min_dist - crit_distance) / (V1 + V2)
-        time_to_conjunction = sec2mjd2000(sec_to_collision)
+        time_to_conjunction = sec_to_collision / 86400
     return time_to_conjunction
-
-
-def sec2mjd2000(sec):
-    """Converts time in seconds to time in mjd2000."""
-    assert (sec < 86400), "the number of seconds {} is greater than 86400".format(sec)
-    s = "2000-01-01 " + str(datetime.timedelta(seconds=sec))
-    time_mjd2000 = pk.epoch_from_string(s).mjd2000
-
-    return time_mjd2000
