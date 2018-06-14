@@ -4,15 +4,14 @@ import pykep as pk
 from tqdm import trange
 
 from ...api import Environment, MAX_FUEL_CONSUMPTION
-from ...simulator import Simulator
-from ...agent import TableAgent as Agent
-from ...utils import read_space_objects
+from ...agent import TableAgent
 from ..train_utils import ProgressPlotter, ProgressLogger, generate_session_with_env, constrain_action
 
 
+np.random.seed(0)
+
 def random_weights(weights_shape, max_time, rand_type="uniform"):
-    """ Constrain time_to_request column in action table. """
-    # print("Max time: ", max_time)
+    """ Provide random_weights, with constrained time_to_request column in action table. """
     if rand_type == "uniform":
         weights = np.random.uniform(-0.1, 0.1, weights_shape)
     elif rand_type == "gauss":
@@ -24,7 +23,7 @@ def random_weights(weights_shape, max_time, rand_type="uniform"):
 
 
 class EvolutionStrategies(object):
-    """ ... """
+    """EvolutionStrategies implements evolution strategies optimization method for action table. """
 
     def __init__(self, env, step, weights_shape, sigma, population_size=10, learning_rate=0.1, decay=1.0):
         self.env = env
@@ -37,11 +36,13 @@ class EvolutionStrategies(object):
         self.learning_rate = learning_rate
         self.decay = decay
 
-        # TODO: provide learning for neural network agent
         self.weights_shape = weights_shape
         self.max_time = self.env.init_params[
             'end_time'].mjd2000 - self.env.init_params['start_time'].mjd2000
+
         self.weights = random_weights(weights_shape, self.max_time, "gauss")
+
+        self.agent = TableAgent(self.weights)
 
         self.reward = -float('inf')
         self.best_reward = -float('inf')
@@ -51,8 +52,7 @@ class EvolutionStrategies(object):
         # TODO: implement logger for training
         self.logger = ProgressLogger()
 
-    def train(self, iterations, print_out=False, print_step=1):
-        # np.random.seed(0)
+    def train(self, iterations, print_out=False):
         if print_out:
             self.print_start_train()
 
@@ -64,11 +64,17 @@ class EvolutionStrategies(object):
             rewards = np.zeros(self.pop_size)
             N = np.zeros((self.pop_size, self.n_actions, self.action_size))
             for policy in trange(self.pop_size):
-                N[policy] = random_weights(self.weights_shape, self.max_time, "gauss")
+                N[policy] = random_weights(
+                    self.weights_shape, self.max_time, "gauss")
                 w_try = self.weights + self.sigma * N[policy]
                 for action in range(self.n_actions):
-                    w_try[action] = constrain_action(w_try[action], MAX_FUEL_CONSUMPTION, 0, self.max_time)
-                rewards[policy] = generate_session_with_env(w_try, self.env)
+                    min_time = 0.0
+                    if action > 0:
+                        min_time = w_try[action - 1][-1]
+                    w_try[action] = constrain_action(
+                        w_try[action], MAX_FUEL_CONSUMPTION, min_time, self.max_time)
+                agent = TableAgent(w_try)
+                rewards[policy] = generate_session_with_env(agent, self.env)
                 self.actions[iteration, policy] = w_try
                 # update best reward and policy
                 if rewards[policy] > self.best_reward:
@@ -81,18 +87,20 @@ class EvolutionStrategies(object):
             A = (rewards - np.mean(rewards)) / np.std(rewards)
             self.weights += self.learning_rate / \
                 (self.pop_size * self.sigma) * np.dot(N.T, A).T
+            # self.weights = constrain_action()
+
+            self.agent = TableAgent(self.weights)
 
             self.learning_rate *= self.decay
 
             if print_out:
-                print("Mean Reward at iter #{}: {}".format(
-                    iteration, np.mean(rewards)))
+                print(f"Mean Reward at iter #{iteration}: {np.mean(rewards)}")
 
         if print_out:
             self.print_end_train()
 
     def save(self, path):
-        """ Save model to file. """
+        """ Save model to file by given path. """
         header = "dVx,dVy,dVz,time to request"
         np.savetxt(path, self.weights, delimiter=',', header=header)
 
@@ -100,7 +108,7 @@ class EvolutionStrategies(object):
         return self.weights
 
     def get_reward(self):
-        return generate_session_with_env(self.weights, self.env)
+        return generate_session_with_env(self.agent, self.env)
 
     def get_best_weights(self):
         return self.best_weights
@@ -112,9 +120,9 @@ class EvolutionStrategies(object):
         return self.rewards_per_iter
 
     def print_start_train(self):
-        print("Start training.\nInitial action table: {}".format(self.weights))
-        print("Initial reward: {}\n".format(self.get_reward()))
+        print(f"Start training.\nInitial action table: {self.weights}")
+        print(f"Initial reward: {self.get_reward()}\n")
 
     def print_end_train(self):
-        print("Training completed.\nTotal reward: {}".format(self.get_reward()))
-        print("Action Table: {}\n".format(self.weights))
+        print(f"Training completed.\nTotal reward: {self.get_reward()}")
+        print(f"Action Table: {self.agent.action_table}\n")

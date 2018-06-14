@@ -8,7 +8,10 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from matplotlib.transforms import Bbox
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.patches import FancyArrowPatch
+from mpl_toolkits.mplot3d import proj3d
 
 import pykep as pk
 from pykep.orbit_plots import plot_planet
@@ -19,8 +22,22 @@ logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
 
 PAUSE_TIME = 0.0001  # sc
 PAUSE_ACTION_TIME = 2  # sc
-ARROW_LENGTH = 3e6  # meters
+ARROW_LENGTH = 4e6  # meters
 EARTH_RADIUS = 6.3781e6  # meters
+
+
+def full_extent(ax, pad=0.0):
+    """Get the full extent of an axes, including axes labels, tick labels, and
+    titles."""
+    # For text objects, we need to draw the figure first, otherwise the extents
+    # are undefined.
+    ax.figure.canvas.draw()
+    items = ax.get_xticklabels() + ax.get_yticklabels()
+#    items += [ax, ax.title, ax.xaxis.label, ax.yaxis.label]
+    items += [ax, ax.title]
+    bbox = Bbox.union([item.get_window_extent() for item in items])
+
+    return bbox.expanded(1.0 + pad, 1.0 + pad)
 
 
 def draw_sphere(axis, centre, radius, wireframe_params={}):
@@ -50,7 +67,8 @@ def draw_action(axis, pos, dV):
     """
     x, y, z = pos
     dVx, dVy, dVz = dV
-    return axis.quiver(x, y, z, x + dVx, y + dVy, z + dVz, length=ARROW_LENGTH, normalize=True)
+
+    return axis.quiver(x, y, z, dVx, dVy, dVz, length=ARROW_LENGTH, normalize=True)
 
 
 def strf_position(satellite, epoch):
@@ -83,6 +101,9 @@ class Visualizer:
         self.traj_dev_arr = [traj_dev]
         self.reward_arr = [reward]
         self.reward_components = reward_components
+
+        # initialize zero action
+        self.dV_plot = np.zeros(3)
 
     def run(self):
         plt.ion()
@@ -147,8 +168,16 @@ class Visualizer:
         if xlabel is not None:
             ax.set_xlabel(xlabel)
 
-    def plot_action(self, pos, action):
-        draw_action(self.subplot_3d, pos, action)
+    def plot_action(self, pos, time):
+        draw_action(self.subplot_3d, pos, self.dV_plot)
+
+        # create bbox for 3d subplot only
+        extent = full_extent(self.subplot_3d).transformed(
+            self.fig.dpi_scale_trans.inverted())
+
+        self.fig.savefig(f'action_{self.dV_plot}_{time}.png', bbox_inches=extent)
+        # set plotted action to zero
+        self.dV_plot = np.zeros(3)
 
     def save_graphics(self):
         fig = plt.figure(figsize=[7, 12])
@@ -210,6 +239,7 @@ class Simulator:
             reward (float): reward of the session.
 
         """
+
         if visualize:
             self.vis = Visualizer(self.curr_time.mjd2000, self.env.total_collision_probability,
                                   self.env.get_fuel_consumption(), self.env.get_trajectory_deviation(),
@@ -241,10 +271,14 @@ class Simulator:
                         self.log_bad_action(err, action)
                     self.log_reward_action(iteration, r, action)
 
+                if visualize and not err:
+                    self.vis.dV_plot = action[:3]
+
             if log:
                 self.log_iteration(iteration)
                 self.log_protected_position()
                 self.log_debris_positions()
+                iteration += 1
 
             if visualize:
                 self.plot_protected()
@@ -253,12 +287,12 @@ class Simulator:
                 if n_steps_since_vis % n_steps_vis == 0:
                     self.update_vis_data()
                     n_steps_since_vis = 1
-                if np.not_equal(action[:3], np.zeros(3)).all():
-                    self.vis.plot_action(self.env.protected.position(
-                        self.curr_time)[0], action[:3])
+
+                if np.not_equal(self.vis.dV_plot, np.zeros(3)).all():
+                    self.vis.plot_action(
+                        self.env.protected.position(self.curr_time)[0], self.curr_time)
                     self.vis.pause(PAUSE_ACTION_TIME)
-                    # set action to zero after it is done
-                    action = np.zeros(4)
+
                 self.vis.plot_graphics()
                 self.vis.pause(PAUSE_TIME)
                 self.vis.clear()
@@ -283,11 +317,8 @@ class Simulator:
                     n_steps_since_vis = n_steps_vis
                 else:
                     n_steps_since_vis += n_steps_to_next_time
-            self.curr_time = next_time
 
-            if log:
-                # TODO - log next_time
-                iteration += 1
+            self.curr_time = next_time
 
         if log:
             self.log_protected_position()
@@ -295,6 +326,7 @@ class Simulator:
         if visualize:
             self.update_vis_data()
             self.vis.save_graphics()
+
         if print_out:
             self.print_end(simulation_start_time)
 

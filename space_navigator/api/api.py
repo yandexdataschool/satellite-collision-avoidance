@@ -27,7 +27,8 @@ class Environment:
         Args:
             protected (SpaceObject): protected space object in Environment.
             debris ([SpaceObject, ]): list of other space objects.
-            start (pk.epoch): initial time of the environment.
+            start_time (pk.epoch): initial time of the environment.
+            end_time (pk.epoch): end time of the environment.
 
         """
         self.init_params = dict(protected=copy(protected), debris=copy(
@@ -44,7 +45,6 @@ class Environment:
         self.debris_r = np.array([d.get_radius() for d in debris])
 
         self.next_action = pk.epoch(0, "mjd2000")
-        self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
 
         self.crit_distance = 10000  #: Critical convergence distance (meters)
         self.min_distances_in_current_conjunction = np.full(
@@ -64,6 +64,13 @@ class Environment:
         self.last_r_p_update = None
         # : int: number of propagate forward iterations
         # since last update collision probability and reward.
+
+        # initiate state with initial positions
+        st, debr = self.get_coords_by_epoch(start_time)
+        coord = dict(st=st, debr=debr)
+        self.state = dict(
+            coord=coord, epoch=start_time, fuel=self.protected.get_fuel())
+
         self.update_all_reward_components()
 
     def propagate_forward(self, end_time, step=10e-6, each_step_propagation=False):
@@ -104,14 +111,7 @@ class Environment:
         while s < number_of_time_steps_plus_one:
             t = propagation_grid[s]
             epoch = pk.epoch(t, "mjd2000")
-            st_pos, st_v = self.protected.position(epoch)
-            st = np.hstack((np.array(st_pos), np.array(st_v)))[np.newaxis, ...]
-            n_items = len(self.debris)
-            debr = np.zeros((n_items, 6))
-            for i in range(n_items):
-                pos, v = self.debris[i].position(epoch)
-                debr[i] = np.array(pos + v)
-
+            st, debr = self.get_coords_by_epoch(epoch)
             coord = dict(st=st, debr=debr)
             self.state = dict(
                 coord=coord, epoch=epoch, fuel=self.protected.get_fuel()
@@ -125,7 +125,7 @@ class Environment:
                 time_to_collision_estimation = get_lower_estimate_of_time_to_conjunction(
                     self.state['coord']['st'], self.state['coord']['debr'], self.crit_distance)
                 n_steps = max(1, int(time_to_collision_estimation / retstep))
-                n_steps = min(number_of_time_steps_plus_one - i - 1, n_steps)
+                n_steps = min(number_of_time_steps_plus_one - s, n_steps)
                 s += n_steps
 
         self.update_all_reward_components()
@@ -305,6 +305,17 @@ class Environment:
 
     def get_fuel_consumption(self):
         return self.init_fuel - self.protected.get_fuel()
+
+    def get_coords_by_epoch(self, epoch):
+        st_pos, st_v = self.protected.position(epoch)
+        st = np.hstack((np.array(st_pos), np.array(st_v)))[np.newaxis, ...]
+        n_items = len(self.debris)
+        debr = np.zeros((n_items, 6))
+        for i in range(n_items):
+            pos, v = self.debris[i].position(epoch)
+            debr[i] = np.array(pos + v)
+
+        return st, debr
 
     def reset(self):
         """ Return Environment to initial state. """
