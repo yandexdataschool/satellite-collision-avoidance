@@ -10,6 +10,7 @@ from ..train_utils import ProgressPlotter, ProgressLogger, generate_session_with
 
 np.random.seed(0)
 
+
 def random_weights(weights_shape, max_time, rand_type="uniform"):
     """ Provide random_weights, with constrained time_to_request column in action table. """
     if rand_type == "uniform":

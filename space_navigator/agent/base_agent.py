@@ -17,6 +17,7 @@ class BaseAgent:
 
 class NNAgent(BaseAgent):
     """docstring for NNAgent"""
+
     def __init__(self):
         """"""
         pass
@@ -28,4 +29,3 @@ class NNAgent(BaseAgent):
     def forward(self):
         """"""
         pass
-        
