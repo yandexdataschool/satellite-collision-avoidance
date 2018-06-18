@@ -26,7 +26,7 @@ Args:
                 # merge actions if time to next action == 0
                 result_table[i + 1] += result_table[i]
                 result_table = np.delete(result_table, i, axis=0)
-            elif np.all(result_table[i, :3] == np.zeros(3)) and i != 0:
+            elif np.all(result_table[i, :3] == 0) and i != 0:
                 # merge empty actions
                 result_table[i - 1] += result_table[i]
                 result_table = np.delete(result_table, i, axis=0)
