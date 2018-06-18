@@ -2,6 +2,7 @@
 # and learning proccess of the agent.
 
 import logging
+import time
 
 import numpy as np
 
@@ -23,7 +24,6 @@ PAUSE_TIME = 0.0001  # sc
 PAUSE_ACTION_TIME = 2  # sc
 ARROW_LENGTH = 4e6  # meters
 EARTH_RADIUS = 6.3781e6  # meters
-
 
 
 def full_extent(ax, pad=0.0):
@@ -57,6 +57,7 @@ def draw_sphere(axis, centre, radius, wireframe_params={}):
     z = radius * np.cos(v) + centre[2]
     return axis.plot_wireframe(x, y, z, **wireframe_params)
 
+
 def draw_action(axis, pos, dV):
     """ Draws action.
     Args:
@@ -68,6 +69,7 @@ def draw_action(axis, pos, dV):
     dVx, dVy, dVz = dV
 
     return axis.quiver(x, y, z, dVx, dVy, dVz, length=ARROW_LENGTH, normalize=True)
+
 
 def strf_position(satellite, epoch):
     """ Print SpaceObject position at epoch. """
@@ -138,8 +140,8 @@ class Visualizer:
         self.subplot_d.cla()
         self.subplot_r.cla()
 
-    def plot_iteration(self, epoch, last_update):
-        s = '  Epoch: {}\nUpdate: {}'.format(epoch, last_update)
+    def plot_iteration(self, epoch):
+        s = 'Epoch: {}'.format(epoch)
         s += '\n\nColl Prob: {:.7}     Fuel Cons: {:.5}     Traj Dev coef: {:.5}'.format(
             self.prob_arr[-1], self.fuel_cons_arr[-1], self.traj_dev_arr[-1])
         s += '\n\nReward components:\nColl Prob R: {:.5}     Fuel Cons R: {:.5}     Traj Dev coef R: {:.5}\
@@ -148,7 +150,7 @@ class Visualizer:
         self.subplot_3d.text2D(-0.3, 1.05, s,
                                transform=self.subplot_3d.transAxes)
 
-    def plot_prob_fuel_reward(self):
+    def plot_graphics(self):
         self.make_step_on_graph(self.subplot_p, self.time_arr, self.prob_arr,
                                 title='Total collision probability', ylabel='prob')
         self.make_step_on_graph(self.subplot_f, self.time_arr, self.fuel_cons_arr,
@@ -202,15 +204,14 @@ class Simulator:
         and starts agent-environment collaboration.
     """
 
-    def __init__(self, agent, environment, step=0.001, update_r_p_step=None):
+    def __init__(self, agent, environment, step=10e-6):
         """
         Args:
-            agent (api.Agent, agent, to do actions in environment.
+            agent (api.Agent): agent, to do actions in environment.
             environment (api.Environment): the initial space environment.
-            step (float): time step in simulation.
-            update_r_p_step (int): update reward and probability step;
-                (if update_r_p_step == None, reward and probability are updated only by agent).
-            print_out (bool): print out some parameters and results (reward and probability).
+            step (float): propagation time step.
+                By default is equal to 0.000001 (0.0864 sc.).
+
         """
 
         self.agent = agent
@@ -219,86 +220,115 @@ class Simulator:
         self.end_time = self.env.init_params["end_time"]
         self.curr_time = self.start_time
 
-        self.logger = logging.getLogger('simulator.Simulator')
         self.step = step
-        self.update_r_p_step = update_r_p_step
 
         self.vis = None
+        self.logger = None
 
-    def run(self, visualize=False, print_out=False):
+    def run(self, visualize=False, n_steps_vis=1000, log=True, each_step_propagation=False, print_out=False):
         """
         Args:
             visualize (bool): whether show the simulation or not.
+            n_steps_vis (int): number of propagation steps in one step of visualization.
+            log (bool): whether log the simulation or not.
+            each_step_propagation (bool): whether propagate for each step
+                or skip the steps using a lower estimation of the time to conjunction.
             print_out (bool): whether show the print out or not.
 
         Returns:
-            reward (float): reward of session.
+            reward (float): reward of the session.
 
         """
-        iteration = 0
+
         if visualize:
             self.vis = Visualizer(self.curr_time.mjd2000, self.env.total_collision_probability,
                                   self.env.get_fuel_consumption(), self.env.get_trajectory_deviation(),
                                   self.env.reward_components, self.env.reward)
             self.vis.run()
+            action = np.zeros(4)
+            n_steps_since_vis = 1
+
+        if log:
+            iteration = 0
+            self.logger = logging.getLogger('simulator.Simulator')
 
         if print_out:
             self.print_start()
+            simulation_start_time = time.time()
 
-        while self.curr_time.mjd2000 <= self.end_time.mjd2000:
+        while True:
             self.env.propagate_forward(
-                self.curr_time.mjd2000, self.update_r_p_step)
+                self.curr_time.mjd2000, self.step, each_step_propagation)
 
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
                 s = self.env.get_state()
                 action = self.agent.get_action(s)
-                r = self.env.get_reward()
                 err = self.env.act(action)
-                if err:
-                    self.log_bad_action(err, action)
+
+                if log:
+                    r = self.env.get_reward()
+                    if err:
+                        self.log_bad_action(err, action)
+                    self.log_reward_action(iteration, r, action)
 
                 if visualize and not err:
                     self.vis.dV_plot = action[:3]
 
-                self.log_reward_action(iteration, r, action)
-
-            self.log_iteration(iteration)
-            self.log_protected_position()
-            self.log_debris_positions()
+            if log:
+                self.log_iteration(iteration)
+                self.log_protected_position()
+                self.log_debris_positions()
+                iteration += 1
 
             if visualize:
                 self.plot_protected()
                 self.plot_debris()
                 self.vis.plot_earth()
-                if iteration % self.update_r_p_step == 0:
+                if n_steps_since_vis % n_steps_vis == 0:
                     self.update_vis_data()
+                    n_steps_since_vis = 1
 
                 if np.not_equal(self.vis.dV_plot, np.zeros(3)).all():
                     self.vis.plot_action(
                         self.env.protected.position(self.curr_time)[0], self.curr_time)
                     self.vis.pause(PAUSE_ACTION_TIME)
-                self.vis.plot_prob_fuel_reward()
+
+                self.vis.plot_graphics()
                 self.vis.pause(PAUSE_TIME)
                 self.vis.clear()
+                self.vis.plot_iteration(self.curr_time)
 
-                # self.env.reward and self.env.total_collision_probability -
-                # without update.
-                self.vis.plot_iteration(
-                    self.curr_time, self.env.last_r_p_update)
+            if self.curr_time.mjd2000 >= self.end_time.mjd2000:
+                break
 
-            self.curr_time = pk.epoch(
-                self.curr_time.mjd2000 + self.step, "mjd2000")
+            next_action_time = self.env.get_next_action().mjd2000
 
-            iteration += 1
+            if np.isnan(next_action_time) or next_action_time > self.end_time.mjd2000:
+                next_time = self.end_time
+            else:
+                next_time = pk.epoch(next_action_time, "mjd2000")
 
-        self.env.update_all_reward_components()
-        self.log_protected_position()
+            if visualize:
+                n_steps_to_next_time = int(next_time.mjd2000 / self.step)
+                n_steps_to_next_vis = n_steps_vis - n_steps_since_vis
+                if n_steps_to_next_time > n_steps_to_next_vis:
+                    next_time = pk.epoch(
+                        self.curr_time.mjd2000 + n_steps_to_next_vis * self.step, "mjd2000")
+                    n_steps_since_vis = n_steps_vis
+                else:
+                    n_steps_since_vis += n_steps_to_next_time
+
+            self.curr_time = next_time
+
+        if log:
+            self.log_protected_position()
 
         if visualize:
             self.update_vis_data()
             self.vis.save_graphics()
+
         if print_out:
-            self.print_end()
+            self.print_end(simulation_start_time)
 
         return self.env.get_reward()
 
@@ -337,7 +367,6 @@ class Simulator:
                 size=25, color=colors[i])
 
     def update_vis_data(self):
-        # TODO - better time difference
         self.vis.update_data(
             self.curr_time.mjd2000 - self.start_time.mjd2000,
             self.env.get_total_collision_probability(),
@@ -353,10 +382,11 @@ class Simulator:
         for spaceObject in self.env.debris:
             print(spaceObject.satellite)
 
-    def print_end(self):
+    def print_end(self, simulation_start_time):
         reward_components = self.env.get_reward_components()
-        s = "Simulation ended.\n\nCollision probability: {:.5}\nFuel consumption: {:.5}\
+        s = "Simulation ended in {:.5} sec.\n\nCollision probability: {:.5}\nFuel consumption: {:.5}\
             \nTrajectory deviation coefficient: {:.5}".format(
+            time.time() - simulation_start_time,
             self.env.get_total_collision_probability(), self.env.get_fuel_consumption(),
             self.env.get_trajectory_deviation())
         s += '\n\nReward components:\nColl Prob R: {:.5}     Fuel Cons R: {:.5}     Traj Dev coef R: {:.5}\

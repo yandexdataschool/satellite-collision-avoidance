@@ -13,10 +13,11 @@ import pykep as pk
 from copy import copy
 
 from .api_utils import fuel_consumption, sum_coll_prob, get_dangerous_debris
+from .api_utils import get_lower_estimate_of_time_to_conjunction
 from ..collision import CollProbEstimator
 
-MAX_PROPAGATION_STEP = 0.000001  # equal to 0.0864 sc.
 MAX_FUEL_CONSUMPTION = 10
+SEC_IN_DAY = 86400  # number of seconds in one day
 
 
 class Environment:
@@ -64,28 +65,28 @@ class Environment:
         self.last_r_p_update = None
         # : int: number of propagate forward iterations
         # since last update collision probability and reward.
-        self.pf_iterations_since_update = 0
 
         # initiate state with initial positions
-        self.state = dict(epoch=start_time, fuel=self.protected.get_fuel())
         st, debr = self.get_coords_by_epoch(start_time)
         coord = dict(st=st, debr=debr)
         self.state = dict(
-            coord=coord, epoch=start_time, fuel=self.protected.get_fuel()
-        )
+            coord=coord, epoch=start_time, fuel=self.protected.get_fuel())
 
         self.update_all_reward_components()
 
-    def propagate_forward(self, end_time, update_r_p_step=20):
-        """ Forward step.
+    def propagate_forward(self, end_time, step=10e-6, each_step_propagation=False):
+        """ Forward propagation.
 
         Args:
             end_time (float): end time for propagation as mjd2000.
-            update_r_p_step (int): update reward and probability step.
+            step (float): propagation time step.
+                By default is equal to 0.000001 (0.0864 sc.).
+            each_step_propagation (bool): whether propagate for each step
+                or skip the steps using a lower estimation of the time to conjunction.
 
         Raises:
             ValueError: if end_time is less then current time of the environment.
-            Exception: if step in propagation_grid is less then MAX_PROPAGATION_STEP.
+            Exception: if step in propagation_grid is less then step.
 
         """
         curr_time = self.state["epoch"].mjd2000
@@ -96,18 +97,20 @@ class Environment:
                 "end_time should be greater or equal to current time")
 
         # Choose number of steps in linspace, s.t.
-        # restep is less then MAX_PROPAGATION_STEP.
+        # restep is less then step.
         number_of_time_steps_plus_one = int(np.ceil(
-            (end_time - curr_time) / MAX_PROPAGATION_STEP) + 1)
+            (end_time - curr_time) / step) + 1)
 
         propagation_grid, retstep = np.linspace(
             curr_time, end_time, number_of_time_steps_plus_one, retstep=True)
 
-        if retstep > MAX_PROPAGATION_STEP:
+        if retstep > step:
             raise Exception(
-                "Step in propagation grid should be <= MAX_PROPAGATION_STEP")
+                "Step in propagation grid should be <= step")
 
-        for t in propagation_grid:
+        s = 0
+        while s < number_of_time_steps_plus_one:
+            t = propagation_grid[s]
             epoch = pk.epoch(t, "mjd2000")
             st, debr = self.get_coords_by_epoch(epoch)
             coord = dict(st=st, debr=debr)
@@ -116,10 +119,17 @@ class Environment:
             )
             self.update_distances_and_probabilities_prior_to_current_conjunction()
 
-        self.pf_iterations_since_update += 1
+            # calculation of the number of steps forward
+            if each_step_propagation:
+                s += 1
+            else:
+                time_to_collision_estimation = get_lower_estimate_of_time_to_conjunction(
+                    self.state['coord']['st'], self.state['coord']['debr'], self.crit_distance)
+                n_steps = max(1, int(time_to_collision_estimation / retstep))
+                n_steps = min(number_of_time_steps_plus_one - s, n_steps)
+                s += n_steps
 
-        if self.pf_iterations_since_update == update_r_p_step:
-            self.update_all_reward_components()
+        self.update_all_reward_components()
 
     def update_distances_and_probabilities_prior_to_current_conjunction(self):
         """ Update the distances and collision probabilities prior to current conjunction.
@@ -259,8 +269,6 @@ class Environment:
         self.update_total_collision_probability()
         self.update_trajectory_deviation()
         self.update_reward()
-        self.last_r_p_update = self.state["epoch"]
-        self.pf_iterations_since_update = 0
 
     def act(self, action):
         """ Change velocity for protected object.
@@ -436,8 +444,17 @@ class SpaceObject:
     def get_orbital_elements(self):
         return self.satellite.orbital_elements
 
+    def get_mu_central_body(self):
+        return self.satellite.mu_central_body
+
+    def get_mu_self(self):
+        return self.satellite.mu_self
+
+    def get_safe_radius(self):
+        return self.satellite.safe_radius
+
     def get_orbital_period(self):
         a = self.get_orbital_elements()[0]  # meters.
         mu = pk.MU_EARTH  # meters^3 / sc^2.
-        T = 2 * np.pi * (a**3 / mu)**0.5 / 86400  # days.
+        T = 2 * np.pi * (a**3 / mu)**0.5 / SEC_IN_DAY  # mjd2000 (or days).
         return T

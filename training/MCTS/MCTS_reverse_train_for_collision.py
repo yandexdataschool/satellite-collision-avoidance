@@ -8,7 +8,7 @@ from space_navigator.api import MAX_FUEL_CONSUMPTION
 from space_navigator.models.MCTS import DecisionTree
 
 START_TIME = 6599.95
-SIMULATION_STEP = 0.0001
+PROPAGATION_STEP = 0.000001
 END_TIME = 6600.05
 
 
@@ -21,7 +21,7 @@ def main(args):
     parser.add_argument("-end", "--end_time", type=float,
                         default=END_TIME, required=False)
     parser.add_argument("-s", "--step", type=float,
-                        default=SIMULATION_STEP, required=False)
+                        default=PROPAGATION_STEP, required=False)
     parser.add_argument("-save_path", "--save_action_table_path", type=str,
                         default="training/agents_tables/MCTS/action_table_MCTS_with_reverse.csv", required=False)
     parser.add_argument("-print", "--print_out", type=str,
