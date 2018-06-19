@@ -132,9 +132,7 @@ class Environment:
         self.update_all_reward_components()
 
     def update_distances_and_probabilities_prior_to_current_conjunction(self):
-        """ Update the distances and collision probabilities prior to current conjunction.
-
-        """
+        """ Update the distances and collision probabilities prior to current conjunction."""
         new_curr_dangerous_debris, new_curr_dangerous_distances = get_dangerous_debris(
             self.state['coord']['st'][:, :3],
             self.state['coord']['debr'][:, :3],
@@ -166,7 +164,7 @@ class Environment:
         # in current conjunction.
         if for_update_debris.size:
             self.min_distances_in_current_conjunction[
-                for_update_debris] = new_curr_dangerous_distances[for_update_debris]
+                for_update_debris] = new_curr_dangerous_distances
             for d in for_update_debris:
                 self.state_for_min_distances_in_current_conjunction[d] = np.vstack((
                     self.state['coord']['st'][0, :],
@@ -425,7 +423,7 @@ class SpaceObject:
         """ Provide SpaceObject position at given epoch:
         Args:
             epoch (pk.epoch): at what time to calculate position.
-        Returns
+        Returns:
             pos (tuple): position x, y, z (meters).
             vel (tuple): velocity Vx, Vy, Vz (m/s).
         """
