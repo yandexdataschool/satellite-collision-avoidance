@@ -430,6 +430,16 @@ class SpaceObject:
         pos, vel = self.satellite.eph(epoch)
         return pos, vel
 
+    def osculating_elements(self, epoch):
+        """ Provide SpaceObject position at given epoch:
+        Args:
+            epoch (pk.epoch): at what time to calculate osculating elements.
+        Returns:
+            elements (tuple): six osculating keplerian elements (a,e,i,W,w,M).
+        """
+        elements = self.satellite.osculating_elements(epoch)
+        return elements
+
     def get_name(self):
         return self.satellite.name
 
