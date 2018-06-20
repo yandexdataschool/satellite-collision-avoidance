@@ -1,4 +1,4 @@
-# Generate SpaceObjects in collision situation.
+# Generate random collision situation.
 import argparse
 import sys
 
@@ -13,23 +13,10 @@ from generator_utils import SpaceObject2srt, rotate_velocity
 # standard gravitational parameter of the Earth (m^2/s^3)
 MU_EARTH = 398600800000000
 
-"""
-TODO:
-    docstrings
-    check all names and common rewiew
-    то что сдесь можно все в utils
-    добавить в examples штуку чтоб прям там
-        можно было сгенерировать опасную ситуацию
-        и решить ее (и пусть печатается без, baseline,
-        разные методы и их сравнение)
-    да и вообще можно небольшой интерфейс сделать
-    сохранять описание ситуаций
-
-"""
-
 
 class Generator:
-    """
+    """Generates random collision situation.
+
     TODO:
         better distributions parameters
         add user protected object?
