@@ -17,7 +17,6 @@ from .api_utils import get_lower_estimate_of_time_to_conjunction
 from ..collision import CollProbEstimator
 
 MAX_FUEL_CONSUMPTION = 10
-SEC_IN_DAY = 86400  # number of seconds in one day
 
 
 class Environment:
@@ -430,16 +429,6 @@ class SpaceObject:
         pos, vel = self.satellite.eph(epoch)
         return pos, vel
 
-    def osculating_elements(self, epoch):
-        """ Provide SpaceObject position at given epoch:
-        Args:
-            epoch (pk.epoch): at what time to calculate osculating elements.
-        Returns:
-            elements (tuple): six osculating keplerian elements (a,e,i,W,w,M).
-        """
-        elements = self.satellite.osculating_elements(epoch)
-        return elements
-
     def get_name(self):
         return self.satellite.name
 
@@ -464,5 +453,5 @@ class SpaceObject:
     def get_orbital_period(self):
         a = self.get_orbital_elements()[0]  # meters.
         mu = pk.MU_EARTH  # meters^3 / sc^2.
-        T = 2 * np.pi * (a**3 / mu)**0.5 / SEC_IN_DAY  # mjd2000 (or days).
+        T = 2 * np.pi * (a**3 / mu)**0.5 * pk.SEC2DAY  # mjd2000 (or days).
         return T
