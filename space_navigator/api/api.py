@@ -128,7 +128,6 @@ class Environment:
                 n_steps = max(1, int(time_to_collision_estimation / retstep))
                 n_steps = min(number_of_time_steps_plus_one - s, n_steps)
                 s += n_steps
-        print(epoch)
         self.update_all_reward_components()
 
     def update_distances_and_probabilities_prior_to_current_conjunction(self):
