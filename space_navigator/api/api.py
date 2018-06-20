@@ -39,7 +39,8 @@ class Environment:
 
         self.protected_r = self.protected.get_radius()
         self.init_fuel = self.protected.get_fuel()
-        self.init_orbital_elements = self.protected.get_orbital_elements()
+        self.init_orbital_elements = self.protected.osculating_elements(
+            start_time)
         self.trajectory_deviation = None
         self.n_debris = len(debris)
         self.debris_r = np.array([d.get_radius() for d in debris])
@@ -127,7 +128,7 @@ class Environment:
                 n_steps = max(1, int(time_to_collision_estimation / retstep))
                 n_steps = min(number_of_time_steps_plus_one - s, n_steps)
                 s += n_steps
-
+        print(epoch)
         self.update_all_reward_components()
 
     def update_distances_and_probabilities_prior_to_current_conjunction(self):
@@ -234,7 +235,7 @@ class Environment:
 
         """
         diff = np.abs(
-            np.array(self.protected.get_orbital_elements()) - np.array(self.init_orbital_elements))
+            np.array(self.protected.osculating_elements(self.state["epoch"])) - np.array(self.init_orbital_elements))
         deviation = np.sum(diff * np.array(singnificance))
         self.trajectory_deviation = deviation
 
@@ -428,6 +429,16 @@ class SpaceObject:
         """
         pos, vel = self.satellite.eph(epoch)
         return pos, vel
+
+    def osculating_elements(self, epoch):
+        """ Provide SpaceObject position at given epoch:
+        Args:
+            epoch (pk.epoch): at what time to calculate osculating elements.
+        Returns:
+            elements (tuple): six osculating keplerian elements (a,e,i,W,w,M).
+        """
+        elements = self.satellite.osculating_elements(epoch)
+        return elements
 
     def get_name(self):
         return self.satellite.name
