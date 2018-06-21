@@ -17,7 +17,6 @@ from .api_utils import get_lower_estimate_of_time_to_conjunction
 from ..collision import CollProbEstimator
 
 MAX_FUEL_CONSUMPTION = 10
-SEC_IN_DAY = 86400  # number of seconds in one day
 
 
 class Environment:
@@ -40,7 +39,8 @@ class Environment:
 
         self.protected_r = self.protected.get_radius()
         self.init_fuel = self.protected.get_fuel()
-        self.init_orbital_elements = self.protected.get_orbital_elements()
+        self.init_orbital_elements = self.protected.osculating_elements(
+            start_time)
         self.trajectory_deviation = None
         self.n_debris = len(debris)
         self.debris_r = np.array([d.get_radius() for d in debris])
@@ -128,13 +128,10 @@ class Environment:
                 n_steps = max(1, int(time_to_collision_estimation / retstep))
                 n_steps = min(number_of_time_steps_plus_one - s, n_steps)
                 s += n_steps
-
         self.update_all_reward_components()
 
     def update_distances_and_probabilities_prior_to_current_conjunction(self):
-        """ Update the distances and collision probabilities prior to current conjunction.
-
-        """
+        """ Update the distances and collision probabilities prior to current conjunction."""
         new_curr_dangerous_debris, new_curr_dangerous_distances = get_dangerous_debris(
             self.state['coord']['st'][:, :3],
             self.state['coord']['debr'][:, :3],
@@ -166,7 +163,7 @@ class Environment:
         # in current conjunction.
         if for_update_debris.size:
             self.min_distances_in_current_conjunction[
-                for_update_debris] = new_curr_dangerous_distances[for_update_debris]
+                for_update_debris] = new_curr_dangerous_distances
             for d in for_update_debris:
                 self.state_for_min_distances_in_current_conjunction[d] = np.vstack((
                     self.state['coord']['st'][0, :],
@@ -237,7 +234,7 @@ class Environment:
 
         """
         diff = np.abs(
-            np.array(self.protected.get_orbital_elements()) - np.array(self.init_orbital_elements))
+            np.array(self.protected.osculating_elements(self.state["epoch"])) - np.array(self.init_orbital_elements))
         deviation = np.sum(diff * np.array(singnificance))
         self.trajectory_deviation = deviation
 
@@ -425,12 +422,22 @@ class SpaceObject:
         """ Provide SpaceObject position at given epoch:
         Args:
             epoch (pk.epoch): at what time to calculate position.
-        Returns
+        Returns:
             pos (tuple): position x, y, z (meters).
             vel (tuple): velocity Vx, Vy, Vz (m/s).
         """
         pos, vel = self.satellite.eph(epoch)
         return pos, vel
+
+    def osculating_elements(self, epoch):
+        """ Provide SpaceObject position at given epoch:
+        Args:
+            epoch (pk.epoch): at what time to calculate osculating elements.
+        Returns:
+            elements (tuple): six osculating keplerian elements (a,e,i,W,w,M).
+        """
+        elements = self.satellite.osculating_elements(epoch)
+        return elements
 
     def get_name(self):
         return self.satellite.name
@@ -456,5 +463,5 @@ class SpaceObject:
     def get_orbital_period(self):
         a = self.get_orbital_elements()[0]  # meters.
         mu = pk.MU_EARTH  # meters^3 / sc^2.
-        T = 2 * np.pi * (a**3 / mu)**0.5 / SEC_IN_DAY  # mjd2000 (or days).
+        T = 2 * np.pi * (a**3 / mu)**0.5 * pk.SEC2DAY  # mjd2000 (or days).
         return T
