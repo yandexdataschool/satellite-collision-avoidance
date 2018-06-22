@@ -10,10 +10,6 @@ from space_navigator.api import SpaceObject
 from generator_utils import SpaceObject2srt, rotate_velocity
 
 
-# standard gravitational parameter of the Earth (m^2/s^3)
-MU_EARTH = 398600800000000
-
-
 class Generator:
     """Generates random collision situation.
 
@@ -77,7 +73,7 @@ class Generator:
         params = {
             "epoch": self.start_time,
             "elements": elements,
-            "mu_central_body": MU_EARTH,
+            "mu_central_body": pk.MU_EARTH,
             "mu_self": mu_self,
             "radius": radius,
             "safe_radius": safe_radius,
@@ -151,7 +147,7 @@ class Generator:
             "epoch": collision_time,
             "pos": pos,
             "vel": vel,
-            "mu_central_body": MU_EARTH,
+            "mu_central_body": pk.MU_EARTH,
             "mu_self": mu_self,
             "radius": radius,
             "safe_radius": safe_radius,

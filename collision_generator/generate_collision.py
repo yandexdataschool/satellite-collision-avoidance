@@ -7,7 +7,6 @@ from generator import Generator
 
 
 def main(args):
-    n_debris = 3
     parser = argparse.ArgumentParser()
 
     # generator initialization
@@ -47,7 +46,7 @@ def main(args):
     for _ in range(n_debris):
         generator.add_debris(pos_sigma, vel_ratio_sigma, i_threshold)
 
-    generator.save_env('data/environments/generated_collision.env')
+    generator.save_env(save_path)
 
     return
 

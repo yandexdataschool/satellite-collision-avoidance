@@ -219,7 +219,7 @@ class Environment:
             self.total_collision_probability_arr
         )
 
-    def update_trajectory_deviation(self, singnificance=(0.01, 1, 1, 1, 1, 0)):
+    def update_trajectory_deviation(self, singnificance=(0.01, 1, 1, 1, 1, 0), round_deviation=6):
         """Update trajectory deviation from init the trajectory.
 
         Note:
@@ -231,11 +231,14 @@ class Environment:
 
         Args:
             singnificance (tuple): multipliers for orbital parameter differences.
+            round_deviation (int): round a number to a given precision in decimal digits (not round if None).
 
         """
         diff = np.abs(
             np.array(self.protected.osculating_elements(self.state["epoch"])) - np.array(self.init_orbital_elements))
         deviation = np.sum(diff * np.array(singnificance))
+        if round_deviation:
+            deviation = round(deviation, round_deviation)
         self.trajectory_deviation = deviation
 
     def update_reward(self, coll_prob_C=1., traj_C=1., fuel_C=1.,
