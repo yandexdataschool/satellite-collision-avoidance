@@ -108,3 +108,7 @@ venv.bak/
 
 # simulator
 simulator.log
+simulation_graphics.png
+
+# training
+training/CE/CE_graphics.png

@@ -1,5 +1,7 @@
 import numpy as np
+
 from . import BaseAgent
+from .agent_utils import adjust_action_table
 
 
 class TableAgent(BaseAgent):
@@ -7,11 +9,11 @@ class TableAgent(BaseAgent):
     def __init__(self, action_table=np.array([])):
         """
         Args:
-            action_table (np.array with shape(n_actions, 4)):
+            action_table (np.array with shape=(n_actions, 4) or (4) or (0)):
                 table of actions with columns ["dVx", "dVy", "dVz", "time to request"].
 
         """
-        self.action_table = action_table
+        self.action_table = adjust_action_table(action_table)
         # TODO: add index and not delete actions from table
         # self.action_idx = 0
 
@@ -42,3 +44,5 @@ class TableAgent(BaseAgent):
         self.action_table = np.delete(self.action_table, 0, axis=0)
         return action
 
+    def get_action_table(self):
+        return self.action_table
