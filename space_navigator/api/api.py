@@ -61,10 +61,6 @@ class Environment:
 
         self.reward_components = None
         self.reward = None
-        # : epoch: Last reward and collision probability update
-        self.last_r_p_update = None
-        # : int: number of propagate forward iterations
-        # since last update collision probability and reward.
 
         # initiate state with initial positions
         st, debr = self.get_coords_by_epoch(start_time)
@@ -72,7 +68,7 @@ class Environment:
         self.state = dict(
             coord=coord, epoch=start_time, fuel=self.protected.get_fuel())
 
-        self.update_all_reward_components()
+        self.update_all_reward_components(zero_update=True)
 
     def propagate_forward(self, end_time, step=10e-6, each_step_propagation=False):
         """ Forward propagation.
@@ -219,7 +215,7 @@ class Environment:
             self.total_collision_probability_arr
         )
 
-    def update_trajectory_deviation(self, singnificance=(0.01, 1, 1, 1, 1, 0), round_deviation=6):
+    def update_trajectory_deviation(self, significance=(0.01, 1, 1, 1, 1, 0), zero_update=False, round_deviation=6):
         """Update trajectory deviation from init the trajectory.
 
         Note:
@@ -230,15 +226,19 @@ class Environment:
                 w (Argument of periapsis), M (mean anomaly): radians.
 
         Args:
-            singnificance (tuple): multipliers for orbital parameter differences.
+            significance (tuple): multipliers for orbital parameter differences.
             round_deviation (int): round a number to a given precision in decimal digits (not round if None).
+            zero_update (bool): no deviation at zero update.
 
         """
-        diff = np.abs(
-            np.array(self.protected.osculating_elements(self.state["epoch"])) - np.array(self.init_orbital_elements))
-        deviation = np.sum(diff * np.array(singnificance))
-        if round_deviation:
-            deviation = round(deviation, round_deviation)
+        if zero_update:
+            deviation = 0.
+        else:
+            diff = np.abs(
+                np.array(self.protected.get_orbital_elements()) - np.array(self.init_orbital_elements))
+            deviation = np.sum(diff * np.array(significance))
+            if round_deviation:
+                deviation = round(deviation, round_deviation)
         self.trajectory_deviation = deviation
 
     def update_reward(self, coll_prob_C=1., traj_C=1., fuel_C=1.,
@@ -246,7 +246,7 @@ class Environment:
         """Update reward and reward components.
 
         Args:
-            coll_prob_C, traj_C, fuel_C (float): constants for the singnificance regulation of reward components.
+            coll_prob_C, traj_C, fuel_C (float): constants for the significance regulation of reward components.
             dangerous_prob (float): the threshold below which the probability is negligible.
 
         """
@@ -264,10 +264,10 @@ class Environment:
         self.reward_components = (coll_prob_r, fuel_r, traj_r)
         self.reward = sum(self.reward_components)
 
-    def update_all_reward_components(self):
+    def update_all_reward_components(self, zero_update=False):
         """Update total collision probability, trajectory deviation, reward components and reward."""
         self.update_total_collision_probability()
-        self.update_trajectory_deviation()
+        self.update_trajectory_deviation(zero_update=zero_update)
         self.update_reward()
 
     def act(self, action):
