@@ -37,9 +37,9 @@ class Environment:
         self.protected = protected
         self.debris = debris
 
-        self.protected_r = self.protected.get_radius()
-        self.init_fuel = self.protected.get_fuel()
-        self.init_orbital_elements = self.protected.osculating_elements(
+        self.protected_r = protected.get_radius()
+        self.init_fuel = protected.get_fuel()
+        self.init_orbital_elements = protected.osculating_elements(
             start_time)
         self.trajectory_deviation = None
         self.n_debris = len(debris)
@@ -232,14 +232,14 @@ class Environment:
 
         """
         if zero_update:
-            deviation = 0.
+            deviation = 0
         else:
             diff = np.abs(
                 np.array(self.protected.get_orbital_elements()) - np.array(self.init_orbital_elements))
             deviation = np.sum(diff * np.array(significance))
             if round_deviation:
                 deviation = round(deviation, round_deviation)
-        self.trajectory_deviation = deviation
+        self.trajectory_deviation = float(deviation)
 
     def update_reward(self, coll_prob_C=1., traj_C=1., fuel_C=1.,
                       dangerous_prob=10e-4):
@@ -321,7 +321,7 @@ class Environment:
     def reset(self):
         """ Return Environment to initial state. """
         self.__init__(self.init_params['protected'], self.init_params['debris'],
-                      self.init_params['start_time'], self.init_params['end_time'])
+                      self.init_params['start_time'], self.init_params['end_time'],)
         return self.state
 
 
