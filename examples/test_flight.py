@@ -14,7 +14,7 @@ from space_navigator.agent import TableAgent
 from space_navigator.utils import read_space_objects
 
 START_TIME = 6000
-SIMULATION_STEP = 0.0001
+SIMULATION_STEP = 0.000001
 END_TIME = 6000.01
 # Number of TLE satellites to read from file.
 DEBRIS_NUM = 3
@@ -30,8 +30,8 @@ def main(args):
                         default=END_TIME, required=False)
     parser.add_argument("-s", "--step", type=float,
                         default=SIMULATION_STEP, required=False)
-    parser.add_argument("-u", "--update_r_p_step", type=int,
-                        default=20, required=False)
+    parser.add_argument("-n_v", "--n_steps_vis", type=int,
+                        default=1000, required=False)
     parser.add_argument("-p", "--print_out", type=str,
                         default="False", required=False)
 
@@ -40,7 +40,7 @@ def main(args):
     visualize = args.visualize.lower() == "true"
     print_out = args.print_out.lower() == "true"
     start_time, end_time = args.start_time, args.end_time
-    step, update_r_p_step = args.step, args.update_r_p_step
+    step, n_steps_vis = args.step, args.n_steps_vis
 
     # SpaceObjects with TLE initial parameters.
     satellites = read_space_objects(
@@ -66,9 +66,9 @@ def main(args):
     end_time = pk.epoch(end_time, "mjd2000")
     env = Environment(iss, debris, start_time, end_time)
 
-    simulator = Simulator(
-        agent, env, step=step, update_r_p_step=update_r_p_step)
-    simulator.run(visualize=visualize, print_out=print_out)
+    simulator = Simulator(agent, env, step)
+    simulator.run(visualize=visualize,
+                  n_steps_vis=n_steps_vis, print_out=print_out)
     return
 
 

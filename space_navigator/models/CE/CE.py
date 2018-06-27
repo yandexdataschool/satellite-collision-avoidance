@@ -81,17 +81,23 @@ class ShowProgress:
 
         plt.subplot(1, 2, 1)
         plt.cla()
+        plt.title('Rewards history')
         plt.plot(mean_rewards, label='Mean rewards')
         plt.plot(max_rewards, label='Max rewards')
         plt.plot(policy_rewards, label='Policy rewards')
-        plt.legend(loc=2, prop={'size': 10})
+        plt.xlabel("iteration")
+        plt.ylabel("reward")
+        plt.legend(loc=4, prop={'size': 10})
         plt.grid()
 
         plt.subplot(1, 2, 2)
         plt.cla()
+        plt.title('Histogram of sessions')
         plt.hist(rewards_batch)
         plt.vlines(threshold,  [0], [len(rewards_batch)],
                    label="threshold", color='red')
+        plt.xlabel("reward")
+        plt.ylabel("number of sessions")
         plt.legend(loc=2, prop={'size': 10})
         plt.grid()
 
@@ -102,10 +108,13 @@ class ShowProgress:
         mean_rewards = list(zip(*log))[0]
         max_rewards = list(zip(*log))[1]
         policy_rewards = list(zip(*log))[2]
+        plt.title('Rewards history')
         plt.plot(mean_rewards, label='Mean rewards')
         plt.plot(max_rewards, label='Max rewards')
         plt.plot(policy_rewards, label='Policy rewards')
-        plt.legend(loc=2, prop={'size': 10})
+        plt.xlabel("iteration")
+        plt.ylabel("reward")
+        plt.legend(loc=4, prop={'size': 10})
         plt.grid()
         fig.savefig("./training/CE/CE_graphics.png")
 

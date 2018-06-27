@@ -124,6 +124,7 @@ class Environment:
                 n_steps = max(1, int(time_to_collision_estimation / retstep))
                 n_steps = min(number_of_time_steps_plus_one - s, n_steps)
                 s += n_steps
+
         self.update_all_reward_components()
 
     def update_distances_and_probabilities_prior_to_current_conjunction(self):
@@ -252,11 +253,15 @@ class Environment:
         """
         # reward components
         coll_prob = self.get_total_collision_probability()
-        ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
-        # collision probability reward - some kind of ELU function
-        # of collision probability
-        coll_prob_r = -coll_prob_C * \
-            (ELU((coll_prob - dangerous_prob) * 10000) + 1)
+        if coll_prob == 0:
+            coll_prob_r = -0.
+        else:
+            ELU = lambda x: x if (x >= 0) else (1 * (np.exp(x) - 1))
+            # collision probability reward - some kind of ELU function
+            # of collision probability
+            coll_prob_r = -coll_prob_C * \
+                (ELU((coll_prob - dangerous_prob) * 10000) + 1)
+
         fuel_r = - fuel_C * (self.init_fuel - self.protected.get_fuel())
         traj_r = - traj_C * self.get_trajectory_deviation()
 
@@ -305,7 +310,7 @@ class Environment:
         return self.state
 
     def get_fuel_consumption(self):
-        return self.init_fuel - self.protected.get_fuel()
+        return float(self.init_fuel - self.protected.get_fuel())
 
     def get_coords_by_epoch(self, epoch):
         st_pos, st_v = self.protected.position(epoch)

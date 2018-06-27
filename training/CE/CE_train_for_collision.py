@@ -16,7 +16,7 @@ def main(args):
     parser.add_argument("-n_a", "--n_actions", type=int,
                         default=3, required=False)
     parser.add_argument("-n_i", "--n_iterations", type=int,
-                        default=100, required=False)
+                        default=50, required=False)
     parser.add_argument("-n_s", "--n_sessions", type=int,
                         default=30, required=False)
     parser.add_argument("-lr", "--learning_rate", type=float,

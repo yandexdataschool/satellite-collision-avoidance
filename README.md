@@ -40,7 +40,7 @@ After cloning the repo, install **requirements**:
  pip install -r requirements.txt
 ```
 
-We use following libraries:
+We use Python 3.6.5 and following libraries:
 > * Pykep
 > * Pandas
 > * Matplotlib
@@ -63,9 +63,11 @@ python setup.py develop
 
 Now you can run examples of space simulator.
 
+#### Example 1: test fight
+
 Run following code:
 ```
-python examples/test_flight.py 
+python examples/test_flight.py -p true
 ```
 
 If evereything is correct, you should get such plot:
@@ -74,17 +76,52 @@ If evereything is correct, you should get such plot:
 
 And output:
 ```
-Start time: 6000.0   End time: 6000.01   Simulation step:0.0001
+Start time: 6000.0   End time: 6000.01   Simulation step:1e-06
 
 ...
 Space objects description
 ...
 
-Simulation ended.
-Collision probability: 0.0.
-Reward: -4.539992976249074e-05.
-Fuel consumption: 0.0.
+Simulation ended in 4.7806 sec.
+
+Collision probability: 0.0
+Fuel consumption: 0.0            
+Trajectory deviation coefficient: 0.0
+
+Reward components:
+Coll Prob R: -0.0     Fuel Cons R: -0.0     Traj Dev coef R: -0.0            
+Total Reward: -0
 ```
+
+#### Example 2: maneuvers for random generated collision situation
+
+Run following code to generate collision situation environment with 5 dangerous debris objects in the time interval from 6601 to 6602 ([mjd2000](http://www.solarsystemlab.com/faq.html)) and save it to data/environments/generated_collision_5_debr.env:
+```
+python collision_generator/generate_collision.py \
+-n_d 5 -start 6601 -end 6602 -save_path data/environments/generated_collision_5_debr.env
+```
+
+Then, to calculate the maneuvers using the Cross Entropy method and save them to training/agents_tables/CE/action_table_CE_for_generated_collision_5_debr.csv, run:
+```
+python training/CE/CE_train_for_collision.py \
+-env data/environments/generated_collision_5_debr.env -print true -progress true \
+-save_path training/agents_tables/CE/action_table_CE_for_generated_collision_5_debr.csv
+```
+
+Finally, to run the simulator for generated environment and obtained maneuvers:
+```
+python  examples/collision.py -env data/environments/generated_collision_5_debr.env \
+-model training/agents_tables/CE/action_table_CE_for_generated_collision_5_debr.csv
+```
+
+
+
+
+
+
+
+
+
 
 ## Running the tests
 
@@ -111,7 +148,7 @@ Tutorial on learning an agent:
 
 * **Nikita Kazeev** - scientific director, Yandex LAMBDA Factory
 * **Irina Ponomareva** - scientific advisor, TSNIIMASH
-* **Leonid Gremyachi** - MSc in computer science, NRU-HSE, 1st year.
+* **Leonid Gremyachikh** - MSc in computer science, NRU-HSE, 2st year.
 * **Dubov Dmitry** - BSc in computer science, NRU-HSE, 4th year. -->
 
 <!-- See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
