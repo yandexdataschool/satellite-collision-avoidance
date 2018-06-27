@@ -123,8 +123,3 @@ def print_end_train(reward, train_time, action_table):
     print("\nTraining completed in {:.5} sec.".format(train_time))
     print(f"Total Reward: {reward}")
     print(f"Action Table:\n{action_table}")
-
-
-def save_action_table(self, path, action_table):
-    header = "dVx,dVy,dVz,time to request"
-    np.savetxt(path, action_table, delimiter=',', header=header)

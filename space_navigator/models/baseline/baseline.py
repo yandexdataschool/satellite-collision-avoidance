@@ -27,6 +27,7 @@ class Baseline:
         """
         Agrs:
             env (Environment): environment with given parameteres.
+            step (float): time step in simulation.
 
         """
         self.env = env

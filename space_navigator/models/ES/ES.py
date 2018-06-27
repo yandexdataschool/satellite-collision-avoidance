@@ -1,11 +1,16 @@
 import numpy as np
 import pykep as pk
+import time
 
 from tqdm import trange
 
 from ...api import Environment, MAX_FUEL_CONSUMPTION
 from ...agent import TableAgent
-from ..train_utils import ProgressPlotter, ProgressLogger, generate_session_with_env, constrain_action
+from ..train_utils import (
+    ProgressPlotter, ProgressLogger,
+    generate_session_with_env, constrain_action,
+    print_start_train, print_end_train
+)
 
 
 np.random.seed(0)
@@ -55,7 +60,8 @@ class EvolutionStrategies(object):
 
     def train(self, iterations, print_out=False):
         if print_out:
-            self.print_start_train()
+            train_start_time = time.time()
+            print_start_train(self.get_reward(), self.weights)
 
         self.rewards_per_iter = np.zeros((iterations, self.pop_size))
         self.actions = np.zeros(
@@ -98,7 +104,8 @@ class EvolutionStrategies(object):
                 print(f"Mean Reward at iter #{iteration}: {np.mean(rewards)}")
 
         if print_out:
-            self.print_end_train()
+            train_time = time.time() - train_start_time
+            print_end_train(self.get_reward(), train_time, self.weights)
 
     def save(self, path):
         """ Save model to file by given path. """
@@ -119,11 +126,3 @@ class EvolutionStrategies(object):
 
     def get_rewards_history(self):
         return self.rewards_per_iter
-
-    def print_start_train(self):
-        print(f"Start training.\nInitial action table: {self.weights}")
-        print(f"Initial reward: {self.get_reward()}\n")
-
-    def print_end_train(self):
-        print(f"Training completed.\nTotal reward: {self.get_reward()}")
-        print(f"Action Table: {self.agent.action_table}\n")
