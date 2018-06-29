@@ -97,7 +97,7 @@ Total Reward: -0
 
 Run following code to generate collision situation environment with 5 dangerous debris objects in the time interval from 6601 to 6602 ([mjd2000](http://www.solarsystemlab.com/faq.html)) and save it to data/environments/generated_collision_5_debr.env:
 ```
-python collision_generator/generate_collision.py \
+python generation/generate_collision.py \
 -n_d 5 -start 6601 -end 6602 -save_path data/environments/generated_collision_5_debr.env
 ```
 
