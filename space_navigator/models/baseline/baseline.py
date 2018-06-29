@@ -44,11 +44,11 @@ class Baseline:
         self.action_table = np.array([])
         self.policy_reward = None
 
-    def train(self, num=100, print_out=False):
+    def train(self, n_samples=100, print_out=False):
         """Training agent policy (self.action_table).
 
         Args:
-            num (int): number of samples to generate.
+            n_samples (int): number of samples to generate.
             print_out (bool): print information during the training.
 
         TODO:
@@ -61,11 +61,11 @@ class Baseline:
 
         _, V = self.protected.position(self.start_time)
         c = self.max_fuel / np.linalg.norm(V)
-        space = np.linspace(-c, c, num)
+        space = np.linspace(-c, c, n_samples)
         dV_arr = np.vstack([V[i] * space for i in range(3)]).T
         best_reward = -float("inf")
 
-        for i in trange(num):
+        for i in trange(n_samples):
             dV = dV_arr[i]
             temp_action_table = np.hstack((dV, np.nan))
             agent = Agent(temp_action_table)
