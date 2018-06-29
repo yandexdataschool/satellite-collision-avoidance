@@ -5,9 +5,9 @@ import sys
 import numpy as np
 import pykep as pk
 
-from space_navigator.api import SpaceObject
 
-from generator_utils import SpaceObject2srt, rotate_velocity
+from .generator_utils import SpaceObject2srt, rotate_velocity
+from ..api import SpaceObject
 
 
 class Generator:

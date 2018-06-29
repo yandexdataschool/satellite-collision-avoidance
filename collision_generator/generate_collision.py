@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from generator import Generator
+from space_navigator.generator import Generator
 
 
 def main(args):
