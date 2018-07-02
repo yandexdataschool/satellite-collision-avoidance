@@ -51,7 +51,7 @@ We use **Python 3.6.5** and following libraries:
 
 If you have any problems with Pykep installation, you could try [this](https://esa.github.io/pykep/documentation/index.html) or use the virtual environment in current repo (which already has Pykep package):
 ```
-mv env_with_pykep env
+tar -zxvf env.tar.gz
 source env/bin/activate
 pip install -r requirements.txt
 ```
