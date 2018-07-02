@@ -56,9 +56,9 @@ source env/bin/activate
 pip install -r requirements.txt
 ```
 
-P.S. Don't forget to disactivate virtual environment after all:
+P.S. Don't forget to deactivate virtual environment after all:
 ```
-disactivate
+deactivate
 ```
 
 ### Step 3
