@@ -40,12 +40,26 @@ After cloning the repo, install **requirements**:
  pip install -r requirements.txt
 ```
 
-We use Python 3.6.5 and following libraries:
+We use **Python 3.6.5** and following libraries:
 > * Pykep
 > * Pandas
 > * Matplotlib
 > * Numpy
 > * Scipy
+> * Torch
+> * tqdm
+
+If you have any problems with Pykep installation, you could try [this](https://esa.github.io/pykep/documentation/index.html) or use the virtual environment in current repo (which already has Pykep package):
+```
+mv env_with_pykep env
+source env/bin/activate
+pip install -r requirements.txt
+```
+
+P.S. Don't forget to disactivate virtual environment after all:
+```
+disactivate
+```
 
 ### Step 3
 
