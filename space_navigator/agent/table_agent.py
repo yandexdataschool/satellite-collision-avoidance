@@ -14,9 +14,8 @@ class TableAgent(BaseAgent):
                 table of actions with columns ["dVx", "dVy", "dVz", "time to request"].
 
         """
-        self.action_table = adjust_action_table(copy(action_table))
-        # TODO: add index and not delete actions from table
-        # self.action_idx = 0
+        self.action_table = adjust_action_table(action_table)
+        self.action_idx = 0
 
     def get_action(self, state):
         """ Provides action for protected object.
@@ -37,12 +36,11 @@ class TableAgent(BaseAgent):
 
         """
         epoch = state["epoch"].mjd2000
-        if not self.action_table.size:
+        if self.action_table.size and self.action_idx < self.action_table.shape[0]:
+            action = self.action_table[self.action_idx]
+            self.action_idx += 1
+        else:
             action = np.array([0, 0, 0, np.nan])
-            return action
-        # TODO - first nan can't be - fix
-        action = self.action_table[0]
-        self.action_table = np.delete(self.action_table, 0, axis=0)
         return action
 
     def get_action_table(self):

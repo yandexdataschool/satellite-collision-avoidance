@@ -11,11 +11,10 @@ def adjust_action_table(action_table):
     Returns:
         result_table (np.array): general action table.
     """
+    result_table = np.copy(action_table)
 
-    if not action_table.size:
-        result_table = action_table
-    else:
-        result_table = action_table.reshape((-1, 4))
+    if result_table.size:
+        result_table = result_table.reshape((-1, 4))
         result_table = np.delete(result_table, result_table[:, 3] < 0, axis=0)
         if result_table.size:
             result_table[-1, -1] = np.nan
@@ -28,7 +27,7 @@ def adjust_action_table(action_table):
                     # merge actions if time to next action == 0
                     result_table[i + 1] += result_table[i]
                     result_table = np.delete(result_table, i, axis=0)
-                elif np.all(result_table[i, :3] == 0) and i != 0:
+                elif np.count_nonzero(result_table[i, :3]) == 0 and i != 0:
                     # merge empty actions
                     result_table[i - 1] += result_table[i]
                     result_table = np.delete(result_table, i, axis=0)
