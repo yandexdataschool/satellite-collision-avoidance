@@ -1,6 +1,6 @@
 import numpy as np
 
-from space_navigator.api import SpaceObject
+from ..api import SpaceObject
 
 
 def SpaceObject2srt(space_object, collision_time):

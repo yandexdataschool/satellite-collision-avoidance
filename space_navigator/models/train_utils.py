@@ -25,6 +25,8 @@ def generate_session_with_env(agent, env):
     env.reset()
     return reward
 
+# TODO - delete generate_session
+
 
 def generate_session(protected, debris, agent, start_time, end_time, step, return_env=False):
     """Simulation.
@@ -110,3 +112,14 @@ class ProgressPlotter(object):
 class ProgressLogger(object):
     # TODO: create Logger for reward/iterations/parameteres/
     pass
+
+
+def print_start_train(reward, action_table):
+    print("Start training.\n\nInitial action table:\n", action_table,
+          "\nInitial Reward:", reward, "\n")
+
+
+def print_end_train(reward, train_time, action_table):
+    print("\nTraining completed in {:.5} sec.".format(train_time))
+    print(f"Total Reward: {reward}")
+    print(f"Action Table:\n{action_table}")

@@ -1,9 +1,10 @@
 # Reinforcement Learning - Cross-Entropy method.
 
 import numpy as np
-from copy import copy
 import pykep as pk
 
+from tqdm import trange
+import time
 import matplotlib.pyplot as plt
 
 from ...api import Environment, MAX_FUEL_CONSUMPTION
@@ -11,16 +12,18 @@ from ...simulator import Simulator
 from ...agent import TableAgent as Agent
 from ...utils import read_space_objects
 
-from ..train_utils import generate_session, constrain_action
+from ..train_utils import (
+    generate_session, constrain_action,
+    print_start_train, print_end_train
+)
 
 
-def random_action_table(mu_table, sigma_table, max_fuel_cons, fuel_level):
+def random_action_table(mu_table, sigma_table, fuel_level):
     """Returns random action table using normal distributions under the given parameters.
 
     Args:
         mu_table (np.array): action table as table of expectation.
         sigma_table (np.array): table of sigmas.
-        max_fuel_cons (float): maximum allowable fuel consumption per action.
         fuel_level (float): total fuel level.
 
     Returns:
@@ -29,6 +32,7 @@ def random_action_table(mu_table, sigma_table, max_fuel_cons, fuel_level):
     """
     n_actions = mu_table.shape[0]
     action_table = np.zeros_like(mu_table)
+    max_fuel_cons = MAX_FUEL_CONSUMPTION
     for i in range(n_actions - 1):
         for j in range(4):
             action_table[i, j] = np.random.normal(
@@ -52,7 +56,7 @@ class ShowProgress:
         self.fig.show()
         self.fig.canvas.draw()
 
-    def plot(self, rewards_batch, log):  # , :
+    def plot(self, rewards_batch, log):
         """Displays training progress.
 
         Args:
@@ -66,7 +70,7 @@ class ShowProgress:
             threshold to subplot 0
             some report on the plot (iteration, n_iterations...)
             reward_range (list): [min_reward, max_reward] for chart?
-            plt.hist(rewards_batch, range=reward_range)? 
+            plt.hist(rewards_batch, range=reward_range)?
             percentile?
 
         """
@@ -77,17 +81,23 @@ class ShowProgress:
 
         plt.subplot(1, 2, 1)
         plt.cla()
+        plt.title('Rewards history')
         plt.plot(mean_rewards, label='Mean rewards')
         plt.plot(max_rewards, label='Max rewards')
         plt.plot(policy_rewards, label='Policy rewards')
-        plt.legend(loc=2, prop={'size': 10})
+        plt.xlabel("iteration")
+        plt.ylabel("reward")
+        plt.legend(loc=4, prop={'size': 10})
         plt.grid()
 
         plt.subplot(1, 2, 2)
         plt.cla()
+        plt.title('Histogram of sessions')
         plt.hist(rewards_batch)
         plt.vlines(threshold,  [0], [len(rewards_batch)],
                    label="threshold", color='red')
+        plt.xlabel("reward")
+        plt.ylabel("number of sessions")
         plt.legend(loc=2, prop={'size': 10})
         plt.grid()
 
@@ -98,54 +108,56 @@ class ShowProgress:
         mean_rewards = list(zip(*log))[0]
         max_rewards = list(zip(*log))[1]
         policy_rewards = list(zip(*log))[2]
+        plt.title('Rewards history')
         plt.plot(mean_rewards, label='Mean rewards')
         plt.plot(max_rewards, label='Max rewards')
         plt.plot(policy_rewards, label='Policy rewards')
-        plt.legend(loc=2, prop={'size': 10})
+        plt.xlabel("iteration")
+        plt.ylabel("reward")
+        plt.legend(loc=4, prop={'size': 10})
         plt.grid()
-        # fig.canvas.draw()
         fig.savefig("./training/CE/CE_graphics.png")
 
 
 class CrossEntropy:
     """Cross-Entropy Method for Reinforcement Learning."""
 
-    def __init__(self, protected, debris, start_time, end_time, step,
-                 max_fuel_cons=10, fuel_level=10, n_actions=3):
+    def __init__(self, env, step, n_actions=3):
         """
         Agrs:
-            protected (SpaceObject): protected space object in Environment.
-            debris ([SpaceObject, ]): list of other space objects.
-            start_time (float): start time of simulation provided as mjd2000.
-            end_time (float): end time of simulation provided as mjd2000.
+            env (Environment): environment with given parameteres.
             step (float): time step in simulation.
-            max_fuel_cons (float): maximum allowable fuel consumption per action.
-            fuel_level (float): total fuel level.
             n_actions (int): total number of actions.
 
         TODO:
             sigma to args.
             path to save plots.
+            variable step propagation step.
+            generate_session => generate_session_with_env
 
         """
 
-        self.env = Environment(copy(protected), copy(
-            debris), start_time, end_time)
-        self.protected = protected
-        self.debris = debris
-        self.start_time = start_time
-        self.end_time = end_time
-        self.max_time = self.end_time - self.start_time
+        self.env = env
         self.step = step
         self.n_actions = n_actions
-        self.fuel_level = fuel_level
+
+        self.protected = env.protected
+        self.debris = env.debris
+
+        self.start_time = self.env.init_params["start_time"].mjd2000
+        self.end_time = self.env.init_params["end_time"].mjd2000
+        duration = self.end_time - self.start_time
+
         self.action_table = np.zeros((self.n_actions, 4))
-        self.action_table[:, 3] = self.max_time / n_actions
+        self.action_table[:, 3] = duration / (n_actions + 1)
+
         self.action_table[-1, -1] = np.nan
         self.sigma_table = np.ones((self.n_actions, 4))
         self.sigma_table[:, 3] = 0.01
         self.sigma_table[-1, -1] = np.nan
-        self.max_fuel_cons = max_fuel_cons
+
+        self.fuel_level = self.env.init_fuel
+        self.policy_reward = -float("inf")
 
     def train(self, n_iterations=20, n_sessions=100, lr=0.7, percentile=80,
               sigma_decay=0.98, lr_decay=0.98, percentile_growth=1.005,
@@ -174,45 +186,38 @@ class CrossEntropy:
             test
 
         """
-        if print_out | show_progress:
-            agent = Agent(self.action_table)
-            self.total_reward = generate_session(self.protected, self.debris,
-                                                 agent, self.start_time, self.end_time, self.step)
+
+        if (print_out | show_progress):
             if print_out:
-                self.print_start_train()
+                train_start_time = time.time()
+                self.policy_reward = self.get_reward()
+                print_start_train(self.policy_reward, self.action_table)
             if show_progress:
-                # TODO - включать начальный reward?
+                if not print_out:
+                    self.policy_reward = self.get_reward()
                 progress = ShowProgress()
-                #log = [[self.total_reward] * 4]
-                #progress.plot([self.total_reward], log)
-                log = []
+                log = [[self.policy_reward] * 4]
+                progress.plot([self.policy_reward], log)
+
         for i in range(n_iterations):
             rewards_batch = []
             action_tables = []
-            for j in range(n_sessions):
-                if print_out:
-                    print('iter:', i + 1, "session:", j + 1)
+            for j in trange(n_sessions):
                 action_table = random_action_table(
-                    self.action_table, self.sigma_table, self.max_fuel_cons, self.fuel_level)
+                    self.action_table, self.sigma_table, self.fuel_level)
                 agent = Agent(action_table)
+                reward = generate_session(self.protected, self.debris, agent,
+                                          self.start_time, self.end_time, self.step)
                 action_tables.append(action_table)
-                reward = generate_session(self.protected, self.debris,
-                                          agent, self.start_time, self.end_time, self.step)
                 rewards_batch.append(reward)
-                if print_out:
-                    print('action_table:\n', action_table)
-                    print('reward:\n', reward, '\n')
             rewards_batch = np.array(rewards_batch)
-            reward_threshold = np.percentile(
-                np.asarray(rewards_batch), percentile)
+            reward_threshold = np.percentile(rewards_batch, percentile)
             best_rewards_indices = rewards_batch >= reward_threshold
-            best_rewards = np.array(rewards_batch)[best_rewards_indices]
+            best_rewards = rewards_batch[best_rewards_indices]
             best_action_tables = np.array(action_tables)[best_rewards_indices]
             new_action_table = np.mean(best_action_tables, axis=0)
-            self.action_table = (
-                new_action_table * lr
-                + self.action_table * (1 - lr)
-            )
+            self.action_table = new_action_table * lr + \
+                self.action_table * (1 - lr)
             self.sigma_table *= sigma_decay
             lr *= lr_decay
             temp_percentile = percentile * percentile_growth
@@ -220,51 +225,39 @@ class CrossEntropy:
                 percentile = temp_percentile
 
             if print_out | show_progress:
-                self.update_total_reward()
+                self.policy_reward = self.get_reward()
+                mean_reward = np.mean(rewards_batch)
+                max_reward = best_rewards[-1]
                 if print_out:
-                    print('sigma:\n{}\n; lr: {}; perc: {}'.format(
-                        self.sigma_table, lr, percentile))
-                    print('best rewards:', best_rewards)
-                    print('new action table:', new_action_table)
-                    print('action table:', self.action_table)
-                    print('policy reward:', self.get_total_reward(), '\n')
+                    s = (f"iter #{i}:"
+                         + f"\nPolicy Reward: {self.policy_reward}"
+                         + f"\nMean Reward:   {mean_reward}"
+                         + f"\nMax Reward:    {max_reward}"
+                         + f"\nThreshold:     {reward_threshold}")
+                    print(s)
                 if show_progress:
-                    mean_reward = np.mean(rewards_batch)
-                    max_reward = best_rewards[-1]
-                    policy_reward = self.get_total_reward()
-                    threshold = best_rewards[0]
                     log.append([mean_reward, max_reward,
-                                policy_reward, threshold])
+                                self.policy_reward, reward_threshold])
                     progress.plot(rewards_batch, log)
+
         if not (print_out | show_progress):
-            self.update_total_reward()
+            self.policy_reward = self.get_reward()
+
         if print_out:
-            self.print_end_train()
+            train_time = time.time() - train_start_time
+            print_end_train(self.policy_reward, train_time, self.action_table)
         if show_progress:
             progress.save_fig(log)
 
     def set_action_table(self, action_table):
         # TODO - try to set MCTS action_table and train (tune) it.
+        # TODO - use copy
         self.action_table = action_table
 
-    def get_action_table(self):
-        return self.action_table
-
-    def update_total_reward(self):
+    def get_reward(self):
         agent = Agent(self.action_table)
-        self.total_reward = generate_session(self.protected, self.debris,
-                                             agent, self.start_time, self.end_time, self.step)
-
-    def get_total_reward(self):
-        return self.total_reward
-
-    def print_start_train(self):
-        print("Start training.\n\nInitial action table:\n", self.action_table,
-              "\nInitial reward:", self.total_reward, "\n")
-
-    def print_end_train(self):
-        print("Training completed.\nTotal reward:", self.total_reward,
-              "\nAction Table:\n", self.action_table)
+        return generate_session(self.protected, self.debris, agent,
+                                self.start_time, self.end_time, self.step)
 
     def save_action_table(self, path):
         # TODO - save reward here?

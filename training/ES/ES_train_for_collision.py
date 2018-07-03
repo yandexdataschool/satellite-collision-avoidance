@@ -33,7 +33,7 @@ def main(args):
                         default=0.99, required=False)
     parser.add_argument("-sigma", "--sigma_coef", type=float,
                         default=0.5, required=False)
- 
+
     # output parameteres
     parser.add_argument("-progress", "--show_progress", type=str,
                         default="False", required=False)
@@ -72,15 +72,16 @@ def main(args):
     sigma_table = np.full(weights_shape, sigma_coef)
     sigma_table[:, -1] = step
 
-    model = EvolutionStrategies(env, step, weights_shape,
-                                population_size=population_size, sigma=sigma_table, learning_rate=learning_rate, decay=decay)
-    model.train(iterations, print_out=print_out)
-    model.save(save_action_table_path)
+    model = EvolutionStrategies(env, step, n_actions, ACTION_SIZE)
+    model.train(iterations, population_size=population_size, sigma=sigma_table,
+                learning_rate=learning_rate, decay=decay, print_out=print_out)
+    model.save_action_table(save_action_table_path)
 
     if show_progress:
         plotter = ProgressPlotter(output_path, model)
         plotter.plot_all_rewards("training/ES/plots/all_rewards.png")
-        plotter.plot_mean_reward_per_iteration("training/ES/plots/mean_rewards.png")
+        plotter.plot_mean_reward_per_iteration(
+            "training/ES/plots/mean_rewards.png")
 
     return
 

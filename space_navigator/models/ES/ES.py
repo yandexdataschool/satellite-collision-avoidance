@@ -1,11 +1,16 @@
 import numpy as np
 import pykep as pk
+import time
 
 from tqdm import trange
 
 from ...api import Environment, MAX_FUEL_CONSUMPTION
 from ...agent import TableAgent
-from ..train_utils import ProgressPlotter, ProgressLogger, generate_session_with_env, constrain_action
+from ..train_utils import (
+    ProgressPlotter, ProgressLogger,
+    generate_session_with_env, constrain_action,
+    print_start_train, print_end_train
+)
 
 
 np.random.seed(0)
@@ -26,22 +31,19 @@ def random_weights(weights_shape, max_time, rand_type="uniform"):
 class EvolutionStrategies(object):
     """EvolutionStrategies implements evolution strategies optimization method for action table. """
 
-    def __init__(self, env, step, weights_shape, sigma, population_size=10, learning_rate=0.1, decay=1.0):
+    def __init__(self, env, step, n_actions=1, action_size=4):
         self.env = env
         self.step = step
 
-        self.n_actions, self.action_size = weights_shape
+        self.n_actions = n_actions
+        self.action_size = action_size
 
-        self.pop_size = population_size
-        self.sigma = sigma
-        self.learning_rate = learning_rate
-        self.decay = decay
-
-        self.weights_shape = weights_shape
+        self.weights_shape = (n_actions, action_size)
         self.max_time = self.env.init_params[
             'end_time'].mjd2000 - self.env.init_params['start_time'].mjd2000
 
-        self.weights = random_weights(weights_shape, self.max_time, "gauss")
+        self.weights = random_weights(
+            self.weights_shape, self.max_time, "gauss")
 
         self.agent = TableAgent(self.weights)
 
@@ -53,21 +55,22 @@ class EvolutionStrategies(object):
         # TODO: implement logger for training
         self.logger = ProgressLogger()
 
-    def train(self, iterations, print_out=False):
+    def train(self, iterations=10, sigma=0.5, population_size=10, learning_rate=0.1, decay=1.0, print_out=False):
         if print_out:
-            self.print_start_train()
+            train_start_time = time.time()
+            print_start_train(self.get_reward(), self.weights)
 
-        self.rewards_per_iter = np.zeros((iterations, self.pop_size))
+        self.rewards_per_iter = np.zeros((iterations, population_size))
         self.actions = np.zeros(
-            (iterations, self.pop_size, self.n_actions, self.action_size))
+            (iterations, population_size, self.n_actions, self.action_size))
 
         for iteration in range(iterations):
-            rewards = np.zeros(self.pop_size)
-            N = np.zeros((self.pop_size, self.n_actions, self.action_size))
-            for policy in trange(self.pop_size):
+            rewards = np.zeros(population_size)
+            N = np.zeros((population_size, self.n_actions, self.action_size))
+            for policy in trange(population_size):
                 N[policy] = random_weights(
                     self.weights_shape, self.max_time, "gauss")
-                w_try = self.weights + self.sigma * N[policy]
+                w_try = self.weights + sigma * N[policy]
                 for action in range(self.n_actions):
                     min_time = 0.0
                     if action > 0:
@@ -86,21 +89,22 @@ class EvolutionStrategies(object):
 
             # calculate incremental rewards
             A = (rewards - np.mean(rewards)) / np.std(rewards)
-            self.weights += self.learning_rate / \
-                (self.pop_size * self.sigma) * np.dot(N.T, A).T
+            self.weights += learning_rate / \
+                (population_size * sigma) * np.dot(N.T, A).T
             # self.weights = constrain_action()
 
             self.agent = TableAgent(self.weights)
 
-            self.learning_rate *= self.decay
+            learning_rate *= decay
 
             if print_out:
                 print(f"Mean Reward at iter #{iteration}: {np.mean(rewards)}")
 
         if print_out:
-            self.print_end_train()
+            train_time = time.time() - train_start_time
+            print_end_train(self.get_reward(), train_time, self.weights)
 
-    def save(self, path):
+    def save_action_table(self, path):
         """ Save model to file by given path. """
         header = "dVx,dVy,dVz,time to request"
         np.savetxt(path, self.weights, delimiter=',', header=header)
@@ -119,11 +123,3 @@ class EvolutionStrategies(object):
 
     def get_rewards_history(self):
         return self.rewards_per_iter
-
-    def print_start_train(self):
-        print(f"Start training.\nInitial action table: {self.weights}")
-        print(f"Initial reward: {self.get_reward()}\n")
-
-    def print_end_train(self):
-        print(f"Training completed.\nTotal reward: {self.get_reward()}")
-        print(f"Action Table: {self.agent.action_table}\n")

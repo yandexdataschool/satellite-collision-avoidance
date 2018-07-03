@@ -328,7 +328,8 @@ class Simulator:
             self.vis.save_graphics()
 
         if print_out:
-            self.print_end(simulation_start_time)
+            simulation_time = time.time() - simulation_start_time
+            self.print_end(simulation_time)
 
         return self.env.get_reward()
 
@@ -382,11 +383,11 @@ class Simulator:
         for spaceObject in self.env.debris:
             print(spaceObject.satellite)
 
-    def print_end(self, simulation_start_time):
+    def print_end(self, simulation_time):
         reward_components = self.env.get_reward_components()
         s = "Simulation ended in {:.5} sec.\n\nCollision probability: {:.5}\nFuel consumption: {:.5}\
             \nTrajectory deviation coefficient: {:.5}".format(
-            time.time() - simulation_start_time,
+            simulation_time,
             self.env.get_total_collision_probability(), self.env.get_fuel_consumption(),
             self.env.get_trajectory_deviation())
         s += '\n\nReward components:\nColl Prob R: {:.5}     Fuel Cons R: {:.5}     Traj Dev coef R: {:.5}\
