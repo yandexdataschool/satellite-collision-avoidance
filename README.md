@@ -49,17 +49,7 @@ We use **Python 3.6.5** and following libraries:
 > * Torch
 > * tqdm
 
-If you have any problems with Pykep installation, you could try [this](https://esa.github.io/pykep/documentation/index.html) or use the virtual environment in current repo (which already has Pykep package):
-```
-tar -zxvf env.tar.gz
-source env/bin/activate
-pip install -r requirements.txt
-```
-
-P.S. Don't forget to deactivate virtual environment after all:
-```
-deactivate
-```
+If you have problems with Pykep installation, you could use [this link](https://esa.github.io/pykep/documentation/index.html).
 
 ### Step 3
 
