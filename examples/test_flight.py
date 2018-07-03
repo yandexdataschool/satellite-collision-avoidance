@@ -31,7 +31,8 @@ def main(args):
     parser.add_argument("-s", "--step", type=float,
                         default=SIMULATION_STEP, required=False)
     parser.add_argument("-n_v", "--n_steps_vis", type=int,
-                        default=1000, required=False)
+                        default=1000, required=False,
+                        help="the number of propagation steps in one step of visualization")
     parser.add_argument("-p", "--print_out", type=str,
                         default="False", required=False)
 
