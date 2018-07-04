@@ -15,7 +15,9 @@ def adjust_action_table(action_table):
 
     if result_table.size:
         result_table = result_table.reshape((-1, 4))
-        result_table = np.delete(result_table, result_table[:, 3] < 0, axis=0)
+        time_idx = result_table[:, 3] >= 0
+        time_idx[-1] = time_idx[-1] or np.isnan(result_table[-1, -1])
+        result_table = result_table[time_idx]
         if result_table.size:
             result_table[-1, -1] = np.nan
             i = 0
