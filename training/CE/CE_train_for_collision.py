@@ -14,7 +14,7 @@ def main(args):
 
     # train parameters
     parser.add_argument("-n_a", "--n_actions", type=int,
-                        default=3, required=False)
+                        default=2, required=False)
     parser.add_argument("-n_i", "--n_iterations", type=int,
                         default=50, required=False)
     parser.add_argument("-n_s", "--n_sessions", type=int,
@@ -62,8 +62,8 @@ def main(args):
     env = read_environment(env_path)
 
     # CE
-    model = CrossEntropy(env, step, n_actions)
-    model.train(n_iterations, n_sessions, learning_rate, percentile,
+    model = CrossEntropy(env, step, n_actions, learning_rate, percentile)
+    model.train(n_iterations, n_sessions,
                 sigma_decay, learning_rate_decay, percentile_growth,
                 print_out, show_progress)
     model.save_action_table(save_action_table_path)

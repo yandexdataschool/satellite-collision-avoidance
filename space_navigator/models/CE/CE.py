@@ -12,6 +12,7 @@ from ...simulator import Simulator
 from ...agent import TableAgent as Agent
 from ...utils import read_space_objects
 
+from ..base_model import BaseTableModel
 from ..train_utils import (
     generate_session, constrain_action,
     print_start_train, print_end_train
@@ -119,10 +120,11 @@ class ShowProgress:
         fig.savefig("./training/CE/CE_graphics.png")
 
 
-class CrossEntropy:
+class CrossEntropy(BaseTableModel):
     """Cross-Entropy Method for Reinforcement Learning."""
 
-    def __init__(self, env, step, n_actions=3):
+    def __init__(self, env, step, n_actions=2, lr=0.7, percentile=80,
+                 reverse=True, first_maneuver_time="early"):
         """
         Agrs:
             env (Environment): environment with given parameteres.
@@ -136,32 +138,40 @@ class CrossEntropy:
             generate_session => generate_session_with_env
 
         """
+        super().__init__(env, step, reverse)
 
-        self.env = env
-        self.step = step
+        if reverse and n_actions != 2:
+            raise ValueError("if reverse==True, n_actions must be equal to 2.")
+
         self.n_actions = n_actions
+        self.lr = lr
+        self.percentile = percentile
+        self.reverse = reverse
 
         self.protected = env.protected
         self.debris = env.debris
 
-        self.start_time = self.env.init_params["start_time"].mjd2000
-        self.end_time = self.env.init_params["end_time"].mjd2000
+        self.start_time = env.init_params["start_time"].mjd2000
+        self.end_time = env.init_params["end_time"].mjd2000
         duration = self.end_time - self.start_time
 
-        self.action_table = np.zeros((self.n_actions, 4))
+        self.action_table = np.zeros((n_actions, 4))
         self.action_table[:, 3] = duration / (n_actions + 1)
-
         self.action_table[-1, -1] = np.nan
-        self.sigma_table = np.ones((self.n_actions, 4))
+
+        # TODO - add sigma_dV and sigma_t to agrs.
+        self.sigma_table = np.ones((n_actions, 4))
         self.sigma_table[:, 3] = 0.01
         self.sigma_table[-1, -1] = np.nan
 
-        self.fuel_level = self.env.init_fuel
+        self.fuel_level = env.init_fuel
         self.policy_reward = -float("inf")
 
-    def train(self, n_iterations=20, n_sessions=100, lr=0.7, percentile=80,
+    def train(self, n_iterations=20, n_sessions=100,
               sigma_decay=0.98, lr_decay=0.98, percentile_growth=1.005,
-              print_out=False, show_progress=False):
+              print_out=False, show_progress=False,
+              coplanar=True, collinear=True):
+        # TODO - take into account coplanar and collinear
         """Training agent policy (self.action_table).
 
         Args:
@@ -203,26 +213,49 @@ class CrossEntropy:
             rewards_batch = []
             action_tables = []
             for j in trange(n_sessions):
-                action_table = random_action_table(
-                    self.action_table, self.sigma_table, self.fuel_level)
+                if self.reverse:
+                    temp_action_table = random_action_table(
+                        self.action_table[:1, :], self.sigma_table[:1, :], self.fuel_level / 2)
+                    # TODO - better getting of orbital_period
+                    agent = Agent(temp_action_table)
+                    _, temp_env = generate_session(self.protected, self.debris, agent,
+                                                   self.start_time, self.start_time + self.step, self.step, return_env=True)
+                    time_to_req = temp_env.protected.get_orbital_period()
+                    action_table = np.vstack(
+                        (temp_action_table, -temp_action_table))
+                    action_table[0, 3] = time_to_req
+
+                else:
+                    action_table = random_action_table(
+                        self.action_table, self.sigma_table, self.fuel_level)
+
                 agent = Agent(action_table)
                 reward = generate_session(self.protected, self.debris, agent,
                                           self.start_time, self.end_time, self.step)
                 action_tables.append(action_table)
                 rewards_batch.append(reward)
             rewards_batch = np.array(rewards_batch)
-            reward_threshold = np.percentile(rewards_batch, percentile)
+            reward_threshold = np.percentile(rewards_batch, self.percentile)
             best_rewards_indices = rewards_batch >= reward_threshold
             best_rewards = rewards_batch[best_rewards_indices]
             best_action_tables = np.array(action_tables)[best_rewards_indices]
             new_action_table = np.mean(best_action_tables, axis=0)
-            self.action_table = new_action_table * lr + \
-                self.action_table * (1 - lr)
+            self.action_table = new_action_table * self.lr + \
+                self.action_table * (1 - self.lr)
+            if self.reverse:
+                # TODO - better getting of orbital_period
+                # TODO - get reward в отдельную
+                agent = Agent(self.action_table[:1, :])
+                _, temp_env = generate_session(self.protected, self.debris, agent,
+                                               self.start_time, self.start_time + self.step, self.step, return_env=True)
+                time_to_req = temp_env.protected.get_orbital_period()
+                self.action_table[0, 3] = time_to_req
+
             self.sigma_table *= sigma_decay
-            lr *= lr_decay
-            temp_percentile = percentile * percentile_growth
+            self.lr *= lr_decay
+            temp_percentile = self.percentile * percentile_growth
             if temp_percentile <= 100:
-                percentile = temp_percentile
+                self.percentile = temp_percentile
 
             if print_out | show_progress:
                 self.policy_reward = self.get_reward()
@@ -251,7 +284,10 @@ class CrossEntropy:
 
     def set_action_table(self, action_table):
         # TODO - try to set MCTS action_table and train (tune) it.
-        # TODO - use copy
+        # TODO - use copy        if reverse == True and n_actions != 2:
+        # TODO - manage with reverse
+        if self.reverse:
+            raise ValueError("reverse==True")
         self.action_table = action_table
 
     def get_reward(self):
