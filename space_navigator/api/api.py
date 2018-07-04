@@ -216,7 +216,7 @@ class Environment:
             self.total_collision_probability_arr
         )
 
-    def update_trajectory_deviation(self, significance=(0.01, 1, 1, 1, 1, 0), zero_update=False, round_deviation=6):
+    def update_trajectory_deviation(self, significance=(0.001, 1, 100, 100, 0.1, 0), zero_update=False, round_deviation=6):
         """Update trajectory deviation from init the trajectory.
 
         Note:
