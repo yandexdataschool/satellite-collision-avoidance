@@ -37,9 +37,9 @@ def lower_estimate_of_time_to_conjunction(prot_rV, debr_rV, crit_distance):
     It is assumed that the objects move directly to each other.
 
     Args:
-        prot_rV (np.array with shape(1, 6)): vector of coordinates (meters) 
+        prot_rV (np.array with shape(1, 6)): vector of coordinates (meters)
             and velocities (m/s) for protected object. Vector format: (x,y,z,Vx,Vy,Vz).
-        debr_rV (np.array with shape(n_denris, 6)): vectors of coordinates (meters) 
+        debr_rV (np.array with shape(n_denris, 6)): vectors of coordinates (meters)
             and velocities (m/s) for each debris. Vectors format: (x,y,z,Vx,Vy,Vz).
         crit_distance (float): dangerous distance threshold (meters).
 
@@ -61,3 +61,11 @@ def lower_estimate_of_time_to_conjunction(prot_rV, debr_rV, crit_distance):
         sec_to_collision = (min_dist - crit_distance) / (V1 + V2)
         time_to_conjunction = sec_to_collision / SEC_IN_DAY
     return dangerous_debris, distances[dangerous_debris], time_to_conjunction
+
+
+def reward_threshold(x, thr, mult=2, y_t=1, y_t_mult=10):
+    if x <= thr:
+        y = - x * y_t / thr
+    else:
+        y = (y_t_mult - y_t) * (1 - x / thr) / (mult - 1) - y_t
+    return y
