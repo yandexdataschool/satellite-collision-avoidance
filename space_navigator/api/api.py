@@ -26,7 +26,7 @@ class Environment:
 
     def __init__(self, protected, debris, start_time, end_time,
                  coll_prob_thr=1e-4, fuel_cons_thr=10,
-                 traj_dev_thr=(100, 0.01, 0.01, 0.01, 1, None)):
+                 traj_dev_thr=(100, 0.01, 0.01, 0.01, 0.01, None)):
         """
         Args:
             protected (SpaceObject): protected space object in Environment.
@@ -366,6 +366,12 @@ class Environment:
 
     def get_collision_data(self):
         return self.collision_data
+
+    def get_start_time(self):
+        return self.init_params["start_time"].mjd2000
+
+    def get_end_time(self):
+        return self.init_params["end_time"].mjd2000
 
     def reset(self):
         """ Return Environment to initial state. """

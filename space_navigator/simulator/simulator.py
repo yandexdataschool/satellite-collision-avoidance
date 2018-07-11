@@ -232,7 +232,6 @@ class Simulator:
                 By default is equal to 0.000001 (0.0864 sc.).
 
         """
-
         self.agent = agent
         self.env = environment
         self.start_time = self.env.init_params["start_time"]
@@ -434,9 +433,9 @@ Trajectory deviation:
     M: {traj_dev[5]:.5}.
 
 Reward components:
-    Collision probability: {coll_prob_r:0.5};
-    Fuel consumption: {fuel_r:0.5};
-    Trajectory deviation:
+    R Collision probability: {coll_prob_r:0.5};
+    R Fuel consumption: {fuel_r:0.5};
+    R Trajectory deviation:
         a: {traj_dev_r[0]:.5};
         e: {traj_dev_r[1]:.5};
         i: {traj_dev_r[2]:.5};
