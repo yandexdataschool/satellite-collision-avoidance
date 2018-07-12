@@ -12,27 +12,24 @@ from ..agent import TableAgent
 from ..utils import read_space_objects
 
 
-# def rrr(func):
-#     print("ffff")
-
-#     @wraps(func)
-#     def wrapper(self, *args, **kwargs):
-#         print("111111111111/n/n/n11/n/n/n")
-#         func(*args, **kwargs)
-#         print("33333333333")
-
-#     print("eeeeee")
-#     return wrapper
-
-
 class BaseTableModel:
+    """Base class for table models."""
 
     def __init__(self, env, step, reverse=True,
                  first_maneuver_time="early"):
         """
-        first_maneuver_time:
-            early - либо за максимальный полу-виток, либо сразу (если столкновения раньше)
-            auto - сам выбирает (для baseline перебирает все полувитки)
+        Agrs:
+            env (Environment): environment with given parameteres.
+            step (float): time step in simulation.
+            reverse (bool): if True, there are selected exactly 2 maneuvers 
+                while the second of them is reversed to the first.
+            first_maneuver_time (str): time to the first maneuver. Could be:
+                "early": max time to the first maneuver, namely
+                    max(0, 0.5, 1.5, 2.5 ... orbital_periods before collision);
+                "auto".
+
+        TODO:
+            user's maneuver time?
         """
         self.env = env
         self.step = step
@@ -52,42 +49,36 @@ class BaseTableModel:
         self.protected = env.protected
         self.debris = env.debris
 
-        # ИЛИ то что ниже ИЛИ декоратор - печатать старт и конец
-        # print starn
-        # print end
-        # @rrr
     def train(self, n_iterations=5, print_out=False, *args, **kwargs):
-        # ""
-        # ,
-        #           coplanar=True, collinear=True, reverse=True,
-        #           maneuver_time="early",
-        #           print_out=False):
-        # time to maneuver - max, time, auto
-        # компланарность/коллинеарность
-        # пороги
-        """
+        """Training agent policy (self.action_table).
 
-                """
+        Args:
+            n_iterations (int): number of iterations.
+            print_out (bool): print information during the training.
+            *args and **kwargs: iteration arguments, depend on method (inheritor class).
+
+        TODO:
+            add early stopping?
+
+        """
         if print_out:
             train_start_time = time.time()
             self.print_start_train()
+
         for i in range(n_iterations):
             if print_out:
                 print(f"\niteration: {i+1}/{n_iterations}")
             self.iteration(print_out, *args, **kwargs)
-            # Добавить ранюю остановку? в методах RL не двигаться если нет
-            # улучшений?
+
         if print_out:
             train_time = time.time() - train_start_time
             self.print_end_train(train_time)
 
-    def iteration(self, print_out, *args, **kwargs):  # , *args, **kwargs):
+    def iteration(self, print_out, *args, **kwargs):
         pass
 
     def get_reward(self, action_table):
         agent = TableAgent(action_table)
-        # return generate_session(self.protected, self.debris, agent,
-        #                         self.start_time, self.end_time, self.step)
         return generate_session_with_env(agent, self.env, self.step)
 
     def save_action_table(self, path):
