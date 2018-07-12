@@ -26,9 +26,17 @@ def generate_session_with_env(agent, env, step):
     env.reset()
     return reward
 
+
+def get_orbital_period_in_the_end_of_session(agent, env, step):
+    # TODO - better getting of orbital_period
+    simulator = Simulator(agent, env, step)
+    simulator.run(log=False)
+    period = env.protected.get_orbital_period()
+    env.reset()
+    return period
+
+
 # TODO - delete generate_session
-
-
 def generate_session(protected, debris, agent, start_time, end_time, step, return_env=False):
     """Simulation.
 

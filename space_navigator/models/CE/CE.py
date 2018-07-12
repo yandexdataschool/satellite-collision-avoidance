@@ -14,8 +14,8 @@ from ...utils import read_space_objects
 
 from ..base_model import BaseTableModel
 from ..train_utils import (
-    generate_session, constrain_action,
-    print_start_train, print_end_train
+    get_orbital_period_in_the_end_of_session, constrain_action,
+
 )
 
 
@@ -198,14 +198,13 @@ class CrossEntropy(BaseTableModel):
         """Training agent policy (self.action_table).
 
         Args:
-            n_iterations (int): number of iterations.
             n_sessions (int): number of sessions per iteration.
             n_best_actions (int): number of best actions provided by iteration for update policy.
             lr (float): learning rate for stability.
             sigma_decay (float): coefficient of changing sigma per iteration.
             lr_decay (float): coefficient of changing learning rate per iteration.
             percentile_growth (float): coefficient of changing percentile.
-            print_out (bool): print information during the training.
+            print_out (bool): print iteration information.
             show_progress (bool): show training chart.
             dV_angle (str): "coplanar", "collinear" or "auto".
 
@@ -221,6 +220,9 @@ class CrossEntropy(BaseTableModel):
             обратный маневр - пока ровно через виток,
                 но потом можно перебирать разное время
                 или ближайший виток после последней опасности/самый поздний до конца сессии  
+            # Добавить ранюю остановку? в методах RL не двигаться если нет
+            # улучшений?
+
 
         """
         # progress
@@ -242,15 +244,13 @@ class CrossEntropy(BaseTableModel):
                     self.fuel_level / 2, dV_angle
                 )
                 # TODO - better getting of orbital_period
-                # TODO - first action = 0, but time2teq!=0 and trainable
-                # sigma = 0
                 agent = Agent(temp_action_table)
-                _, temp_env = generate_session(self.protected, self.debris, agent,
-                                               self.start_time, self.start_time + self.step, self.step, return_env=True)
-                time_to_req = temp_env.protected.get_orbital_period()
+                time_to_reverse = get_orbital_period_in_the_end_of_session(
+                    agent, self.env, self.step)
                 action_table = np.vstack(
-                    (temp_action_table, -temp_action_table))
-                action_table[0, 3] = time_to_req
+                    (temp_action_table, -temp_action_table[-1]))
+                action_table[1, 3] = time_to_reverse
+                assert action_table.shape == (3, 4), f"action_table.shape={action_table.shape}!=(3,4)"
 
             else:
                 action_table = random_action_table(
@@ -269,13 +269,14 @@ class CrossEntropy(BaseTableModel):
         best_rewards = rewards_batch[best_rewards_indices]
         best_action_tables = np.array(action_tables)[best_rewards_indices]
 
+        new_action_table = np.mean(best_action_tables, axis=0)
+        self.action_table = new_action_table * self.lr + \
+            self.action_table * (1 - self.lr)
         if self.reverse:
-            new_action_table = None
-            pass
-        else:
-            new_action_table = np.mean(best_action_tables, axis=0)
-            self.action_table = new_action_table * self.lr + \
-                self.action_table * (1 - self.lr)
+            agent = Agent(self.action_table[:2])
+            time_to_reverse = get_orbital_period_in_the_end_of_session(
+                agent, self.env, self.step)
+            self.action_table[1, 3] = time_to_reverse
 
         self.sigma_table *= sigma_decay
         self.lr *= lr_decay
@@ -288,8 +289,7 @@ class CrossEntropy(BaseTableModel):
             mean_reward = np.mean(rewards_batch)
             max_reward = best_rewards[-1]
             if print_out:
-                s = (  # f"iter #{i}:"
-                    f"Policy Reward: {self.policy_reward}"
+                s = (f"Policy Reward: {self.policy_reward}"
                      + f"\nMean Reward:   {mean_reward}"
                      + f"\nMax Reward:    {max_reward}"
                      + f"\nThreshold:     {reward_threshold}")
