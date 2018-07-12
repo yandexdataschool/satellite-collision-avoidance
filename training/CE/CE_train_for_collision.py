@@ -86,16 +86,7 @@ def main(args):
         "dV_angle": dV_angle,
     }
     model.train(n_iterations, print_out, **iteration_kwargs)
-    # , n_sessions,
-    #             sigma_decay, learning_rate_decay, percentile_growth,
-    #             print_out, show_progress)
     model.save_action_table(save_action_table_path)
-
-
-# self, n_sessions = 30,
-#                   sigma_decay = 0.98, lr_decay = 0.98, percentile_growth = 1.005,
-#                   print_out = False, show_progress = False,
-#                   dV_angle = "auto"):
 
     return
 
