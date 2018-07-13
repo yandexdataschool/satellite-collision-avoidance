@@ -415,15 +415,15 @@ class Simulator:
         print(f"Simulation ended in {simulation_time:.5} sec.")
         n = len(collision_data)
         if n == 0:
-            print("No collisions.")
+            print("\nNo collisions.")
         else:
             print(f"\n{n} collisions:")
             for i, c in enumerate(collision_data):
                 print(f"    #{i+1}: at {c['epoch']} with {c['debris name']};")
                 print(f"    distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
         print(f"""
-Collision probability: {self.env.get_total_collision_probability():.5}
-Fuel consumption: {self.env.get_fuel_consumption():.5}
+Collision probability: {self.env.get_total_collision_probability():.5};
+Fuel consumption: {self.env.get_fuel_consumption():.5};
 Trajectory deviation:
     a: {traj_dev[0]:.5};
     e: {traj_dev[1]:.5};
