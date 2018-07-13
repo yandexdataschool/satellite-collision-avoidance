@@ -72,7 +72,7 @@ class Environment:
             (self.n_debris, 13), np.nan)
         self.dangerous_debris_in_current_conjunction = np.array([])
 
-        self.collision_probability_estimator = CollProbEstimator()
+        self.collision_probability_estimator = CollProbEstimator.ChenBai_approach
         self.collision_probability_prior_to_current_conjunction = np.zeros(
             self.n_debris)
         self.total_collision_probability_arr = np.zeros(self.n_debris)
@@ -195,7 +195,7 @@ class Environment:
         if end_cojunction_debris.size:
             coll_prob = []
             for d in end_cojunction_debris:
-                p = self.collision_probability_estimator.ChenBai_approach(
+                p = self.collision_probability_estimator(
                     self.state_for_min_distances_in_current_conjunction[
                         d, :6],
                     self.state_for_min_distances_in_current_conjunction[
@@ -225,7 +225,7 @@ class Environment:
         """ Update total collision probability."""
         if self.dangerous_debris_in_current_conjunction.size:
             collision_probability_in_current_conjunction = np.array([
-                self.collision_probability_estimator.ChenBai_approach(
+                self.collision_probability_estimator(
                     self.state_for_min_distances_in_current_conjunction[
                         d, :6],
                     self.state_for_min_distances_in_current_conjunction[
