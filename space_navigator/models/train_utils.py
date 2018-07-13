@@ -6,8 +6,7 @@ from copy import copy
 
 import matplotlib.pyplot as plt
 
-from ..api import Environment
-from ..api import fuel_consumption
+from ..api import Environment, fuel_consumption
 from ..simulator import Simulator
 from ..agent import TableAgent
 
@@ -27,16 +26,36 @@ def generate_session_with_env(agent, env, step):
     return reward
 
 
-def get_orbital_period_in_the_end_of_session(agent, env, step):
-    # TODO - better getting of orbital_period
+def orbital_period_after_actions(action_table, env, step):
+    # TODO - better getting of orbital_period (after last action)
+    agent = TableAgent(action_table)
     simulator = Simulator(agent, env, step)
-    simulator.run(log=False)
+    simulator.end_time = pk.epoch(
+        simulator.start_time.mjd2000 + np.sum(action_table[:, 3]) + step,
+        "mjd2000"
+    )
     period = env.protected.get_orbital_period()
     env.reset()
     return period
 
 
+def position_after_actions(action_table, env, step, epoch):
+    # epoch (pk.epoch): at what time to calculate position.
+    # TODO - то же сделать для поика орб периода
+    agent = TableAgent(action_table)
+    simulator = Simulator(agent, env, step)
+    simulator.end_time = pk.epoch(
+        simulator.start_time.mjd2000 + np.sum(action_table[:, 3]) + step,
+        "mjd2000"
+    )
+    simulator.run(log=False)
+    pos, vel = env.protected.position(epoch)
+    env.reset()
+    return pos, vel
+
 # TODO - delete generate_session
+
+
 def generate_session(protected, debris, agent, start_time, end_time, step, return_env=False):
     """Simulation.
 
@@ -85,7 +104,7 @@ def constrain_action(action, max_fuel_cons, min_time=None, max_time=None):
     if min_time is not None and max_time is not None:
         action[3] = max(min_time, min(max_time, action[3]))
     else:
-        action[3] = max(0.001, action[3])
+        action[3] = max(0., action[3])
     return action
 
 

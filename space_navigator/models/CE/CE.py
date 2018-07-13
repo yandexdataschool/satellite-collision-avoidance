@@ -7,53 +7,16 @@ from tqdm import trange
 import time
 import matplotlib.pyplot as plt
 
-from ...api import Environment, MAX_FUEL_CONSUMPTION
+from ...api import Environment, MAX_FUEL_CONSUMPTION, fuel_consumption
 from ...simulator import Simulator
 from ...agent import TableAgent as Agent
 from ...utils import read_space_objects
 
 from ..base_model import BaseTableModel
 from ..train_utils import (
-    get_orbital_period_in_the_end_of_session, constrain_action,
-
+    orbital_period_after_actions, position_after_actions,
+    constrain_action,
 )
-
-
-def random_action_table(mu_table, sigma_table, fuel_level, dV_angle):
-    """Returns random action table using normal distributions under the given parameters.
-
-    Args:
-        mu_table (np.array): action table as table of expectation.
-        sigma_table (np.array): table of sigmas.
-        fuel_level (float): total fuel level.
-
-    Returns:
-        action_table (np.array): random table of actions.
-
-    """
-    n_maneuvers = mu_table.shape[0]
-    action_table = np.zeros_like(mu_table)
-    max_fuel_cons = MAX_FUEL_CONSUMPTION
-    for i in range(n_maneuvers - 1):
-        for j in range(4):
-            if dV_angle == "auto":
-                action_table[i, j] = np.random.normal(
-                    mu_table[i, j], sigma_table[i, j])
-            if dV_angle == "collinear":
-                # how to do collinear for n_maneuvers > 0
-                pass
-            if dV_angle == "coplanar":
-
-                pass
-        action_table[i] = constrain_action(action_table[i], max_fuel_cons)
-        fuel_level -= np.sum(action_table[i, :3])
-        max_fuel_cons = min(max_fuel_cons, fuel_level)
-    for j in range(3):
-        action_table[-1, j] = np.random.normal(
-            mu_table[-1, j], sigma_table[-1, j])
-    action_table[-1] = constrain_action(action_table[-1], max_fuel_cons)
-    action_table[-1, -1] = np.nan
-    return action_table
 
 
 class ShowProgress:
@@ -179,7 +142,7 @@ class CrossEntropy(BaseTableModel):
             self.action_table[0] = np.array(
                 [0, 0, 0, self.time_to_first_maneuver])
             self.action_table[1:-1, 3] = (
-                duration - self.time_to_first_maneuver) / (n_actions)
+                duration - self.time_to_first_maneuver) / n_actions
             self.sigma_table[0, 3] = 0
 
         self.lr = lr
@@ -195,6 +158,8 @@ class CrossEntropy(BaseTableModel):
                   show_progress=False,
                   dV_angle="auto"):
         # TODO - take into account coplanar and collinear
+        # TODO - не двигаться если reward хуже (опционально)
+        # dV_angle="collinear"
         """Training agent policy (self.action_table).
 
         Args:
@@ -219,7 +184,7 @@ class CrossEntropy(BaseTableModel):
             test
             обратный маневр - пока ровно через виток,
                 но потом можно перебирать разное время
-                или ближайший виток после последней опасности/самый поздний до конца сессии  
+                или ближайший виток после последней опасности/самый поздний до конца сессии
             # Добавить ранюю остановку? в методах RL не двигаться если нет
             # улучшений?
 
@@ -238,28 +203,8 @@ class CrossEntropy(BaseTableModel):
         rewards_batch = []
         action_tables = []
         for _ in trange(n_sessions):
-            if self.reverse:
-                temp_action_table = random_action_table(
-                    self.action_table[:2, :], self.sigma_table[:2, :],
-                    self.fuel_level / 2, dV_angle
-                )
-                # TODO - better getting of orbital_period
-                agent = Agent(temp_action_table)
-                time_to_reverse = get_orbital_period_in_the_end_of_session(
-                    agent, self.env, self.step)
-                action_table = np.vstack(
-                    (temp_action_table, -temp_action_table[-1]))
-                action_table[1, 3] = time_to_reverse
-                assert action_table.shape == (3, 4), f"action_table.shape={action_table.shape}!=(3,4)"
-
-            else:
-                action_table = random_action_table(
-                    self.action_table, self.sigma_table,
-                    self.fuel_level, dV_angle
-                )
-
+            action_table = self._get_random_action_table(dV_angle)
             reward = self.get_reward(action_table)
-
             action_tables.append(action_table)
             rewards_batch.append(reward)
 
@@ -273,9 +218,8 @@ class CrossEntropy(BaseTableModel):
         self.action_table = new_action_table * self.lr + \
             self.action_table * (1 - self.lr)
         if self.reverse:
-            agent = Agent(self.action_table[:2])
-            time_to_reverse = get_orbital_period_in_the_end_of_session(
-                agent, self.env, self.step)
+            time_to_reverse = orbital_period_after_actions(
+                self.action_table[:2], self.env, self.step)
             self.action_table[1, 3] = time_to_reverse
 
         self.sigma_table *= sigma_decay
@@ -289,12 +233,12 @@ class CrossEntropy(BaseTableModel):
             mean_reward = np.mean(rewards_batch)
             max_reward = best_rewards[-1]
             if print_out:
-                s = (f"Policy Reward: {self.policy_reward}"
-                     + f"\nMean Reward:   {mean_reward}"
-                     + f"\nMax Reward:    {max_reward}"
-                     + f"\nThreshold:     {reward_threshold}")
-                print(s)
-                print(self.action_table)
+                print(f"Policy Reward: {self.policy_reward}"
+                      + f"\nMean Reward:   {mean_reward}"
+                      + f"\nMax Reward:    {max_reward}"
+                      + f"\nThreshold:     {reward_threshold}"
+                      # + f"\nAction Table:\n{self.action_table}"
+                      )
             if show_progress:
                 log_rewards.append([mean_reward, max_reward,
                                     self.policy_reward, reward_threshold])
@@ -306,6 +250,65 @@ class CrossEntropy(BaseTableModel):
         # TODO - try to set MCTS action_table and train (tune) it.
         # TODO - use copy        if reverse == True and n_maneuvers != 2:
         # TODO - manage with reverse
+        # TODO - more Exceptions
+        if np.count_nonzero(action_table[0, :3]) != 0:
+            raise ValueError("first action must be empty")
         if self.reverse:
-            raise ValueError("reverse==True")
+            if action_table.shape[0] != 3:
+                raise ValueError("if reverse -  it has to be only 3 actions")
         self.action_table = action_table
+
+    def _get_random_action_table(self, dV_angle):
+        """Returns random action table using normal distributions under the given parameters.
+
+        Args:
+            mu_table (np.array): action table as table of expectation.
+            sigma_table (np.array): table of sigmas.
+            fuel_level (float): total fuel level.
+
+        Returns:
+            action_table (np.array): random table of actions.
+
+        """
+        rnd_action_table = np.zeros_like(self.action_table)
+        max_fuel = MAX_FUEL_CONSUMPTION
+        fuel_level = self.fuel_level / (1 + (self.reverse == True))
+        for i in range(self.action_table.shape[0] - (self.reverse == True)):
+            rnd_action_table[i] = np.random.normal(
+                self.action_table[i], self.sigma_table[i])
+            if dV_angle in ["coplanar", "collinear"] and i != 0:
+                dV = rnd_action_table[i, :3]
+                action_epoch = pk.epoch(
+                    self.env.init_params[
+                        "start_time"].mjd2000 + np.sum(rnd_action_table[:i, 3]),
+                    "mjd2000",
+                )
+                pos, V = position_after_actions(
+                    rnd_action_table[:i], self.env, self.step, action_epoch)
+                pos, V = np.array(pos), np.array(V)
+                if dV_angle == "complanar":
+                    # somehow
+                    pass
+                if dV_angle == "collinear":
+                    norm_V = np.linalg.norm(V)
+                    norm_dV = np.linalg.norm(dV)
+                    cos_a = np.dot(V, dV) / (norm_V * norm_dV)
+                    dV = V * np.sign(cos_a) * norm_dV / norm_V
+                rnd_action_table[i, :3] = dV
+            elif dV_angle != "auto" and i != 0:
+                raise ValueError(f"unknown dV_angle type{dV_angle}")
+
+            rnd_action_table[i] = constrain_action(
+                rnd_action_table[i], max_fuel)
+
+            fuel_level -= fuel_consumption(rnd_action_table[i, :3])
+            max_fuel = min(max_fuel, fuel_level)
+
+        if self.reverse:
+            time_to_reverse = orbital_period_after_actions(
+                rnd_action_table[:-1], self.env, self.step)
+            rnd_action_table[-2, -1] = time_to_reverse
+            rnd_action_table[-1, :3] = -rnd_action_table[-2, :3]
+
+        rnd_action_table[-1, -1] = np.nan
+        return rnd_action_table
