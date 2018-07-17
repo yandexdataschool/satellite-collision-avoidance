@@ -22,14 +22,14 @@ class BaseTableModel:
             env (Environment): environment with given parameteres.
             step (float): time step in simulation.
             reverse (bool): if True, there are selected exactly 2 maneuvers 
-                while the second of them is reversed to the first.
+                while the second of them is reversed to the first one.
             first_maneuver_time (str): time to the first maneuver. Could be:
                 "early": max time to the first maneuver, namely
                     max(0, 0.5, 1.5, 2.5 ... orbital_periods before collision);
                 "auto".
 
         TODO:
-            user's maneuver time?
+            add user's maneuver time?
         """
         self.env = env
         self.step = step
@@ -58,8 +58,9 @@ class BaseTableModel:
             *args and **kwargs: iteration arguments, depend on method (inheritor class).
 
         TODO:
-            add early stopping?
-
+            add early stopping
+            add log
+            decorate by print_out and log?
         """
         if print_out:
             train_start_time = time.time()

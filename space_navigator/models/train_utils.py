@@ -27,7 +27,7 @@ def generate_session_with_env(agent, env, step):
 
 
 def orbital_period_after_actions(action_table, env, step):
-    # TODO - better getting of orbital_period (after last action)
+    # TODO - add this stuff to the baseline model
     agent = TableAgent(action_table)
     simulator = Simulator(agent, env, step)
     simulator.end_time = pk.epoch(
@@ -41,7 +41,7 @@ def orbital_period_after_actions(action_table, env, step):
 
 def position_after_actions(action_table, env, step, epoch):
     # epoch (pk.epoch): at what time to calculate position.
-    # TODO - то же сделать для поика орб периода
+    # TODO - add this stuff to the baseline model
     agent = TableAgent(action_table)
     simulator = Simulator(agent, env, step)
     simulator.end_time = pk.epoch(
@@ -190,6 +190,8 @@ def time_to_early_first_maneuver(env, step):
 def projection(plane, vector):
     A = plane
     x = vector
+    # projection vector x onto plane A
+    # = A * (A^T * A)^(-1) * A^T * x
     proj = np.linalg.inv(A.T.dot(A))
     proj = A.dot(proj).dot(A.T).dot(x)
     return proj

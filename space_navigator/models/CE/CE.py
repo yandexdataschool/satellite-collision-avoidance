@@ -32,17 +32,8 @@ class ShowProgress:
 
         Args:
             rewards_batch (list of floats): batch of rewards.
-            log_rewards ([[mean_reward, max_reward, policy_reward, threshold], ]): training log_rewards.
-
-        TODO:
-            text "mean reward = %.3f, threshold=%.3f" % (log_rewards[-1][0], log_rewards[-1][-1]) with plt.text?
-            reward_range=[-1500, 10]) ?
-            labels
-            threshold to subplot 0
-            some report on the plot (iteration, n_iterations...)
-            reward_range (list): [min_reward, max_reward] for chart?
-            plt.hist(rewards_batch, range=reward_range)?
-            percentile?
+            log_rewards ([[mean_reward, max_reward, policy_reward, threshold], ]):
+                training log_rewards.
 
         """
         mean_rewards = list(zip(*log_rewards))[0]
@@ -100,13 +91,20 @@ class CrossEntropy(BaseTableModel):
         Agrs:
             env (Environment): environment with given parameteres.
             step (float): time step in simulation.
+            reverse (bool): if True, there are selected exactly 2 maneuvers
+                while the second of them is reversed to the first one.
+            first_maneuver_time (str): time to the first maneuver. Could be:
+                "early": max time to the first maneuver, namely
+                    max(0, 0.5, 1.5, 2.5 ... orbital_periods before collision);
+                "auto".
             n_maneuvers (int): total number of maneuvers.
+            lr (float): learning rate for stability.
+            percentile_growth (float): coefficient of changing percentile.
+            sigma_dV, sigma_t (float): sigma of dV and sigma of time_to_req.
 
         TODO:
-            sigma to args.
             path to save plots.
             variable step propagation step.
-            generate_session => generate_session_with_env
 
         """
         super().__init__(env, step, reverse, first_maneuver_time)
@@ -158,23 +156,19 @@ class CrossEntropy(BaseTableModel):
                   sigma_decay=0.98, lr_decay=0.98, percentile_growth=1.005,
                   show_progress=False,
                   dV_angle="auto"):
-        # TODO - take into account coplanar and collinear
-        # TODO - не двигаться если reward хуже (опционально)
-        # dV_angle="collinear"
-        """Training agent policy (self.action_table).
+        """Training iteration.
 
         Args:
+            print_out (bool): print iteration information.
             n_sessions (int): number of sessions per iteration.
-            n_best_actions (int): number of best actions provided by iteration for update policy.
-            lr (float): learning rate for stability.
             sigma_decay (float): coefficient of changing sigma per iteration.
             lr_decay (float): coefficient of changing learning rate per iteration.
             percentile_growth (float): coefficient of changing percentile.
-            print_out (bool): print iteration information.
             show_progress (bool): show training chart.
             dV_angle (str): "coplanar", "collinear" or "auto".
 
         TODO:
+            experiment - don't do step if worser
             stop if reward change < epsilon
             careful update
             good print_out or remove it
@@ -183,12 +177,6 @@ class CrossEntropy(BaseTableModel):
             parallel
             log
             test
-            обратный маневр - пока ровно через виток,
-                но потом можно перебирать разное время
-                или ближайший виток после последней опасности/самый поздний до конца сессии
-            # Добавить ранюю остановку? в методах RL не двигаться если нет
-            # улучшений?
-
 
         """
         # progress
@@ -229,6 +217,7 @@ class CrossEntropy(BaseTableModel):
         if temp_percentile <= 100:
             self.percentile = temp_percentile
 
+        # show progress / print
         if print_out | show_progress:
             self.policy_reward = self.get_reward(self.action_table)
             mean_reward = np.mean(rewards_batch)
@@ -244,31 +233,28 @@ class CrossEntropy(BaseTableModel):
                 self.log_rewards.append([mean_reward, max_reward,
                                          self.policy_reward, reward_threshold])
                 self.progress.plot(rewards_batch, self.log_rewards)
-                # TODO - remove?
                 # self.progress.save_fig(log_rewards)
 
     def set_action_table(self, action_table):
         # TODO - try to set MCTS action_table and train (tune) it.
-        # TODO - use copy        if reverse == True and n_maneuvers != 2:
         # TODO - manage with reverse
         # TODO - more Exceptions
+        # Note - use copy
         if np.count_nonzero(action_table[0, :3]) != 0:
             raise ValueError("first action must be empty")
         if self.reverse:
             if action_table.shape[0] != 3:
                 raise ValueError("if reverse -  it has to be only 3 actions")
-        self.action_table = action_table
+        self.action_table = np.copy(action_table)
 
     def _get_random_action_table(self, dV_angle):
         """Returns random action table using normal distributions under the given parameters.
 
         Args:
-            mu_table (np.array): action table as table of expectation.
-            sigma_table (np.array): table of sigmas.
-            fuel_level (float): total fuel level.
+            dV_angle (str): "coplanar", "collinear" or "auto".
 
         Returns:
-            action_table (np.array): random table of actions.
+            rnd_action_table (np.array): random table of actions.
 
         """
         rnd_action_table = np.zeros_like(self.action_table)
@@ -288,11 +274,8 @@ class CrossEntropy(BaseTableModel):
                     rnd_action_table[:i], self.env, self.step, action_epoch)
                 pos, V = np.array(pos), np.array(V)
                 if dV_angle == "complanar":
-                    # у нас уже есть какой-то семплированный из распраделения маневр
-                    # и хочется только спроецировать его на плоскость
                     A = np.vstack((pos, V)).T
                     dV = projection(A, dV)
-
                 if dV_angle == "collinear":
                     norm_V = np.linalg.norm(V)
                     norm_dV = np.linalg.norm(dV)
