@@ -15,7 +15,7 @@ from ...utils import read_space_objects
 from ..base_model import BaseTableModel
 from ..train_utils import (
     orbital_period_after_actions, position_after_actions,
-    constrain_action,
+    constrain_action, projection,
 )
 
 
@@ -152,6 +152,7 @@ class CrossEntropy(BaseTableModel):
         self.policy_reward = -float("inf")
 
         self.progress = None
+        self.log_rewards = None
 
     def iteration(self, print_out=False, n_sessions=30,
                   sigma_decay=0.98, lr_decay=0.98, percentile_growth=1.005,
@@ -194,10 +195,10 @@ class CrossEntropy(BaseTableModel):
         if show_progress:
             if not self.progress:
                 self.progress = ShowProgress()
-            if not print_out:
-                self.policy_reward = self.get_reward(self.action_table)
-            log_rewards = [[self.policy_reward] * 4]
-            self.progress.plot([self.policy_reward], log_rewards)
+                if not print_out:
+                    self.policy_reward = self.get_reward(self.action_table)
+                self.log_rewards = [[self.policy_reward] * 4]
+                self.progress.plot([self.policy_reward], self.log_rewards)
 
         # iteration
         rewards_batch = []
@@ -240,11 +241,11 @@ class CrossEntropy(BaseTableModel):
                       # + f"\nAction Table:\n{self.action_table}"
                       )
             if show_progress:
-                log_rewards.append([mean_reward, max_reward,
-                                    self.policy_reward, reward_threshold])
-                self.progress.plot(rewards_batch, log_rewards)
+                self.log_rewards.append([mean_reward, max_reward,
+                                         self.policy_reward, reward_threshold])
+                self.progress.plot(rewards_batch, self.log_rewards)
                 # TODO - remove?
-                self.progress.save_fig(log_rewards)
+                # self.progress.save_fig(log_rewards)
 
     def set_action_table(self, action_table):
         # TODO - try to set MCTS action_table and train (tune) it.
@@ -276,7 +277,7 @@ class CrossEntropy(BaseTableModel):
         for i in range(self.action_table.shape[0] - (self.reverse == True)):
             rnd_action_table[i] = np.random.normal(
                 self.action_table[i], self.sigma_table[i])
-            if dV_angle in ["coplanar", "collinear"] and i != 0:
+            if dV_angle in ["complanar", "collinear"] and i != 0:
                 dV = rnd_action_table[i, :3]
                 action_epoch = pk.epoch(
                     self.env.init_params[
@@ -287,8 +288,11 @@ class CrossEntropy(BaseTableModel):
                     rnd_action_table[:i], self.env, self.step, action_epoch)
                 pos, V = np.array(pos), np.array(V)
                 if dV_angle == "complanar":
-                    # somehow
-                    pass
+                    # у нас уже есть какой-то семплированный из распраделения маневр
+                    # и хочется только спроецировать его на плоскость
+                    A = np.vstack((pos, V)).T
+                    dV = projection(A, dV)
+
                 if dV_angle == "collinear":
                     norm_V = np.linalg.norm(V)
                     norm_dV = np.linalg.norm(dV)
@@ -296,7 +300,7 @@ class CrossEntropy(BaseTableModel):
                     dV = V * np.sign(cos_a) * norm_dV / norm_V
                 rnd_action_table[i, :3] = dV
             elif dV_angle != "auto" and i != 0:
-                raise ValueError(f"unknown dV_angle type{dV_angle}")
+                raise ValueError(f"unknown dV_angle type: {dV_angle}")
 
             rnd_action_table[i] = constrain_action(
                 rnd_action_table[i], max_fuel)

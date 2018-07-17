@@ -185,3 +185,11 @@ def time_to_early_first_maneuver(env, step):
         time = None
     print("time:", time)
     return time
+
+
+def projection(plane, vector):
+    A = plane
+    x = vector
+    proj = np.linalg.inv(A.T.dot(A))
+    proj = A.dot(proj).dot(A.T).dot(x)
+    return proj

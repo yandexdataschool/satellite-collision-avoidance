@@ -87,10 +87,12 @@ class BaseTableModel:
         np.savetxt(path, self.action_table, delimiter=',', header=header)
 
     def print_start_train(self):
+        self.policy_reward = self.get_reward(self.action_table)
         print(f"\nStart training.\n\nInitial action table:\n{self.action_table}")
-        print(f"Initial Reward: {self.get_reward(self.action_table)}")
+        print(f"Initial Reward: {self.policy_reward}")
 
     def print_end_train(self, train_time):
+        self.policy_reward = self.get_reward(self.action_table)
         print("\nTraining completed in {:.5} sec.".format(train_time))
-        print(f"Total Reward: {self.get_reward(self.action_table)}")
+        print(f"Total Reward: {self.policy_reward}")
         print(f"Action Table:\n{self.action_table}")
