@@ -8,10 +8,7 @@ class CollProbEstimator:
 
     """ Estimate probability of collision between two objects. """
 
-    def __init__(self):
-        """"""
-
-    def ChenBai_approach(self, rV1, rV2,
+    def ChenBai_approach(rV1, rV2,
                          cs_r1=100, cs_r2=0.1,
                          sigma_1N=50, sigma_1T=50, sigma_1W=50,
                          sigma_2N=300, sigma_2T=300, sigma_2W=300):
@@ -32,10 +29,6 @@ class CollProbEstimator:
 
         Returns:
             float: probability.
-
-        Raises:
-            ValueError: If any probability has incorrect value.
-            TypeError: If any probability has incorrect type.
 
         """
 
@@ -94,7 +87,7 @@ class CollProbEstimator:
         ) * (1 - np.exp(-rA**2 / (2 * (sigma_x_square * sigma_y_square)**0.5)))
         return probability
 
-    def norm_approach(self, rV1, rV2, sigma=50):
+    def norm_approach(rV1, rV2, sigma=50):
         """ Returns probability of collision between two objects.
 
         Args:

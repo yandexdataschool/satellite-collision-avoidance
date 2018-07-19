@@ -6,12 +6,12 @@ from copy import copy
 
 import matplotlib.pyplot as plt
 
-from ..api import Environment
-from ..api import fuel_consumption
+from ..api import Environment, fuel_consumption
 from ..simulator import Simulator
+from ..agent import TableAgent
 
 
-def generate_session_with_env(agent, env):
+def generate_session_with_env(agent, env, step):
     """ Play full simulation. 
     Args:
         agent (Agent): agent to do actions.
@@ -20,10 +20,38 @@ def generate_session_with_env(agent, env):
     Returns:
         reward (float): reward after end of simulation.
     """
-    simulator = Simulator(agent, env)
+    simulator = Simulator(agent, env, step)
     reward = simulator.run(log=False)
     env.reset()
     return reward
+
+
+def orbital_period_after_actions(action_table, env, step):
+    # TODO - add this stuff to the baseline model
+    agent = TableAgent(action_table)
+    simulator = Simulator(agent, env, step)
+    simulator.end_time = pk.epoch(
+        simulator.start_time.mjd2000 + np.sum(action_table[:, 3]) + step,
+        "mjd2000"
+    )
+    period = env.protected.get_orbital_period()
+    env.reset()
+    return period
+
+
+def position_after_actions(action_table, env, step, epoch):
+    # epoch (pk.epoch): at what time to calculate position.
+    # TODO - add this stuff to the baseline model
+    agent = TableAgent(action_table)
+    simulator = Simulator(agent, env, step)
+    simulator.end_time = pk.epoch(
+        simulator.start_time.mjd2000 + np.sum(action_table[:, 3]) + step,
+        "mjd2000"
+    )
+    simulator.run(log=False)
+    pos, vel = env.protected.position(epoch)
+    env.reset()
+    return pos, vel
 
 # TODO - delete generate_session
 
@@ -76,7 +104,7 @@ def constrain_action(action, max_fuel_cons, min_time=None, max_time=None):
     if min_time is not None and max_time is not None:
         action[3] = max(min_time, min(max_time, action[3]))
     else:
-        action[3] = max(0.001, action[3])
+        action[3] = max(0., action[3])
     return action
 
 
@@ -115,11 +143,52 @@ class ProgressLogger(object):
 
 
 def print_start_train(reward, action_table):
+    #TODO - remove
     print("Start training.\n\nInitial action table:\n", action_table,
           "\nInitial Reward:", reward, "\n")
 
 
 def print_end_train(reward, train_time, action_table):
+    #TODO - remove
     print("\nTraining completed in {:.5} sec.".format(train_time))
     print(f"Total Reward: {reward}")
     print(f"Action Table:\n{action_table}")
+
+
+def time_to_first_collision_in_env(env, step):
+    # TODO - test
+    agent = TableAgent()
+    simulator = Simulator(agent, env, step)
+    reward = simulator.run(log=False)
+    collision_moments = env.get_collision_data()
+    if collision_moments:
+        time = collision_moments[0]['epoch'] - env.get_start_time()
+    else:
+        # TODO - if None - empty action table for all models
+        time = None
+    env.reset()
+    return time
+
+
+def time_to_early_first_maneuver(env, step):
+    # TODO - test
+    time_to_collision = time_to_first_collision_in_env(env, step)
+    if time_to_collision:
+        orbital_period = env.protected.get_orbital_period()
+        if time_to_collision < orbital_period / 2:
+            time = 0
+        else:
+            time = (time_to_collision - orbital_period / 2) % orbital_period
+    else:
+        time = None
+    return time
+
+
+def projection(plane, vector):
+    A = plane
+    x = vector
+    # projection vector x onto plane A
+    # = A * (A^T * A)^(-1) * A^T * x
+    proj = np.linalg.inv(A.T.dot(A))
+    proj = A.dot(proj).dot(A.T).dot(x)
+    return proj
