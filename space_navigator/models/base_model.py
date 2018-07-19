@@ -43,8 +43,8 @@ class BaseTableModel:
             time_to_first_maneuver = None
         self.time_to_first_maneuver = time_to_first_maneuver
 
-        self.action_table = None
-        self.policy_reward = -float("inf")
+        self.action_table = np.array([])
+        self.policy_reward = self.get_reward(self.action_table)
 
         self.protected = env.protected
         self.debris = env.debris
@@ -66,10 +66,14 @@ class BaseTableModel:
             train_start_time = time.time()
             self.print_start_train()
 
-        for i in range(n_iterations):
+        i = 0
+        while i < n_iterations:
             if print_out:
                 print(f"\niteration: {i+1}/{n_iterations}")
-            self.iteration(print_out, *args, **kwargs)
+            stop = self.iteration(print_out, *args, **kwargs)
+            if stop:
+                break
+            i += 1
 
         if print_out:
             train_time = time.time() - train_start_time
@@ -88,7 +92,6 @@ class BaseTableModel:
         np.savetxt(path, self.action_table, delimiter=',', header=header)
 
     def print_start_train(self):
-        self.policy_reward = self.get_reward(self.action_table)
         print(f"\nStart training.\n\nInitial action table:\n{self.action_table}")
         print(f"Initial Reward: {self.policy_reward}")
 

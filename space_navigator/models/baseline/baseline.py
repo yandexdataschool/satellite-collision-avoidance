@@ -26,6 +26,9 @@ class Baseline(BaseTableModel):
                     while the second of them is reversed to the first one;
                 if False: one maneuver.
 
+        Returns:
+            stop (bool): whether to stop training after iteration.
+
         """
         super().__init__(env, step, reverse, first_maneuver_time="early")
 
@@ -68,3 +71,5 @@ class Baseline(BaseTableModel):
             if temp_reward > self.policy_reward:
                 self.policy_reward = temp_reward
                 self.action_table = temp_action_table
+        stop = True
+        return True
