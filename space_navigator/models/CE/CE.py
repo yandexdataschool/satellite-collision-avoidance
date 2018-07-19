@@ -154,8 +154,8 @@ class CrossEntropy(BaseTableModel):
 
     def iteration(self, print_out=False, n_sessions=30,
                   sigma_decay=0.98, lr_decay=0.98, percentile_growth=1.005,
-                  show_progress=False,
-                  dV_angle="auto"):
+                  show_progress=False, dV_angle="coplanar",
+                  step_if_low_reward=False):
         """Training iteration.
 
         Args:
@@ -166,6 +166,8 @@ class CrossEntropy(BaseTableModel):
             percentile_growth (float): coefficient of changing percentile.
             show_progress (bool): show training chart.
             dV_angle (str): "coplanar", "collinear" or "auto".
+            step_if_low_reward (bool): whether to step to the new table
+                if reward is lower than current or not.
 
         TODO:
             experiment - don't do step if worser
@@ -203,13 +205,18 @@ class CrossEntropy(BaseTableModel):
         best_rewards = rewards_batch[best_rewards_indices]
         best_action_tables = np.array(action_tables)[best_rewards_indices]
 
-        new_action_table = np.mean(best_action_tables, axis=0)
-        self.action_table = new_action_table * self.lr + \
+        result_action_table = np.mean(best_action_tables, axis=0)
+        new_action_table = result_action_table * self.lr + \
             self.action_table * (1 - self.lr)
         if self.reverse:
             time_to_reverse = orbital_period_after_actions(
-                self.action_table[:2], self.env, self.step)
-            self.action_table[1, 3] = time_to_reverse
+                new_action_table[:2], self.env, self.step)
+            new_action_table[1, 3] = time_to_reverse
+        new_reward = self.get_reward(new_action_table)
+
+        if new_reward > self.policy_reward or step_if_low_reward:
+            self.action_table = new_action_table
+            self.policy_reward = new_reward
 
         self.sigma_table *= sigma_decay
         self.lr *= lr_decay
@@ -219,7 +226,6 @@ class CrossEntropy(BaseTableModel):
 
         # show progress / print
         if print_out | show_progress:
-            self.policy_reward = self.get_reward(self.action_table)
             mean_reward = np.mean(rewards_batch)
             max_reward = best_rewards[-1]
             if print_out:

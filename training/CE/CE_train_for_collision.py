@@ -28,6 +28,9 @@ def main(args):
     parser.add_argument("-dv", "--dV_angle", type=str,
                         default="auto", required=False,
                         help="auto or complanar or collinear")
+    parser.add_argument("-low_r_step", "--step_if_low_reward", type=str,
+                        default="False", required=False,
+                        help="step if new reward is lower than current")
 
     parser.add_argument("-lr", "--learning_rate", type=float,
                         default=0.7, required=False)
@@ -60,6 +63,7 @@ def main(args):
     n_maneuvers, n_iterations, n_sessions = args.n_maneuvers, args.n_iterations, args.n_sessions
     reverse = args.reverse.lower() == "true"
     first_maneuver_time, dV_angle = args.first_maneuver_time.lower(), args.dV_angle.lower()
+    step_if_low_reward = args.step_if_low_reward.lower() == "true"
     percentile, learning_rate = args.percentile, args.learning_rate
     sigma_decay, learning_rate_decay = args.sigma_decay, args.learning_rate_decay
     percentile_growth = args.percentile_growth
@@ -84,6 +88,7 @@ def main(args):
         "sigma_decay": sigma_decay,
         "show_progress": show_progress,
         "dV_angle": dV_angle,
+        "step_if_low_reward": step_if_low_reward,
     }
     model.train(n_iterations, print_out, **iteration_kwargs)
     model.save_action_table(save_action_table_path)
