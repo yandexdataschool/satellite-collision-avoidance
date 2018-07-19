@@ -13,8 +13,8 @@ import pykep as pk
 from copy import copy
 
 from .api_utils import (
-    fuel_consumption, sum_coll_prob, reward_threshold,
-    lower_estimate_of_time_to_conjunction
+    fuel_consumption, sum_coll_prob, reward_func,
+    lower_estimate_of_time_to_conjunction, check_angular_deviations,
 )
 from ..collision import CollProbEstimator
 
@@ -39,14 +39,20 @@ class Environment:
                 represents the thresholds of differencies of
                 six osculating keplerian elements (a,e,i,W,w,M):
                     a (semi-major axis): meters,
-                    e (eccentricity): greater than 0,
+                    e (eccentricity): 0 < e < 1,
                     i (inclination), W (Longitude of the ascending node): radians,
                     w (Argument of periapsis), M (mean anomaly): radians.
 
         Note:
             Reward component is not taken into account, if threshold is None.
 
+        Raises:
+            ValueError: If eccentricity (traj_dev_thr[1]) is not in interval (0, 1).
+
         """
+        if not (0 < traj_dev_thr[1] < 1):
+            raise ValueError(f"eccentricity: {traj_dev_thr[1]}, should be in interval (0, 1).")
+
         self.init_params = dict(protected=copy(protected), debris=copy(
             debris), start_time=start_time, end_time=end_time)
 
@@ -55,8 +61,8 @@ class Environment:
 
         self.protected_r = protected.get_radius()
         self.init_fuel = protected.get_fuel()
-        self.init_orbital_elements = self.protected.osculating_elements(self.init_params[
-            "start_time"])
+        self.init_orbital_elements = np.array(
+            self.protected.osculating_elements(self.init_params["start_time"]))
         self.trajectory_deviation = None
         self.n_debris = len(debris)
         self.debris_r = np.array([d.get_radius() for d in debris])
@@ -78,9 +84,10 @@ class Environment:
         self.total_collision_probability_arr = np.zeros(self.n_debris)
         self.total_collision_probability = None
 
-        self.coll_prob_thr = coll_prob_thr
-        self.fuel_cons_thr = fuel_cons_thr
-        self.traj_dev_thr = traj_dev_thr
+        self._reward_thr = np.concatenate(
+            ([coll_prob_thr], [fuel_cons_thr], traj_dev_thr)
+        ).astype(np.float)
+
         self.reward_components = None
         self.reward = None
 
@@ -258,51 +265,35 @@ class Environment:
         if zero_update:
             deviation = np.zeros((6))
         else:
-            initial = np.array(self.init_orbital_elements)
+            initial = self.init_orbital_elements
             current = np.array(self.protected.osculating_elements(self.init_params[
                 "start_time"]))
-            deviation = np.abs(current - initial)
-            for i in range(2, 6):
-                if deviation[i] > np.pi:
-                    deviation[i] = 2 * np.pi - deviation[i]
+            deviation = current - initial
+            check_angular_deviations(deviation[2:6])
+            assert np.all(np.abs(deviation[2:6]) <= np.pi), f"bad deviation {deviation}"
+
         self.trajectory_deviation = np.round_(deviation, 6)
 
     def _update_reward(self):
         """Update reward and reward components."""
-        # collision probability
-        if self.coll_prob_thr:
-            coll_prob = self.get_total_collision_probability()
-            coll_prob_r = reward_threshold(
-                coll_prob, self.coll_prob_thr)
-        else:
-            coll_prob_r = 0.
-
-        # fuel consumption
-        if self.fuel_cons_thr:
-            fuel = self.get_fuel_consumption()
-            fuel_r = reward_threshold(
-                fuel, self.fuel_cons_thr)
-        else:
-            fuel_r = 0.
-
-        # trajectory deviation
-        traj_dev = self.get_trajectory_deviation()
-        traj_dev_r = [0.] * 6
-        for i, thr in enumerate(self.traj_dev_thr):
-            if thr:
-                traj_dev_r[i] = reward_threshold(
-                    traj_dev[i], thr)
-
-        # total reward
+        values = np.concatenate(
+            (
+                [self.get_total_collision_probability()],
+                [self.get_fuel_consumption()],
+                np.abs(self.get_trajectory_deviation()),
+            )
+        ).astype(np.float)
+        reward_arr = reward_func(values, self._reward_thr)
+        coll_prob_r = reward_arr[0]
+        fuel_r = reward_arr[1]
+        traj_dev_r = reward_arr[2:]
+        # reward components
         self.reward_components = {
             "coll_prob": coll_prob_r, "fuel": fuel_r, "traj_dev": tuple(traj_dev_r)
         }
-        self.reward = (
-            self.reward_components["coll_prob"]
-            + self.reward_components["fuel"]
-            + sum(self.reward_components["traj_dev"])
-        )
-        assert self.reward <= 0, f"reward = {self.reward} > 0"
+        # total reward
+        self.reward = np.sum(reward_arr)
+        assert self.reward <= 0, f"reward: {self.reward} > 0\ncomponents: {self.reward_components}"
 
     def _update_all_reward_components(self, zero_update=False):
         """Update total collision probability, trajectory deviation, reward components and reward."""

@@ -63,9 +63,38 @@ def lower_estimate_of_time_to_conjunction(prot_rV, debr_rV, crit_distance):
     return dangerous_debris, distances[dangerous_debris], time_to_conjunction
 
 
-def reward_threshold(x, thr, mult=2, y_t=1, y_t_mult=10):
+# TODO - explore reward functions
+
+def reward_func_0(x, thr, mult=2, y_t=1, y_t_mult=10):
     if x <= thr:
         y = - x * y_t / thr
     else:
         y = (y_t_mult - y_t) * (1 - x / thr) / (mult - 1) - y_t
     return y
+
+
+def reward_func(values, thr, reward_func=reward_func_0, *args, **kwargs):
+
+    def reward_thr(values, thr):
+        return reward_func(values, thr, *args, **kwargs)
+    reward_thr_v = np.vectorize(reward_thr)
+
+    result = np.zeros_like(values)
+    id_nan = np.isnan(thr)
+    id_not_nan = np.logical_not(id_nan)
+
+    result[id_nan] = 0.
+    result[id_not_nan] = reward_thr_v(values[id_not_nan], thr[id_not_nan])
+
+    return result
+
+
+def check_angular_deviations(angular_deviations):
+    # check over pi angular deviations
+    over_pi_angular_deviations_1 = angular_deviations > np.pi
+    over_pi_angular_deviations_2 = angular_deviations < -np.pi
+    angular_deviations[over_pi_angular_deviations_1] = (
+        angular_deviations[over_pi_angular_deviations_1] - 2 * np.pi)
+    angular_deviations[over_pi_angular_deviations_2] = (
+        angular_deviations[over_pi_angular_deviations_2] + 2 * np.pi)
+    return angular_deviations
