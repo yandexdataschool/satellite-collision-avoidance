@@ -11,10 +11,14 @@ PROPAGATION_STEP = 0.000001
 
 def main(args):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-n_s", "--n_samples", type=int,
+
+    parser.add_argument("-n_s", "--n_sessions", type=int,
                         default=100, required=False)
     parser.add_argument("-s", "--step", type=float,
                         default=PROPAGATION_STEP, required=False)
+    parser.add_argument("-r", "--reverse", type=str,
+                        default="True", required=False)
+
     parser.add_argument("-save_path", "--save_action_table_path", type=str,
                         default="training/agents_tables/Baseline/action_table_baseline.csv", required=False)
     parser.add_argument("-print", "--print_out", type=str,
@@ -24,8 +28,9 @@ def main(args):
 
     args = parser.parse_args(args)
 
-    n_samples = args.n_samples
+    n_sessions = args.n_sessions
     step = args.step
+    reverse = args.reverse.lower() == "true"
     save_action_table_path = args.save_action_table_path
     print_out = args.print_out.lower() == "true"
     env_path = args.environment
@@ -34,9 +39,12 @@ def main(args):
     env = read_environment(env_path)
 
     # Baseline
-    action_table = Baseline(env, step)
-    action_table.train(n_samples, print_out)
-    action_table.save_action_table(save_action_table_path)
+    model = Baseline(env, step, reverse)
+    iteration_kwargs = {
+        "n_sessions": n_sessions,
+    }
+    model.train(1, print_out, **iteration_kwargs)
+    model.save_action_table(save_action_table_path)
 
     return
 

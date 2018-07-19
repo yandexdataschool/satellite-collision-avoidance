@@ -147,15 +147,18 @@ class CrossEntropy(BaseTableModel):
         self.percentile = percentile
 
         self.fuel_level = env.init_fuel
-        self.policy_reward = -float("inf")
+        self.policy_reward = self.get_reward(self.action_table)
 
         self.progress = None
         self.log_rewards = None
 
+        self._log_rewards_stop = None
+        self._epsilon_stop = None
+
     def iteration(self, print_out=False, n_sessions=30,
                   sigma_decay=0.98, lr_decay=0.98, percentile_growth=1.005,
-                  show_progress=False,
-                  dV_angle="auto"):
+                  show_progress=False, dV_angle="coplanar",
+                  step_if_low_reward=False, early_stopping=True):
         """Training iteration.
 
         Args:
@@ -166,6 +169,13 @@ class CrossEntropy(BaseTableModel):
             percentile_growth (float): coefficient of changing percentile.
             show_progress (bool): show training chart.
             dV_angle (str): "coplanar", "collinear" or "auto".
+            step_if_low_reward (bool): whether to step to the new table
+                if reward is lower than current or not.
+            early_stopping (bool): whether to stop training
+                if change of reward is negligibly small or not.
+
+        Returns:
+            stop (bool): whether to stop training after iteration.
 
         TODO:
             experiment - don't do step if worser
@@ -183,10 +193,14 @@ class CrossEntropy(BaseTableModel):
         if show_progress:
             if not self.progress:
                 self.progress = ShowProgress()
-                if not print_out:
-                    self.policy_reward = self.get_reward(self.action_table)
                 self.log_rewards = [[self.policy_reward] * 4]
                 self.progress.plot([self.policy_reward], self.log_rewards)
+
+        # early stopping
+        if early_stopping and not self._epsilon_stop:
+            n_stop = 20
+            self._reward_log = np.full(n_stop, np.nan)
+            self._epsilon_stop = 0.001
 
         # iteration
         rewards_batch = []
@@ -202,14 +216,22 @@ class CrossEntropy(BaseTableModel):
         best_rewards_indices = rewards_batch >= reward_threshold
         best_rewards = rewards_batch[best_rewards_indices]
         best_action_tables = np.array(action_tables)[best_rewards_indices]
-
-        new_action_table = np.mean(best_action_tables, axis=0)
-        self.action_table = new_action_table * self.lr + \
+        result_action_table = np.mean(best_action_tables, axis=0)
+        new_action_table = result_action_table * self.lr + \
             self.action_table * (1 - self.lr)
         if self.reverse:
             time_to_reverse = orbital_period_after_actions(
-                self.action_table[:2], self.env, self.step)
-            self.action_table[1, 3] = time_to_reverse
+                new_action_table[:2], self.env, self.step)
+            new_action_table[1, 3] = time_to_reverse
+        new_reward = self.get_reward(new_action_table)
+        if new_reward > self.policy_reward or step_if_low_reward:
+            # TODO - else: tricky change the percentile.
+            self.action_table = new_action_table
+            self.policy_reward = new_reward
+
+        if early_stopping:
+            self._reward_log = np.roll(self._reward_log, -1)
+            self._reward_log[-1] = self.policy_reward
 
         self.sigma_table *= sigma_decay
         self.lr *= lr_decay
@@ -219,7 +241,6 @@ class CrossEntropy(BaseTableModel):
 
         # show progress / print
         if print_out | show_progress:
-            self.policy_reward = self.get_reward(self.action_table)
             mean_reward = np.mean(rewards_batch)
             max_reward = best_rewards[-1]
             if print_out:
@@ -234,6 +255,16 @@ class CrossEntropy(BaseTableModel):
                                          self.policy_reward, reward_threshold])
                 self.progress.plot(rewards_batch, self.log_rewards)
                 # self.progress.save_fig(log_rewards)
+
+        stop = False
+        if early_stopping:
+            if np.all(np.isfinite(self._reward_log)):
+                if max(np.abs(self._reward_log[:-1] - self._reward_log[1:])) < self._epsilon_stop:
+                    stop = True
+                    if print_out:
+                        print("\nEarly stopping.")
+
+        return stop
 
     def set_action_table(self, action_table):
         # TODO - try to set MCTS action_table and train (tune) it.

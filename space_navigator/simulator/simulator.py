@@ -194,7 +194,7 @@ Total Reward: {self.reward_arr[-1]:.5}
         extent = full_extent(self.subplot_3d).transformed(
             self.fig.dpi_scale_trans.inverted())
 
-        self.fig.savefig(f'action_{self.dV_plot}_{time}.png', bbox_inches=extent)
+        # self.fig.savefig(f'action_{self.dV_plot}_{time}.png', bbox_inches=extent)
         # set plotted action to zero
         self.dV_plot = np.zeros(3)
 
