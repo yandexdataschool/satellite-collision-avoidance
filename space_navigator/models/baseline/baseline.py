@@ -9,90 +9,62 @@ from ...api import Environment, MAX_FUEL_CONSUMPTION
 from ...simulator import Simulator
 from ...agent import TableAgent as Agent
 
-from ..train_utils import (
-    generate_session, print_start_train, print_end_train
-)
+from ..base_model import BaseTableModel
+from ..train_utils import orbital_period_after_actions
 
 
-class Baseline:
-    """Prograde/Retrograde maneuver.
+class Baseline(BaseTableModel):
+    """Prograde/Retrograde maneuvers."""
 
-    TODO:
-        change method name
-        user defined number of orbital periods before collision (0.5; 1.5; ..)
-
-    """
-
-    def __init__(self, env, step):
+    def __init__(self, env, step, reverse=True):
         """
         Agrs:
             env (Environment): environment with given parameteres.
             step (float): time step in simulation.
+            reverse (bool): 
+                if True: there are selected exactly 2 maneuvers
+                    while the second of them is reversed to the first one;
+                if False: one maneuver.
 
         """
-        self.env = env
-        self.protected = env.protected
-        self.debris = env.debris
+        super().__init__(env, step, reverse, first_maneuver_time="early")
 
         self.start_time = self.env.init_params["start_time"].mjd2000
         self.end_time = self.env.init_params["end_time"].mjd2000
-        self.step = step
 
-        self.fuel_level = self.env.init_fuel
-        self.max_fuel = min(MAX_FUEL_CONSUMPTION, self.fuel_level / 2)
+        self.first_action = np.array(
+            [0, 0, 0, self.time_to_first_maneuver])
 
-        self.action_table = np.array([])
-        self.policy_reward = None
-
-    def train(self, n_samples=100, print_out=False):
-        """Training agent policy (self.action_table).
+    def iteration(self, print_out=False, n_sessions=100):
+        """Training iteration.
 
         Args:
-            n_samples (int): number of samples to generate.
-            print_out (bool): print information during the training.
-
-        TODO:
-            limit "c" by end_time
+            print_out (bool): print iteration information.
+            n_sessions (int): number of sessions to generate.
 
         """
-        if print_out:
-            train_start_time = time.time()
-            print_start_train(self.get_reward(), self.action_table)
-
+        max_fuel = self.env.init_fuel / 2 if self.reverse else self.env.init_fuel
+        max_fuel = min(MAX_FUEL_CONSUMPTION, max_fuel)
         _, V = self.protected.position(self.start_time)
-        c = self.max_fuel / np.linalg.norm(V)
-        space = np.linspace(-c, c, n_samples)
+        c = max_fuel / np.linalg.norm(V)
+        space = np.linspace(-c, c, n_sessions)
         dV_arr = np.vstack([V[i] * space for i in range(3)]).T
-        best_reward = -float("inf")
 
-        for i in trange(n_samples):
+        for i in trange(n_sessions):
             dV = dV_arr[i]
-            temp_action_table = np.hstack((dV, np.nan))
-            agent = Agent(temp_action_table)
-            _, temp_env = generate_session(self.protected, self.debris, agent,
-                                           self.start_time, self.start_time + self.step, self.step, return_env=True)
-            time_to_req = temp_env.protected.get_orbital_period()
-            temp_action_table = np.vstack((
-                np.hstack((dV, time_to_req)),
-                np.hstack((-dV, np.nan))
-            ))
-            agent = Agent(temp_action_table)
-            r = generate_session(
-                self.protected, self.debris, agent, self.start_time, self.end_time, self.step)
+            temp_action_table = np.vstack(
+                (self.first_action, np.hstack((dV, np.nan)))
+            )
+            if self.reverse:
+                time_to_reverse = orbital_period_after_actions(
+                    temp_action_table, self.env, self.step)
+                temp_action_table = np.vstack(
+                    (temp_action_table, -temp_action_table[-1])
+                )
+                temp_action_table[1, 3] = time_to_reverse
 
-            if r > best_reward:
-                best_reward = r
+            temp_reward = self.get_reward(temp_action_table)
+
+            if temp_reward > self.policy_reward:
+                self.policy_reward = temp_reward
                 self.action_table = temp_action_table
-
-        if print_out:
-            train_time = time.time() - train_start_time
-            print_end_train(self.get_reward(), train_time, self.action_table)
-
-    def get_reward(self):
-        agent = Agent(self.action_table)
-        return generate_session(
-            self.protected, self.debris, agent, self.start_time, self.end_time, self.step)
-
-    def save_action_table(self, path):
-        header = "dVx,dVy,dVz,time to request"
-        np.savetxt(path, self.action_table, delimiter=',', header=header)
