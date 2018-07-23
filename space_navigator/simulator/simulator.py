@@ -5,6 +5,7 @@ import logging
 import time
 
 import numpy as np
+import pandas as pd
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -15,6 +16,9 @@ from mpl_toolkits.mplot3d import proj3d
 
 import pykep as pk
 from pykep.orbit_plots import plot_planet
+
+from ..agent import TableAgent
+from copy import copy
 
 
 logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
@@ -405,6 +409,16 @@ class Simulator:
             print(spaceObject.satellite)
 
     def print_end(self, simulation_time):
+        # data
+        coll_prob_thr = self.env.coll_prob_thr
+        fuel_cons_thr = self.env.fuel_cons_thr
+        traj_dev_thr = self.env.traj_dev_thr
+        action_table = self.agent.action_table
+        action_table_not_empty = action_table.size
+        crit_distance = self.env.crit_distance
+
+        coll_prob = self.env.get_total_collision_probability()
+        fuel_cons = self.env.get_fuel_consumption()
         traj_dev = self.env.get_trajectory_deviation()
         reward_components = self.env.get_reward_components()
         coll_prob_r = reward_components["coll_prob"]
@@ -412,37 +426,88 @@ class Simulator:
         traj_dev_r = reward_components["traj_dev"]
         collision_data = self.env.get_collision_data()
 
-        print(f"Simulation ended in {simulation_time:.5} sec.")
-        n = len(collision_data)
-        if n == 0:
-            print("\nNo collisions.")
+        # w/o maneuvers
+        if action_table_not_empty:
+            agent = TableAgent()
+            env_wo = copy(self.env)
+            env_wo.reset()
+            simulator_wo = Simulator(agent, env_wo, self.step)
+            simulator_wo.run(visualize=False, n_steps_vis=1000,
+                             log=False, each_step_propagation=False, print_out=False)
+
+            coll_prob_wo = env_wo.get_total_collision_probability()
+            fuel_cons_wo = env_wo.get_fuel_consumption()
+            traj_dev_wo = env_wo.get_trajectory_deviation()
+            reward_components_wo = env_wo.get_reward_components()
+            coll_prob_r_wo = reward_components_wo["coll_prob"]
+            fuel_r_wo = reward_components_wo["fuel"]
+            traj_dev_r_wo = reward_components_wo["traj_dev"]
+            collision_data_wo = env_wo.get_collision_data()
         else:
-            print(f"\n{n} collisions:")
-            for i, c in enumerate(collision_data):
-                print(f"    #{i+1}: at {c['epoch']} with {c['debris name']};")
-                print(f"    distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
-        print(f"""
-Collision probability: {self.env.get_total_collision_probability():.5};
-Fuel consumption: {self.env.get_fuel_consumption():.5};
-Trajectory deviation:
-    a: {traj_dev[0]:.5};
-    e: {traj_dev[1]:.5};
-    i: {traj_dev[2]:.5};
-    W: {traj_dev[3]:.5};
-    w: {traj_dev[4]:.5};
-    M: {traj_dev[5]:.5}.
+            coll_prob_wo = coll_prob
+            fuel_cons_wo = fuel_cons
+            traj_dev_wo = traj_dev
+            reward_components_wo = reward_components
+            coll_prob_r_wo = coll_prob_r
+            fuel_r_wo = fuel_r
+            traj_dev_r_wo = traj_dev_r
+            collision_data_wo = collision_data
 
-Reward components:
-    R Collision probability: {coll_prob_r:0.5};
-    R Fuel consumption: {fuel_r:0.5};
-    R Trajectory deviation:
-        a: {traj_dev_r[0]:.5};
-        e: {traj_dev_r[1]:.5};
-        i: {traj_dev_r[2]:.5};
-        W: {traj_dev_r[3]:.5};
-        w: {traj_dev_r[4]:.5};
-        M: {traj_dev_r[5]:.5};
-        Total: {sum(traj_dev_r):.5}.
+        # simulation time
+        print(f"Simulation ended in {simulation_time:.5} sec.")
 
-Total Reward: {self.env.get_reward():0.5}.
-""")
+        # maneuvers
+        print("\nManeuvers table:")
+        if action_table_not_empty:
+            maneuvers = action_table
+            maneuvers[1:, 3] = maneuvers[:-1, 3]
+            maneuvers[0, 3] = 0
+            maneuvers[:, 3] = np.cumsum(
+                maneuvers[:, 3]) + self.start_time.mjd2000
+            columns = ["dVx (m^2/s)", "dVy (m^2/s)",
+                       "dVz (m^2/s)", "time (mjd2000)"]
+            df = pd.DataFrame(maneuvers,
+                              index=range(1, maneuvers.shape[0] + 1),
+                              columns=columns)
+            print(df)
+        else:
+            print("no maneuvers.")
+
+        # collisions
+        print(f"\nCollisions (distance <= {crit_distance} meters):")
+        n = len(collision_data_wo)
+        print(f"    without maneuvers (total number: {n}):")
+        for i, c in enumerate(collision_data_wo):
+            print(f"        #{i+1}: at {c['epoch']} with {c['debris name']};")
+            print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
+        if action_table_not_empty:
+            n = len(collision_data)
+            print(f"    without maneuvers (total number: {n}):")
+            for i, c in enumerate(collision_data_wo):
+                print(f"        #{i+1}: at {c['epoch']} with {c['debris name']};")
+                print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
+
+        # table of significant parameters
+        print("\nParameters table:")
+        columns = ["threshold", "value w/o man", "reward w/o man"]
+        if action_table_not_empty:
+            columns += ["value with man", "reward with man"]
+
+        index = [
+            "coll prob", "fuel (|dV|)",
+            "dev a (m)", "dev e", "dev i (rad)",
+            "dev W (rad)", "dev w (rad)", "dev M (rad)",
+        ]
+        df = pd.DataFrame(index=index, columns=columns)
+        df["threshold"] = [coll_prob_thr, fuel_cons_thr] + list(traj_dev_thr)
+        df["threshold"].fillna(value="not taken", inplace=True)
+        df["value w/o man"] = [coll_prob_wo,
+                               fuel_cons_wo] + list(traj_dev_wo)
+        df["reward w/o man"] = [coll_prob_r_wo,
+                                fuel_r_wo] + list(traj_dev_r_wo)
+        if action_table_not_empty:
+            df["value with man"] = [coll_prob, fuel_cons] + list(traj_dev)
+            df["reward with man"] = [coll_prob_r,
+                                     fuel_r] + list(traj_dev_r)
+
+        print(df.round(5))
