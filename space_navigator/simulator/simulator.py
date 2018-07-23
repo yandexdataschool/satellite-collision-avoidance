@@ -179,7 +179,7 @@ Total Reward: {self.reward_arr[-1]:.5}
         self.make_step_on_graph(self.subplot_f, self.time_arr, self.fuel_cons_arr,
                                 title='Total fuel consumption', ylabel='fuel (dV)')
         self.make_step_on_graph(self.subplot_r_t, self.time_arr, self.r_traj_dev_arr,
-                                title='R Trajectory Deviation', ylabel='R Trajectory Deviation')
+                                title='R Trajectory Deviation', ylabel='reward')
         self.make_step_on_graph(self.subplot_r, self.time_arr, self.reward_arr,
                                 title='Total reward', ylabel='reward', xlabel='time (mjd2000)')
 
@@ -215,7 +215,7 @@ Total Reward: {self.reward_arr[-1]:.5}
         self.make_step_on_graph(subplot_f, self.time_arr, self.fuel_cons_arr,
                                 title='Total fuel consumption', ylabel='fuel (dV)')
         self.make_step_on_graph(subplot_r_t, self.time_arr, self.r_traj_dev_arr,
-                                title='R Trajectory Deviation', ylabel='R Trajectory Deviation')
+                                title='R Trajectory Deviation', ylabel='reward')
         self.make_step_on_graph(subplot_r, self.time_arr, self.reward_arr,
                                 title='Total reward', ylabel='reward', xlabel='time since simulation starts (mjd2000)')
 
@@ -487,7 +487,7 @@ class Simulator:
         if action_table_not_empty:
             n = len(collision_data)
             print(f"    without maneuvers (total number: {n}):")
-            for i, c in enumerate(collision_data_wo):
+            for i, c in enumerate(collision_data):
                 print(f"        #{i+1}: at {c['epoch']} with {c['debris name']};")
                 print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
 
