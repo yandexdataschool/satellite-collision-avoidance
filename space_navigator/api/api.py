@@ -84,6 +84,9 @@ class Environment:
         self.total_collision_probability_arr = np.zeros(self.n_debris)
         self.total_collision_probability = None
 
+        self.coll_prob_thr = coll_prob_thr
+        self.fuel_cons_thr = fuel_cons_thr
+        self.traj_dev_thr = traj_dev_thr
         self._reward_thr = np.concatenate(
             ([coll_prob_thr], [fuel_cons_thr], traj_dev_thr)
         ).astype(np.float)

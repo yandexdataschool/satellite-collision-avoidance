@@ -5,6 +5,7 @@ import logging
 import time
 
 import numpy as np
+import pandas as pd
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -15,6 +16,9 @@ from mpl_toolkits.mplot3d import proj3d
 
 import pykep as pk
 from pykep.orbit_plots import plot_planet
+
+from ..agent import TableAgent
+from copy import copy
 
 
 logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
@@ -85,22 +89,22 @@ class Visualizer:
         in real time.
     """
 
-    def __init__(self, curr_time, prob, fuel_cons, traj_dev, foo, reward_components, reward):
+    def __init__(self, curr_time, prob, fuel_cons, traj_dev, reward_components, reward):
         self.fig = plt.figure(figsize=[14, 12])
         self.gs = gridspec.GridSpec(15, 2)
         self.subplot_3d = self.fig.add_subplot(self.gs[:, 0], projection='3d')
         self.subplot_3d.set_aspect("equal")
         self.subplot_p = self.fig.add_subplot(self.gs[:3, 1])
         self.subplot_f = self.fig.add_subplot(self.gs[4:7, 1])
-        self.subplot_foo = self.fig.add_subplot(self.gs[8:11, 1])
+        self.subplot_r_t = self.fig.add_subplot(self.gs[8:11, 1])
         self.subplot_r = self.fig.add_subplot(self.gs[12:, 1])
         # initialize data for plots
         self.time_arr = [0]
         self.prob_arr = [prob]
         self.fuel_cons_arr = [fuel_cons]
         self.traj_dev = traj_dev
-        self.foo_arr = [foo]
         self.reward_components = reward_components
+        self.r_traj_dev_arr = [sum(traj_dev)]
         self.reward_arr = [reward]
         # initialize zero action
         self.dV_plot = np.zeros(3)
@@ -108,13 +112,13 @@ class Visualizer:
     def run(self):
         plt.ion()
 
-    def update_data(self, curr_time, prob, fuel_cons, traj_dev, foo, reward_components, reward):
+    def update_data(self, curr_time, prob, fuel_cons, traj_dev, reward_components, reward):
         self.time_arr.append(curr_time)
         self.prob_arr.append(prob)
         self.fuel_cons_arr.append(fuel_cons)
         self.traj_dev = traj_dev
-        self.foo_arr.append(foo)
         self.reward_components = reward_components
+        self.r_traj_dev_arr.append(sum(reward_components["traj_dev"]))
         self.reward_arr.append(reward)
 
     def plot_planet(self, satellite, t, size, color):
@@ -138,7 +142,7 @@ class Visualizer:
         self.subplot_3d.cla()
         self.subplot_p.cla()
         self.subplot_f.cla()
-        self.subplot_foo.cla()
+        self.subplot_r_t.cla()
         self.subplot_r.cla()
 
     def plot_iteration(self, epoch):
@@ -174,8 +178,8 @@ Total Reward: {self.reward_arr[-1]:.5}
                                 title='Total collision probability', ylabel='prob')
         self.make_step_on_graph(self.subplot_f, self.time_arr, self.fuel_cons_arr,
                                 title='Total fuel consumption', ylabel='fuel (dV)')
-        self.make_step_on_graph(self.subplot_foo, self.time_arr, self.foo_arr,
-                                title='-----------', ylabel='----------')
+        self.make_step_on_graph(self.subplot_r_t, self.time_arr, self.r_traj_dev_arr,
+                                title='R Trajectory Deviation', ylabel='reward')
         self.make_step_on_graph(self.subplot_r, self.time_arr, self.reward_arr,
                                 title='Total reward', ylabel='reward', xlabel='time (mjd2000)')
 
@@ -203,15 +207,15 @@ Total Reward: {self.reward_arr[-1]:.5}
         gs = gridspec.GridSpec(15, 1)
         subplot_p = fig.add_subplot(gs[:3, 0])
         subplot_f = fig.add_subplot(gs[4:7, 0])
-        subplot_foo = fig.add_subplot(gs[8:11, 0])
+        subplot_r_t = fig.add_subplot(gs[8:11, 0])
         subplot_r = fig.add_subplot(gs[12:, 0])
 
         self.make_step_on_graph(subplot_p, self.time_arr, self.prob_arr,
                                 title='Total collision probability', ylabel='prob')
         self.make_step_on_graph(subplot_f, self.time_arr, self.fuel_cons_arr,
                                 title='Total fuel consumption', ylabel='fuel (dV)')
-        self.make_step_on_graph(subplot_foo, self.time_arr, self.foo_arr,
-                                title='----------', ylabel='----------')
+        self.make_step_on_graph(subplot_r_t, self.time_arr, self.r_traj_dev_arr,
+                                title='R Trajectory Deviation', ylabel='reward')
         self.make_step_on_graph(subplot_r, self.time_arr, self.reward_arr,
                                 title='Total reward', ylabel='reward', xlabel='time since simulation starts (mjd2000)')
 
@@ -261,7 +265,7 @@ class Simulator:
         if visualize:
             self.vis = Visualizer(self.curr_time.mjd2000, self.env.get_total_collision_probability(),
                                   self.env.get_fuel_consumption(), self.env.get_trajectory_deviation(),
-                                  -999, self.env.get_reward_components(), self.env.get_reward())
+                                  self.env.get_reward_components(), self.env.get_reward())
             self.vis.run()
             action = np.zeros(4)
             n_steps_since_vis = 1
@@ -306,15 +310,15 @@ class Simulator:
                     self.update_vis_data()
                     n_steps_since_vis = 1
 
+                self.vis.plot_iteration(self.curr_time)
+                self.vis.plot_graphics()
                 if np.not_equal(self.vis.dV_plot, np.zeros(3)).all():
                     self.vis.plot_action(
                         self.env.protected.position(self.curr_time)[0], self.curr_time)
                     self.vis.pause(PAUSE_ACTION_TIME)
-
-                self.vis.plot_graphics()
-                self.vis.pause(PAUSE_TIME)
+                else:
+                    self.vis.pause(PAUSE_TIME)
                 self.vis.clear()
-                self.vis.plot_iteration(self.curr_time)
 
             if self.curr_time.mjd2000 >= self.end_time.mjd2000:
                 break
@@ -391,7 +395,6 @@ class Simulator:
             self.env.get_total_collision_probability(),
             self.env.get_fuel_consumption(),
             self.env.get_trajectory_deviation(),
-            -999,
             self.env.get_reward_components(),
             self.env.get_reward())
 
@@ -405,6 +408,19 @@ class Simulator:
             print(spaceObject.satellite)
 
     def print_end(self, simulation_time):
+        # data
+        coll_prob_thr = self.env.coll_prob_thr
+        fuel_cons_thr = self.env.fuel_cons_thr
+        traj_dev_thr = self.env.traj_dev_thr
+        action_table = self.agent.action_table
+        action_table_not_empty = action_table.size
+        if action_table_not_empty:
+            if np.count_nonzero(action_table[0, :3]) == 0 and action_table.shape[0] == 1:
+                action_table_not_empty = False
+        crit_distance = self.env.crit_distance
+
+        coll_prob = self.env.get_total_collision_probability()
+        fuel_cons = self.env.get_fuel_consumption()
         traj_dev = self.env.get_trajectory_deviation()
         reward_components = self.env.get_reward_components()
         coll_prob_r = reward_components["coll_prob"]
@@ -412,37 +428,89 @@ class Simulator:
         traj_dev_r = reward_components["traj_dev"]
         collision_data = self.env.get_collision_data()
 
-        print(f"Simulation ended in {simulation_time:.5} sec.")
-        n = len(collision_data)
-        if n == 0:
-            print("\nNo collisions.")
+        # w/o maneuvers
+        if action_table_not_empty:
+            agent = TableAgent()
+            env_wo = copy(self.env)
+            env_wo.reset()
+            simulator_wo = Simulator(agent, env_wo, self.step)
+            simulator_wo.run(visualize=False, n_steps_vis=1000,
+                             log=False, each_step_propagation=False, print_out=False)
+
+            coll_prob_wo = env_wo.get_total_collision_probability()
+            fuel_cons_wo = env_wo.get_fuel_consumption()
+            traj_dev_wo = env_wo.get_trajectory_deviation()
+            reward_components_wo = env_wo.get_reward_components()
+            coll_prob_r_wo = reward_components_wo["coll_prob"]
+            fuel_r_wo = reward_components_wo["fuel"]
+            traj_dev_r_wo = reward_components_wo["traj_dev"]
+            collision_data_wo = env_wo.get_collision_data()
         else:
-            print(f"\n{n} collisions:")
+            coll_prob_wo = coll_prob
+            fuel_cons_wo = fuel_cons
+            traj_dev_wo = traj_dev
+            reward_components_wo = reward_components
+            coll_prob_r_wo = coll_prob_r
+            fuel_r_wo = fuel_r
+            traj_dev_r_wo = traj_dev_r
+            collision_data_wo = collision_data
+
+        # simulation time
+        print(f"Simulation ended in {simulation_time:.5} sec.")
+
+        # maneuvers
+        print("\nManeuvers table:")
+        if action_table_not_empty:
+            maneuvers = action_table
+            maneuvers[1:, 3] = maneuvers[:-1, 3]
+            maneuvers[0, 3] = 0
+            maneuvers[:, 3] = np.cumsum(
+                maneuvers[:, 3]) + self.start_time.mjd2000
+            if np.count_nonzero(maneuvers[0, :3]) == 0:
+                maneuvers = maneuvers[1:]
+            columns = ["dVx (m^2/s)", "dVy (m^2/s)",
+                       "dVz (m^2/s)", "time (mjd2000)"]
+            df = pd.DataFrame(maneuvers,
+                              index=range(1, maneuvers.shape[0] + 1),
+                              columns=columns)
+            print(df)
+        else:
+            print("no maneuvers.")
+
+        # collisions
+        print(f"\nCollisions (distance <= {crit_distance} meters):")
+        n = len(collision_data_wo)
+        print(f"    without maneuvers (total number: {n}):")
+        for i, c in enumerate(collision_data_wo):
+            print(f"        #{i+1}: at {c['epoch']} with {c['debris name']};")
+            print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
+        if action_table_not_empty:
+            n = len(collision_data)
+            print(f"    without maneuvers (total number: {n}):")
             for i, c in enumerate(collision_data):
-                print(f"    #{i+1}: at {c['epoch']} with {c['debris name']};")
-                print(f"    distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
-        print(f"""
-Collision probability: {self.env.get_total_collision_probability():.5};
-Fuel consumption: {self.env.get_fuel_consumption():.5};
-Trajectory deviation:
-    a: {traj_dev[0]:.5};
-    e: {traj_dev[1]:.5};
-    i: {traj_dev[2]:.5};
-    W: {traj_dev[3]:.5};
-    w: {traj_dev[4]:.5};
-    M: {traj_dev[5]:.5}.
+                print(f"        #{i+1}: at {c['epoch']} with {c['debris name']};")
+                print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
 
-Reward components:
-    R Collision probability: {coll_prob_r:0.5};
-    R Fuel consumption: {fuel_r:0.5};
-    R Trajectory deviation:
-        a: {traj_dev_r[0]:.5};
-        e: {traj_dev_r[1]:.5};
-        i: {traj_dev_r[2]:.5};
-        W: {traj_dev_r[3]:.5};
-        w: {traj_dev_r[4]:.5};
-        M: {traj_dev_r[5]:.5};
-        Total: {sum(traj_dev_r):.5}.
+        # table of significant parameters
+        print("\nParameters table:")
+        columns = ["threshold", "value w/o man", "reward w/o man"]
+        if action_table_not_empty:
+            columns += ["value with man", "reward with man"]
+        index = [
+            "coll prob", "fuel (|dV|)",
+            "dev a (m)", "dev e", "dev i (rad)",
+            "dev W (rad)", "dev w (rad)", "dev M (rad)",
+        ]
+        df = pd.DataFrame(index=index, columns=columns)
+        df["threshold"] = [coll_prob_thr, fuel_cons_thr] + list(traj_dev_thr)
+        df["threshold"].fillna(value="not taken", inplace=True)
+        df["value w/o man"] = [coll_prob_wo,
+                               fuel_cons_wo] + list(traj_dev_wo)
+        df["reward w/o man"] = [coll_prob_r_wo,
+                                fuel_r_wo] + list(traj_dev_r_wo)
+        if action_table_not_empty:
+            df["value with man"] = [coll_prob, fuel_cons] + list(traj_dev)
+            df["reward with man"] = [coll_prob_r,
+                                     fuel_r] + list(traj_dev_r)
 
-Total Reward: {self.env.get_reward():0.5}.
-""")
+        print(df.round(5))

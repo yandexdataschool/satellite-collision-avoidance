@@ -55,8 +55,8 @@ class Generator:
         # a (semi-major axis): meters
         # https://upload.wikimedia.org/wikipedia/commons/b/b4/Comparison_satellite_navigation_orbits.svg
         a = np.random.uniform(7e6, 8e6)
-        # e (eccentricity): in interval (0, 1)
-        e = np.random.uniform(0.001, 0.003)
+        # e (eccentricity): in interval [0, 1)
+        e = np.random.uniform(0, 0.003)
         # i (inclination): radians
         # TODO - fix if i > pi? i > 2*pi?
         i = np.random.uniform(0, 2 * np.pi)
