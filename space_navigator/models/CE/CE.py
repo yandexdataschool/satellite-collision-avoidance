@@ -271,16 +271,6 @@ class CrossEntropy(BaseTableModel):
         # TODO - manage with reverse
         # TODO - more Exceptions
         # Note - use copy
-        if np.count_nonzero(action_table[0, :3]) != 0:
-            raise ValueError("first action must be empty")
-        if self.reverse:
-            if action_table.shape[0] != 3:
-                raise ValueError("if reverse -  it has to be only 3 actions")
-        self.action_table = np.copy(action_table)
-        self.policy_reward = self.get_reward(self.action_table)
-
-    def set_action_table_from_path(self, model_path):
-        action_table = np.loadtxt(model_path, delimiter=',')
         if action_table.size:
             if np.count_nonzero(action_table[0, :3]) != 0:
                 raise ValueError("first action must be empty")
@@ -288,8 +278,12 @@ class CrossEntropy(BaseTableModel):
                 if action_table.shape[0] != 3:
                     raise ValueError(
                         "if reverse -  it has to be only 3 actions")
-            self.action_table = action_table
+            self.action_table = np.copy(action_table)
             self.policy_reward = self.get_reward(self.action_table)
+
+    def set_action_table_from_path(self, model_path):
+        action_table = np.loadtxt(model_path, delimiter=',')
+        self.set_action_table(action_table)
 
     def _get_random_action_table(self, dV_angle):
         """Returns random action table using normal distributions under the given parameters.
