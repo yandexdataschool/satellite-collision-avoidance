@@ -20,7 +20,7 @@ def main(args):
     parser.add_argument("-print", "--print_out", type=str,
                         default="False", required=False)
     parser.add_argument("-env", "--environment", type=str,
-                        default="data/environments/collision.osc", required=False)
+                        default="data/environments/collision.env", required=False)
 
     args = parser.parse_args(args)
 
