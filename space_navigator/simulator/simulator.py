@@ -486,7 +486,7 @@ class Simulator:
             print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
         if action_table_not_empty:
             n = len(collision_data)
-            print(f"    without maneuvers (total number: {n}):")
+            print(f"    with maneuvers (total number: {n}):")
             for i, c in enumerate(collision_data):
                 print(f"        #{i+1}: at {c['epoch']} with {c['debris name']};")
                 print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
