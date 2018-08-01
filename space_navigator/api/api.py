@@ -14,7 +14,7 @@ from copy import copy
 
 from .api_utils import (
     fuel_consumption, sum_coll_prob, reward_func,
-    lower_estimate_of_time_to_conjunction, check_angular_deviations,
+    lower_estimate_of_time_to_conjunction, correct_angular_deviations,
 )
 from ..collision import CollProbEstimator
 
@@ -272,7 +272,7 @@ class Environment:
             current = np.array(self.protected.osculating_elements(self.init_params[
                 "start_time"]))
             deviation = current - initial
-            check_angular_deviations(deviation[2:6])
+            correct_angular_deviations(deviation[2:6])
             assert np.all(np.abs(deviation[2:6]) <= np.pi), f"bad deviation {deviation}"
 
         self.trajectory_deviation = np.round_(deviation, 6)
