@@ -480,16 +480,22 @@ class Simulator:
         # collisions
         print(f"\nCollisions (distance <= {crit_distance} meters):")
         n = len(collision_data_wo)
-        print(f"    without maneuvers (total number: {n}):")
-        for i, c in enumerate(collision_data_wo):
-            print(f"        #{i+1}: at {c['epoch']} with {c['debris name']};")
-            print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
-        if action_table_not_empty:
-            n = len(collision_data)
-            print(f"    with maneuvers (total number: {n}):")
-            for i, c in enumerate(collision_data):
+        if n > 0:
+            print(f"    without maneuvers (total number: {n}):")
+            for i, c in enumerate(collision_data_wo):
                 print(f"        #{i+1}: at {c['epoch']} with {c['debris name']};")
                 print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
+        else:
+            print("    no collisions without maneuvers.")
+        if action_table_not_empty:
+            n = len(collision_data)
+            if n > 0:
+                print(f"    with maneuvers (total number: {n}):")
+                for i, c in enumerate(collision_data):
+                    print(f"        #{i+1}: at {c['epoch']} with {c['debris name']};")
+                    print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
+            else:
+                print("    no collisions with maneuvers.")
 
         # table of significant parameters
         print("\nParameters table:")
