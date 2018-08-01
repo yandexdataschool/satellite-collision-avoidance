@@ -128,18 +128,18 @@ class Environment:
 
         # Choose number of steps in linspace, s.t.
         # restep is less then step.
-        number_of_time_steps_plus_one = int(np.ceil(
+        n_time_steps_plus_one = int(np.ceil(
             (end_time - curr_time) / step) + 1)
 
         propagation_grid, retstep = np.linspace(
-            curr_time, end_time, number_of_time_steps_plus_one, retstep=True)
+            curr_time, end_time, n_time_steps_plus_one, retstep=True)
 
         if retstep > step:
             raise Exception(
                 "Step in propagation grid should be <= step")
 
         s = 0
-        while s < number_of_time_steps_plus_one:
+        while s < n_time_steps_plus_one:
             t = propagation_grid[s]
             epoch = pk.epoch(t, "mjd2000")
             st, debr = self.get_coords_by_epoch(epoch)
@@ -151,15 +151,20 @@ class Environment:
             # and estimation of time to collision with closest debris
             debr, dist, time_to_collision = lower_estimate_of_time_to_conjunction(
                 self.state['coord']['st'], self.state['coord']['debr'], self.crit_distance)
-            self._update_distances_and_probabilities_prior_to_current_conjunction(
-                debr, dist)
+            time_to_collision_is_finite = np.isfinite(time_to_collision)
+            if time_to_collision_is_finite:
+                self._update_distances_and_probabilities_prior_to_current_conjunction(
+                    debr, dist)
             # calculation of the number of steps forward
             if each_step_propagation:
                 s += 1
             else:
-                n_steps = max(1, int(time_to_collision / retstep))
-                n_steps = min(number_of_time_steps_plus_one - s, n_steps)
-                s += n_steps
+                if time_to_collision_is_finite:
+                    n_steps = max(1, int(time_to_collision / retstep))
+                    n_steps = min(n_time_steps_plus_one - s, n_steps)
+                    s += n_steps
+                else:
+                    s = n_time_steps_plus_one - 1 if s < n_time_steps_plus_one - 1 else s + 1
 
         self._update_all_reward_components()
 

@@ -53,6 +53,9 @@ def lower_estimate_of_time_to_conjunction(prot_rV, debr_rV, crit_distance):
             (examples: https://en.wikipedia.org/wiki/Elliptic_orbit).
             Add an account of eccentricity and orbit type.
     """
+    if not debr_rV.size:
+        return np.array([]), np.array([]), float("inf")
+
     distances = np.linalg.norm(debr_rV[:, :3] - prot_rV[:, :3], axis=1)
     closest_debr = np.argmin(distances)
     min_dist = distances[closest_debr]
