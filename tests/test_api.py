@@ -59,7 +59,7 @@ class TestBasicFunctions(unittest.TestCase):
         self.assertEqual(list(distances), [100.] * 3)
         self.assertEqual(time_to_conjunction, 0.)
 
-        # zeros test
+        # test zeros
         prot_rV = np.array([
             [0, 0, 0, 0, 0, 0]
         ])
@@ -69,6 +69,14 @@ class TestBasicFunctions(unittest.TestCase):
         crit_distance = 10
         dangerous_debris, distances, time_to_conjunction = lower_estimate_of_time_to_conjunction(
             prot_rV, debr_rV, crit_distance)
+        self.assertEqual(time_to_conjunction, float("inf"))
+
+        # test empty
+        debr_rV = np.empty((0, 6))
+        dangerous_debris, distances, time_to_conjunction = lower_estimate_of_time_to_conjunction(
+            prot_rV, debr_rV, crit_distance)
+        self.assertFalse(dangerous_debris)
+        self.assertFalse(distances)
         self.assertEqual(time_to_conjunction, float("inf"))
 
     def test_reward_func(self):
@@ -115,7 +123,14 @@ class TestBasicFunctions(unittest.TestCase):
 class TestCollProbEstimation(unittest.TestCase):
 
     def test_ChenBai_approach(self):
-        estimator = CollProbEstimator()
+        """
+        Example from book:
+            page 177,
+            Lei Chen, Xian-Zong Bai, Yan-Gang Liang, Ke-Bo Li,
+            "Orbital Data Applications for Space Objects",
+            2017.
+        """
+        estimator = CollProbEstimator.ChenBai_approach
         # collision cross-section radii of ISS and the debris
         rV1 = np.array([
             3126018.8, 5227146.1, -2891302.9, -3298.0, 4758.7, 5054.3
@@ -133,14 +148,14 @@ class TestCollProbEstimation(unittest.TestCase):
         sigma_2N = 871.7616
         sigma_2T = 12306.207
         sigma_2W = 921.0618
-        probability = estimator.ChenBai_approach(
+        probability = estimator(
             rV1, rV2,
             cs_r1, cs_r2,
             sigma_1N, sigma_1T, sigma_1W,
             sigma_2N, sigma_2T, sigma_2W
         )
         self.assertAlmostEqual(probability, 4.749411e-5)
-        self.assertEqual(1, estimator.ChenBai_approach(np.ones(6), np.ones(6)))
+        self.assertEqual(1, estimator(np.ones(6), np.ones(6)))
 
 
 class TestEnvironment(unittest.TestCase):
@@ -164,16 +179,17 @@ class TestEnvironment(unittest.TestCase):
 
     def test_propagate_forward(self):
         env = Environment(self.protected, [], self.start_time, self.end_time)
+        step = 10e-6
 
         end_times = [
-            self.start_time.mjd2000 + MAX_PROPAGATION_STEP * 100,
-            self.start_time.mjd2000 + MAX_PROPAGATION_STEP,
-            self.start_time.mjd2000 + MAX_PROPAGATION_STEP * 1.5,
+            self.start_time.mjd2000 + step * 100,
+            self.start_time.mjd2000 + step,
+            self.start_time.mjd2000 + step * 1.5,
         ]
 
         for end_time in end_times:
             env.end_time = pk.epoch(end_time, "mjd2000")
-            env.propagate_forward(end_time)
+            env.propagate_forward(end_time, step)
             self.assertEqual(env.state["epoch"].mjd2000, end_time)
             env.reset()
 
@@ -224,23 +240,21 @@ class TestEnvironment(unittest.TestCase):
         # TODO: implement test.
         self.assertTrue(True)
 
-    def test_(self):
-        pass
+    def test__update_distances_and_probabilities_prior_to_current_conjunction(self):
+        # TODO: implement test.
+        self.assertTrue(True)
 
-    def test_(self):
-        pass
+    def test__update_total_collision_probability(self):
+        # TODO: implement test.
+        self.assertTrue(True)
 
-    def test_(self):
-        pass
+    def test__update_trajectory_deviation(self):
+        # TODO: implement test.
+        self.assertTrue(True)
 
-    def test_(self):
-        pass
-
-    def test_(self):
-        pass
-
-    def test_(self):
-        pass
+    def test__update_reward(self):
+        # TODO: implement test.
+        self.assertTrue(True)
 
 
 class TestSpaceObject(unittest.TestCase):
@@ -296,23 +310,13 @@ class TestSpaceObject(unittest.TestCase):
         self.assertEqual(pos, want_pos)
         self.assertEqual(vel, want_vel)
 
-    def test_(self):
-        pass
+    def test_osculating_elements(self):
+        # TODO: implement test (test time changing).
+        self.assertTrue(True)
 
-    def test_(self):
-        pass
-
-    def test_(self):
-        pass
-
-    def test_(self):
-        pass
-
-    def test_(self):
-        pass
-
-    def test_(self):
-        pass
+    def test_get_orbital_period(self):
+        # TODO: implement test (does pykep have such method?).
+        self.assertTrue(True)
 
 
 if __name__ == '__main__':
