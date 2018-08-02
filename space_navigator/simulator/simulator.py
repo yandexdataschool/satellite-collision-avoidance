@@ -227,7 +227,7 @@ class Simulator:
         and starts agent-environment collaboration.
     """
 
-    def __init__(self, agent, environment, step=10e-6):
+    def __init__(self, agent, environment, step=1e-6):
         """
         Args:
             agent (api.Agent): agent, to do actions in environment.

@@ -101,6 +101,7 @@ class CrossEntropy(BaseTableModel):
             lr (float): learning rate for stability.
             percentile_growth (float): coefficient of changing percentile.
             sigma_dV, sigma_t (float): sigma of dV and sigma of time_to_req.
+                If None, the values are calculated automatically.
 
         TODO:
             path to save plots.
@@ -178,12 +179,6 @@ class CrossEntropy(BaseTableModel):
             stop (bool): whether to stop training after iteration.
 
         TODO:
-            experiment - don't do step if worser
-            stop if reward change < epsilon
-            careful update
-            good print_out or remove it
-            lists => np.arrays
-            save table sometimes during the learning?
             parallel
             log
             test
