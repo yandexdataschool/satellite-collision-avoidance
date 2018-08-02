@@ -146,8 +146,8 @@ Tutorial on learning an agent:
 
 ## RL Methods description
 
-1. [Baseline](space_navigator/models/baseline/baseline.md)
-2. [CE](space_navigator/models/CE/CE.md)
+1. [Baseline](space_navigator/models/baseline/README.md)
+2. [CE](space_navigator/models/CE/README.md)
 
 ## Analysis and Experiments 
 
