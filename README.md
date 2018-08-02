@@ -86,15 +86,16 @@ Start time: 6000.0   End time: 6000.01   Simulation step:1e-06
 Space objects description
 ...
 
-Simulation ended in 4.7806 sec.
+Simulation ended in 0.0050948 sec.
 
-Collision probability: 0.0
-Fuel consumption: 0.0            
-Trajectory deviation coefficient: 0.0
+Maneuvers table:
+no maneuvers.
 
-Reward components:
-Coll Prob R: -0.0     Fuel Cons R: -0.0     Traj Dev coef R: -0.0            
-Total Reward: -0
+Collisions (distance <= 2000 meters):
+    no collisions without maneuvers.
+
+Parameters table:
+...
 ```
 
 #### Example 2: maneuvers for random generated collision situation
@@ -137,16 +138,20 @@ python tests/test_api.py
 ## Documentation and tutorials
 
 Tutorial on environment setup and simulator:
-* [Simulator](examples/Notebooks/Simulator_tutorial.ipynb)
+* [Simulator](examples/Notebooks/tutorials/Simulator_tutorial.ipynb)
 
 Tutorial on learning an agent: 
-* [MCTC](examples/Notebooks/MCTS_tutorial.ipynb)
-* [CE](examples/Notebooks/CE_tutorial.ipynb)
+* [Baseline](examples/Notebooks/tutorials/Baseline_tutorial.ipynb)
+* [CE](examples/Notebooks/tutorials/CE_tutorial.ipynb)
 
 ## RL Methods description
 
-1. [MCTS](space_navigator/models/MCTS/MCTS.md)
+1. [Baseline](space_navigator/models/baseline/baseline.md)
 2. [CE](space_navigator/models/CE/CE.md)
+
+## Analysis and Experiments 
+
+1. [Comparison of models on the generated sample of environments](examples/Notebooks/analysis_and_experiments/Models_comparison.ipynb)
 
 <!-- ## Authors
 
