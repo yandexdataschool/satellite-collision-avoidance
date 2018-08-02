@@ -157,7 +157,7 @@ class CrossEntropy(BaseTableModel):
 
     def iteration(self, print_out=False, n_sessions=30,
                   sigma_decay=0.98, lr_decay=0.98, percentile_growth=1.005,
-                  show_progress=False, dV_angle="coplanar",
+                  show_progress=False, dV_angle="complanar",
                   step_if_low_reward=False, early_stopping=True):
         """Training iteration.
 
@@ -168,7 +168,7 @@ class CrossEntropy(BaseTableModel):
             lr_decay (float): coefficient of changing learning rate per iteration.
             percentile_growth (float): coefficient of changing percentile.
             show_progress (bool): show training chart.
-            dV_angle (str): "coplanar", "collinear" or "auto".
+            dV_angle (str): "complanar", "collinear" or "auto".
             step_if_low_reward (bool): whether to step to the new table
                 if reward is lower than current or not.
             early_stopping (bool): whether to stop training
@@ -289,7 +289,7 @@ class CrossEntropy(BaseTableModel):
         """Returns random action table using normal distributions under the given parameters.
 
         Args:
-            dV_angle (str): "coplanar", "collinear" or "auto".
+            dV_angle (str): "complanar", "collinear" or "auto".
 
         Returns:
             rnd_action_table (np.array): random table of actions.
