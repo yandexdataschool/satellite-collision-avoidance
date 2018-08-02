@@ -1,6 +1,5 @@
 import numpy as np
 import pykep as pk
-import datetime
 
 SEC_IN_DAY = 86400  # number of seconds in one day
 
@@ -48,7 +47,15 @@ def lower_estimate_of_time_to_conjunction(prot_rV, debr_rV, crit_distance):
         distances (np.array): Euclidean distances for the each dangerous debris (meters).
         time_to_conjunction (float): estimation of the time to the nearest conjunction (mjd2000).
 
+    TODO:
+        The assumption depends on eccentricity and orbit type
+            because vesolisity could change dramatically
+            (examples: https://en.wikipedia.org/wiki/Elliptic_orbit).
+            Add an account of eccentricity and orbit type.
     """
+    if not debr_rV.size:
+        return np.array([]), np.array([]), float("inf")
+
     distances = np.linalg.norm(debr_rV[:, :3] - prot_rV[:, :3], axis=1)
     closest_debr = np.argmin(distances)
     min_dist = distances[closest_debr]
@@ -60,36 +67,71 @@ def lower_estimate_of_time_to_conjunction(prot_rV, debr_rV, crit_distance):
         V2 = np.linalg.norm(debr_rV[closest_debr, 3:])
         sec_to_collision = (min_dist - crit_distance) / (V1 + V2)
         time_to_conjunction = sec_to_collision / SEC_IN_DAY
+
     return dangerous_debris, distances[dangerous_debris], time_to_conjunction
 
 
 # TODO - explore reward functions
 
-def reward_func_0(x, thr, mult=2, y_t=1, y_t_mult=10):
-    if x <= thr:
-        y = - x * y_t / thr
+def reward_func_0(value, thr, r_thr=-1,
+                  thr_times_exceeded=2, r_thr_times_exceeded=-10):
+    """Reward function.
+
+    Piecewise linear function with increased penalty for exceeding the threshold.
+
+    Args:
+        value (float): value of the rewarded parameter.
+        thr (float): threshold of the rewarded parameter. 
+        r_thr (float): reward in case the parameter value is equal to the threshold.
+        thr_times_exceeded (float): how many times should the parameter value exceed
+            the threshold to be rewarded as r_thr_times_exceeded.
+        r_thr_times_exceeded (float): reward in case the parameter value exceeds
+            the threshold thr_times_exceeded times.
+
+    Returns:
+        reward (float): result reward.
+    """
+    if value <= thr:
+        reward = value * r_thr / thr
     else:
-        y = (y_t_mult - y_t) * (1 - x / thr) / (mult - 1) - y_t
-    return y
+        reward = (
+            (-r_thr_times_exceeded + r_thr)
+            * (1 - value / thr) / (thr_times_exceeded - 1)
+            + r_thr
+        )
+    return reward
 
 
 def reward_func(values, thr, reward_func=reward_func_0, *args, **kwargs):
+    """Returns reward values for np.array input.
+
+    Args:
+        values (np.array): array of values of the rewarded parameters.
+        thr (np.array): array of thresholds of the rewarded parameter.
+            if the threshold is np.nan, then the reward is 0
+            (there is no penalty for the parameter).
+        reward_func (function): reward function.
+        *args, **kwargs: additional arguments of reward_func.
+
+    Returns: 
+        reward (np.array): reward array.
+    """
 
     def reward_thr(values, thr):
         return reward_func(values, thr, *args, **kwargs)
     reward_thr_v = np.vectorize(reward_thr)
 
-    result = np.zeros_like(values)
+    reward = np.zeros_like(values)
     id_nan = np.isnan(thr)
     id_not_nan = np.logical_not(id_nan)
 
-    result[id_nan] = 0.
-    result[id_not_nan] = reward_thr_v(values[id_not_nan], thr[id_not_nan])
+    reward[id_nan] = 0.
+    if np.count_nonzero(id_not_nan) != 0:
+        reward[id_not_nan] = reward_thr_v(values[id_not_nan], thr[id_not_nan])
+    return reward
 
-    return result
 
-
-def check_angular_deviations(angular_deviations):
+def correct_angular_deviations(angular_deviations):
     # check over pi angular deviations
     over_pi_angular_deviations_1 = angular_deviations > np.pi
     over_pi_angular_deviations_2 = angular_deviations < -np.pi
