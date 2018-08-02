@@ -8,5 +8,5 @@ Also, it should be noticed that the maneuvers table obtained by Baseline model c
 
 Examples:
 
-- [Tutorial](examples/Notebooks/tutorials/Baseline_tutorial.ipynb)
-- [The comparison of models on the generated sample of environments](examples/Notebooks/analysis_and_experiments/Models_comparison.ipynb)
+- [Tutorial](../../../examples/Notebooks/tutorials/Baseline_tutorial.ipynb)
+- [The comparison of models on the generated sample of environments](../../../examples/Notebooks/analysis_and_experiments/Models_comparison.ipynb)

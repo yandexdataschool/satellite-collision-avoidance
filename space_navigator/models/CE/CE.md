@@ -28,5 +28,5 @@ Also, it should be noticed that CE model could be used for tuning maneuvers tabl
 
 Examples:
 
-- [CE tutorial](examples/Notebooks/tutorials/CE_tutorial.ipynb)
-- [The comparison of models on the generated sample of environments](examples/Notebooks/analysis_and_experiments/Models_comparison.ipynb)
+- [CE tutorial](../../../examples/Notebooks/tutorials/CE_tutorial.ipynb)
+- [The comparison of models on the generated sample of environments](../../../examples/Notebooks/analysis_and_experiments/Models_comparison.ipynb)
