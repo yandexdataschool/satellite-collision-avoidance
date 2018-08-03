@@ -26,9 +26,6 @@ class Baseline(BaseTableModel):
                     while the second of them is reversed to the first one;
                 if False: one maneuver.
 
-        Returns:
-            stop (bool): whether to stop training after iteration.
-
         """
         super().__init__(env, step, reverse, first_maneuver_time="early")
 
@@ -44,6 +41,9 @@ class Baseline(BaseTableModel):
         Args:
             print_out (bool): print iteration information.
             n_sessions (int): number of sessions to generate.
+
+        Returns:
+            stop (bool): whether to stop training after iteration.
 
         """
         max_fuel = self.env.init_fuel / 2 if self.reverse else self.env.init_fuel
