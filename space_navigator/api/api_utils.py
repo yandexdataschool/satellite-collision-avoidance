@@ -49,7 +49,7 @@ def lower_estimate_of_time_to_conjunction(prot_rV, debr_rV, crit_distance):
 
     TODO:
         The assumption depends on eccentricity and orbit type
-            because vesolisity could change dramatically
+            because velocity could change dramatically
             (examples: https://en.wikipedia.org/wiki/Elliptic_orbit).
             Add an account of eccentricity and orbit type.
     """
