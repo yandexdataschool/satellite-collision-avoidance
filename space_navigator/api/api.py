@@ -221,7 +221,8 @@ class Environment:
                     "probability": p,
                     "distance": self.min_distances_in_current_conjunction[d],
                     "epoch": self.state_for_min_distances_in_current_conjunction[d, 12],
-                    "debris name": self.debris[d].get_name(),
+                    "debris_name": self.debris[d].get_name(),
+                    "debris_id": d,
                 })
                 coll_prob.append(p)
             self.collision_probability_prior_to_current_conjunction[end_cojunction_debris] = sum_coll_prob(
@@ -367,10 +368,10 @@ class Environment:
         return self.collision_data
 
     def get_start_time(self):
-        return self.init_params["start_time"].mjd2000
+        return self.init_params["start_time"]
 
     def get_end_time(self):
-        return self.init_params["end_time"].mjd2000
+        return self.init_params["end_time"]
 
     def reset(self):
         """ Return Environment to initial state. """
