@@ -127,9 +127,7 @@ class Baseline(BaseTableModel):
                             collisions[0]['epoch'],
                             atol=atol,
                     ):
-                        # print("11111111111111111111111", new_collisions)
                         new_collisions = new_collisions[1:] or []
-                        # print("11111111111111111111111", new_collisions)
             collisions = new_collisions
 
         if self.reverse:
