@@ -43,7 +43,7 @@ class BaseTableModel:
             time_to_first_maneuver = None
         self.time_to_first_maneuver = time_to_first_maneuver
 
-        self.action_table = np.array([])
+        self.action_table = np.empty((0, 4))
         self.policy_reward = self.get_reward(self.action_table)
 
         self.protected = env.protected
