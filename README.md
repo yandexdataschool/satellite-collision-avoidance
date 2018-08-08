@@ -149,7 +149,7 @@ Tutorial on learning an agent:
 
 1. [Baseline](space_navigator/models/baseline/README.md)
 2. [Collinear Grid Search](space_navigator/models/collinear_GS/README.md)
-3. [CE](space_navigator/models/CE/README.md)
+3. [Cross-Entropy method](space_navigator/models/CE/README.md)
 
 ## Analysis and Experiments 
 
