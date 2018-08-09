@@ -16,7 +16,7 @@ from ..train_utils import orbital_period_after_actions
 class CollinearGridSearch(BaseTableModel):
     """Provides prograde/retrograde maneuvers through Grid Search."""
 
-    def __init__(self, env, step, reverse=True):
+    def __init__(self, env, step, reverse=True, first_maneuver_direction="auto"):
         """
         Agrs:
             env (Environment): environment with given parameteres.
@@ -25,12 +25,16 @@ class CollinearGridSearch(BaseTableModel):
                 if True: there are selected exactly 2 maneuvers
                     while the second of them is reversed to the first one;
                 if False: one maneuver.
-
+            first_maneuver_direction (str): first maneuver is collinear
+                to the velocity vector and could be:
+                    "forward" (co-directed)
+                    "backward" (oppositely directed)
+                    "auto" (just collinear).
         """
         super().__init__(env, step, reverse, first_maneuver_time="early")
 
         self.start_time = self.env.get_start_time()
-
+        self.first_maneuver_direction = first_maneuver_direction
         self.first_action = np.array(
             [0, 0, 0, self.time_to_first_maneuver])
 
@@ -47,9 +51,23 @@ class CollinearGridSearch(BaseTableModel):
         """
         max_fuel = self.env.init_fuel / 2 if self.reverse else self.env.init_fuel
         max_fuel = min(MAX_FUEL_CONSUMPTION, max_fuel)
-        _, V = self.protected.position(self.start_time.mjd2000)
-        c = max_fuel / np.linalg.norm(V)
-        space = np.linspace(-c, c, n_sessions)
+        _, V = self.protected.position(
+            self.start_time.mjd2000 + self.time_to_first_maneuver)
+        max_dV = max_fuel / np.linalg.norm(V)
+
+        if self.first_maneuver_direction == "auto":
+            left_dV = -max_dV
+            right_dV = max_dV
+        elif self.first_maneuver_direction == "forward":
+            left_dV = 0
+            right_dV = max_dV
+        elif self.first_maneuver_direction == "backward":
+            left_dV = -max_dV
+            right_dV = 0
+        else:
+            raise ValueError("Invalid first maneuver direction type")
+
+        space = np.linspace(left_dV, right_dV, n_sessions)
         dV_arr = np.vstack([V[i] * space for i in range(3)]).T
 
         for i in trange(n_sessions):
@@ -70,5 +88,6 @@ class CollinearGridSearch(BaseTableModel):
             if temp_reward > self.policy_reward:
                 self.policy_reward = temp_reward
                 self.action_table = temp_action_table
+
         stop = True
         return stop
