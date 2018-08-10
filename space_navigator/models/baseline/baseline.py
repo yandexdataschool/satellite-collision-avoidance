@@ -116,15 +116,15 @@ class Baseline(BaseTableModel):
                 t_man = pk.epoch(t_man, "mjd2000")
                 start_time = t_man.mjd2000 + self.min_time_to_next_maneuver
                 start_time = pk.epoch(start_time, "mjd2000")
+                env.protected.maneuver(action_table[1, :3], t_man)
                 new_env = Environment(
                     protected=copy(env.protected),
                     debris=copy(env.debris),
                     start_time=start_time,
                     end_time=self.end_time,
+                    target_osculating_elements=self.env.init_osculating_elements
                 )
-                # change trajectory of protected object
-                # according to obtained maneuver
-                new_env.protected.maneuver(action_table[1, :3], t_man)
+
                 # add action to the actions table
                 action_table[-1, 3] = t_man.mjd2000 - self.start_time.mjd2000
                 self.action_table = np.vstack(
@@ -153,7 +153,7 @@ class Baseline(BaseTableModel):
                     for i, new_coll in enumerate(new_collisions):
                         for avoided_coll in self._avoided_collisions:
                             # check debris id
-                            if new_coll[0]['debris_id'] == avoided_coll[0]['debris_id']:
+                            if new_coll['debris_id'] == avoided_coll['debris_id']:
                                 # check if it is not
                                 # another turn around the Earth
                                 atol = 0.01  # (days) 0.01 days == 14.4 minutes
@@ -169,6 +169,10 @@ class Baseline(BaseTableModel):
                 self._avoided_collisions.append(collisions[0])
                 new_collisions = collisions[1:] or []
 
+            # update reward
+            old_policy_reward = self.policy_reward
+            self.policy_reward = self.get_reward(self.action_table)
+
             # print collision info after maneuver
             if print_out:
                 if len(action_table) > 0:
@@ -178,9 +182,12 @@ class Baseline(BaseTableModel):
                     print(f"Maneuver: {maneuver}")
                 else:
                     print("Maneuver: no maneuvers.")
+                print(f"Policy Reward: {self.policy_reward}")
 
             # update collisions information
             collisions = new_collisions
+
+            assert (old_policy_reward <= self.policy_reward), "reward decreased"
 
         if self.reverse:
             # TODO
