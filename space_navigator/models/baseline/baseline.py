@@ -68,7 +68,6 @@ class Baseline(BaseTableModel):
         start_time = copy(self.start_time)
 
         while True:
-            # print("----", "n coll", len(collisions))
             if not collisions:
                 break
 
@@ -86,6 +85,11 @@ class Baseline(BaseTableModel):
             next_collision_epoch = pk.epoch(
                 collisions[0]['epoch'] + epsilon, "mjd2000")
             debris_id = collisions[0]['debris_id']
+            assert (
+                start_time.mjd2000
+                <= collisions[0]['epoch']
+                <= self.end_time.mjd2000
+            ), "collision is not in simulation time"
 
             # new narrowed environment with only next collision
             narrowed_env = Environment(
@@ -104,6 +108,11 @@ class Baseline(BaseTableModel):
             # update environment
             if len(action_table) > 0:
                 t_man = start_time.mjd2000 + model_GS.time_to_first_maneuver
+                assert (
+                    start_time.mjd2000
+                    <= t_man
+                    <= self.end_time.mjd2000
+                ), "maneuver is not in simulation time"
                 t_man = pk.epoch(t_man, "mjd2000")
                 start_time = t_man.mjd2000 + self.min_time_to_next_maneuver
                 start_time = pk.epoch(start_time, "mjd2000")
@@ -117,9 +126,13 @@ class Baseline(BaseTableModel):
                 # according to obtained maneuver
                 new_env.protected.maneuver(action_table[1, :3], t_man)
                 # add action to the actions table
-                action_table[-1, 3] = self.step
+                action_table[-1, 3] = t_man.mjd2000 - self.start_time.mjd2000
                 self.action_table = np.vstack(
                     (self.action_table, action_table))
+                assert (
+                    np.sum(self.action_table[:, 3])
+                    <= self.end_time.mjd2000 - self.start_time.mjd2000
+                ), "actions are not in simulation time"
                 env = new_env
 
             # update maneuvers direction
