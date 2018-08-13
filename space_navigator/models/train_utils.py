@@ -169,14 +169,14 @@ def time_to_first_collision_in_env(env, step):
 def time_to_early_first_maneuver(env, step):
     # TODO - test
     time_to_collision = time_to_first_collision_in_env(env, step)
-    if time_to_collision:
+    if time_to_collision is None:
+        time = None
+    else:
         orbital_period = env.protected.get_orbital_period()
         if time_to_collision < orbital_period / 2:
             time = 0
         else:
             time = (time_to_collision - orbital_period / 2) % orbital_period
-    else:
-        time = None
     return time
 
 
