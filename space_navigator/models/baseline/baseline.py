@@ -68,7 +68,7 @@ class Baseline(BaseTableModel):
         start_time = copy(self.start_time)
 
         while True:
-            if not collisions:
+            if not collisions or start_time.mjd2000 > self.end_time.mjd2000:
                 break
 
             # print collision info
@@ -104,15 +104,22 @@ class Baseline(BaseTableModel):
                 narrowed_env, self.step, False, self.maneuvers_direction)
             model_GS.train(1, False, n_sessions)
             action_table = model_GS.action_table
+            is_action = len(action_table) > 0
 
+            # update maneuvers direction
+            if self.maneuvers_direction == 'auto' and is_action:
+                _, V = env.protected.position(pk.epoch(
+                    start_time.mjd2000 + action_table[0, 3]))
+                is_forward = np.sum(action_table[1, :3] / V) >= 0
+                self.maneuvers_direction = 'forward' if is_forward else 'backward'
             # update environment
-            if len(action_table) > 0:
+            if is_action:
                 t_man = start_time.mjd2000 + model_GS.time_to_first_maneuver
                 assert (
                     start_time.mjd2000
                     <= t_man
                     <= self.end_time.mjd2000
-                ), "maneuver is not in simulation time"
+                ), f"maneuver is not in simulation time {t_man}"
                 t_man = pk.epoch(t_man, "mjd2000")
                 start_time = t_man.mjd2000 + self.min_time_to_next_maneuver
                 start_time = pk.epoch(start_time, "mjd2000")
@@ -132,18 +139,11 @@ class Baseline(BaseTableModel):
                 assert (
                     np.sum(self.action_table[:, 3])
                     <= self.end_time.mjd2000 - self.start_time.mjd2000
-                ), "actions are not in simulation time"
+                ), f"actions are not in simulation time {self.action_table}"
                 env = new_env
 
-            # update maneuvers direction
-            if self.maneuvers_direction == 'auto' and len(action_table) > 0:
-                _, V = env.protected.position(
-                    start_time.mjd2000 + self.action_table[0, 3])
-                is_forward = np.sum(action_table[1, :3] / V) >= 0
-                self.maneuvers_direction = 'forward' if is_forward else 'backward'
-
-            # new collisions info after maneuver
-            if len(action_table) > 0:
+            # update collisions information
+            if is_action:
                 agent = Agent()
                 new_collisions = collision_data(env, self.step, agent)
                 if new_collisions:
@@ -168,14 +168,16 @@ class Baseline(BaseTableModel):
                 # skip collision if it is better without maneuver
                 self._avoided_collisions.append(collisions[0])
                 new_collisions = collisions[1:] or []
+            collisions = new_collisions
 
             # update reward
+            self.env.reset()
             old_policy_reward = self.policy_reward
             self.policy_reward = self.get_reward(self.action_table)
 
             # print collision info after maneuver
             if print_out:
-                if len(action_table) > 0:
+                if is_action:
                     maneuver = action_table[-1]
                     maneuver[3] = self.start_time.mjd2000 + np.sum(
                         self.action_table[:-1, 3])
@@ -184,14 +186,16 @@ class Baseline(BaseTableModel):
                     print("Maneuver: no maneuvers.")
                 print(f"Policy Reward: {self.policy_reward}")
 
-            # update collisions information
-            collisions = new_collisions
-
-            assert (old_policy_reward <= self.policy_reward), "reward decreased"
+            if not is_action:
+                assert np.isclose(
+                    old_policy_reward, self.policy_reward
+                ), "reward changed without maneuvers"
 
         if self.reverse:
             # TODO
             change_orbit()
+
+        self.env.reset()
 
         stop = True
         return stop
