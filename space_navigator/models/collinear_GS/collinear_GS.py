@@ -49,25 +49,27 @@ class CollinearGridSearch(BaseTableModel):
             stop (bool): whether to stop training after iteration.
 
         """
+        stop = True
+        if self.time_to_first_maneuver is None:
+            # check there are no collisions
+            return stop
+
         max_fuel = self.env.init_fuel / 2 if self.reverse else self.env.init_fuel
         max_fuel = min(MAX_FUEL_CONSUMPTION, max_fuel)
-        _, V = self.protected.position(
-            self.start_time.mjd2000 + self.time_to_first_maneuver)
+        first_maneuver_epoch = pk.epoch(
+            self.start_time.mjd2000 + self.time_to_first_maneuver, "mjd2000")
+        _, V = self.protected.position(first_maneuver_epoch)
         max_dV = max_fuel / np.linalg.norm(V)
 
         if self.first_maneuver_direction == "auto":
-            left_dV = -max_dV
-            right_dV = max_dV
+            space = np.linspace(-max_dV, max_dV, n_sessions + n_sessions % 2)
         elif self.first_maneuver_direction == "forward":
-            left_dV = 0
-            right_dV = max_dV
+            space = np.linspace(0, max_dV, n_sessions + 1)[1:]
         elif self.first_maneuver_direction == "backward":
-            left_dV = -max_dV
-            right_dV = 0
+            space = np.linspace(-max_dV, 0, n_sessions + 1)[:-1]
         else:
             raise ValueError("Invalid first maneuver direction type")
 
-        space = np.linspace(left_dV, right_dV, n_sessions)
         dV_arr = np.vstack([V[i] * space for i in range(3)]).T
 
         for i in trange(n_sessions):
@@ -89,5 +91,4 @@ class CollinearGridSearch(BaseTableModel):
                 self.policy_reward = temp_reward
                 self.action_table = temp_action_table
 
-        stop = True
         return stop
