@@ -9,4 +9,4 @@ Also, it should be noticed that the maneuvers table obtained by Collinear GS mod
 Examples:
 
 - [Tutorial](../../../examples/Notebooks/tutorials/Collinear_GS_tutorial.ipynb)
-- [The comparison of models on the generated sample of environments](../../../examples/Notebooks/analysis_and_experiments/Models_comparison.ipynb)
+- [The comparison of models on the generated sample of environments](../../../examples/Notebooks/analysis_and_experiments/README.md)
