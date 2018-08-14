@@ -142,16 +142,18 @@ Tutorial on environment setup and simulator:
 
 Tutorial on learning an agent: 
 * [Baseline](examples/Notebooks/tutorials/Baseline_tutorial.ipynb)
-* [CE](examples/Notebooks/tutorials/CE_tutorial.ipynb)
+* [Collinear Grid Search](examples/Notebooks/tutorials/Collinear_GS_tutorial.ipynb)
+* [Cross-Entropy method](examples/Notebooks/tutorials/CE_tutorial.ipynb)
 
 ## RL Methods description
 
 1. [Baseline](space_navigator/models/baseline/README.md)
-2. [CE](space_navigator/models/CE/README.md)
+2. [Collinear Grid Search](space_navigator/models/collinear_GS/README.md)
+3. [Cross-Entropy method](space_navigator/models/CE/README.md)
 
 ## Analysis and Experiments 
 
-1. [The comparison of models on the generated sample of environments](examples/Notebooks/analysis_and_experiments/Models_comparison.ipynb)
+* [The comparison of models on the generated sample of environments](examples/Notebooks/analysis_and_experiments/README.md)
 
 <!-- ## Authors
 

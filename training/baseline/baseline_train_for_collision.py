@@ -16,11 +16,12 @@ def main(args):
                         default=100, required=False)
     parser.add_argument("-s", "--step", type=float,
                         default=PROPAGATION_STEP, required=False)
+    # TODO - reverse default: True?
     parser.add_argument("-r", "--reverse", type=str,
-                        default="True", required=False)
+                        default="False", required=False)
 
     parser.add_argument("-save_path", "--save_action_table_path", type=str,
-                        default="training/agents_tables/Baseline/action_table_baseline.csv", required=False)
+                        default="training/agents_tables/baseline/action_table_baseline.csv", required=False)
     parser.add_argument("-print", "--print_out", type=str,
                         default="False", required=False)
     parser.add_argument("-env", "--environment", type=str,

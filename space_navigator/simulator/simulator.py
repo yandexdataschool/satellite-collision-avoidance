@@ -422,6 +422,7 @@ class Simulator:
         coll_prob = self.env.get_total_collision_probability()
         fuel_cons = self.env.get_fuel_consumption()
         traj_dev = self.env.get_trajectory_deviation()
+        total_reward = self.env.get_reward()
         reward_components = self.env.get_reward_components()
         coll_prob_r = reward_components["coll_prob"]
         fuel_r = reward_components["fuel"]
@@ -440,6 +441,7 @@ class Simulator:
             coll_prob_wo = env_wo.get_total_collision_probability()
             fuel_cons_wo = env_wo.get_fuel_consumption()
             traj_dev_wo = env_wo.get_trajectory_deviation()
+            total_reward_wo = env_wo.get_reward()
             reward_components_wo = env_wo.get_reward_components()
             coll_prob_r_wo = reward_components_wo["coll_prob"]
             fuel_r_wo = reward_components_wo["fuel"]
@@ -449,6 +451,7 @@ class Simulator:
             coll_prob_wo = coll_prob
             fuel_cons_wo = fuel_cons
             traj_dev_wo = traj_dev
+            total_reward_wo = total_reward
             reward_components_wo = reward_components
             coll_prob_r_wo = coll_prob_r
             fuel_r_wo = fuel_r
@@ -483,7 +486,7 @@ class Simulator:
         if n > 0:
             print(f"    without maneuvers (total number: {n}):")
             for i, c in enumerate(collision_data_wo):
-                print(f"        #{i+1}: at {c['epoch']} with {c['debris name']};")
+                print(f"        #{i+1}: at {c['epoch']} with {c['debris_name']};")
                 print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
         else:
             print("    no collisions without maneuvers.")
@@ -492,10 +495,16 @@ class Simulator:
             if n > 0:
                 print(f"    with maneuvers (total number: {n}):")
                 for i, c in enumerate(collision_data):
-                    print(f"        #{i+1}: at {c['epoch']} with {c['debris name']};")
+                    print(f"        #{i+1}: at {c['epoch']} with {c['debris_name']};")
                     print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
             else:
                 print("    no collisions with maneuvers.")
+
+        # total reward
+        print("\nTotal Reward:")
+        print(f"    without maneuvers: {total_reward_wo}.")
+        if action_table_not_empty:
+            print(f"    with maneuvers: {total_reward}.")
 
         # table of significant parameters
         print("\nParameters table:")
@@ -519,4 +528,5 @@ class Simulator:
             df["reward with man"] = [coll_prob_r,
                                      fuel_r] + list(traj_dev_r)
 
-        print(df.round(5))
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            print(df)

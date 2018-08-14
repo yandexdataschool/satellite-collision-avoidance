@@ -109,19 +109,19 @@ class CrossEntropy(BaseTableModel):
 
         """
         super().__init__(env, step, reverse, first_maneuver_time)
-
+        self.n_maneuvers = n_maneuvers
         if n_maneuvers < 1:
             raise ValueError(
-                f"n_maneuvers = {n_maneuvers}, must be greater than 0.")
-        if reverse and n_maneuvers != 2:
+                f"n_maneuvers = {self.n_maneuvers}, must be greater than 0.")
+        if reverse and self.n_maneuvers != 2:
             raise ValueError(
-                f"if reverse==True, n_maneuvers = {n_maneuvers} must be equal to 2.")
+                f"if reverse==True, n_maneuvers = {self.n_maneuvers} must be equal to 2.")
 
         self.start_time = env.init_params["start_time"].mjd2000
         self.end_time = env.init_params["end_time"].mjd2000
         duration = self.end_time - self.start_time
         # for first action: dV = 0, time_to_req >= 0.
-        n_actions = n_maneuvers + 1
+        n_actions = self.n_maneuvers + 1
 
         # action table
         self.action_table = np.zeros((n_actions, 4))
@@ -132,7 +132,7 @@ class CrossEntropy(BaseTableModel):
         sigma_dV = sigma_dV or 1
         sigma_t = sigma_t or duration / 5
         self.sigma_table = np.vstack((
-            np.zeros((1, 4)), sigma_dV * np.ones((n_maneuvers, 4))
+            np.zeros((1, 4)), sigma_dV * np.ones((self.n_maneuvers, 4))
         ))
         self.sigma_table[:, 3] = sigma_t
         self.sigma_table[-1, -1] = np.nan
@@ -266,13 +266,14 @@ class CrossEntropy(BaseTableModel):
         # TODO - manage with reverse
         # TODO - more Exceptions
         # Note - use copy
-        if action_table.size:
+        if action_table.size > 0:
             if np.count_nonzero(action_table[0, :3]) != 0:
                 raise ValueError("first action must be empty")
             if self.reverse:
                 if action_table.shape[0] != 3:
                     raise ValueError(
                         "if reverse -  it has to be only 3 actions")
+            self.n_maneuvers = action_table.shape[0]
             self.action_table = np.copy(action_table)
             self.policy_reward = self.get_reward(self.action_table)
 

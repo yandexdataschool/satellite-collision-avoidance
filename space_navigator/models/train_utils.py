@@ -16,6 +16,7 @@ def generate_session_with_env(agent, env, step):
     Args:
         agent (Agent): agent to do actions.
         env (Environment): environment to simulate session with.
+        step (float): time step in simulation.
 
     Returns:
         reward (float): reward after end of simulation.
@@ -52,8 +53,6 @@ def position_after_actions(action_table, env, step, epoch):
     pos, vel = env.protected.position(epoch)
     env.reset()
     return pos, vel
-
-# TODO - delete generate_session
 
 
 def generate_session(protected, debris, agent, start_time, end_time, step, return_env=False):
@@ -158,29 +157,26 @@ def print_end_train(reward, train_time, action_table):
 def time_to_first_collision_in_env(env, step):
     # TODO - test
     agent = TableAgent()
-    simulator = Simulator(agent, env, step)
-    reward = simulator.run(log=False)
-    collision_moments = env.get_collision_data()
-    if collision_moments:
-        time = collision_moments[0]['epoch'] - env.get_start_time()
+    collisions = collision_data(env, step, agent)
+    if collisions:
+        time = collisions[0]['epoch'] - env.get_start_time().mjd2000
     else:
         # TODO - if None - empty action table for all models
         time = None
-    env.reset()
     return time
 
 
 def time_to_early_first_maneuver(env, step):
     # TODO - test
     time_to_collision = time_to_first_collision_in_env(env, step)
-    if time_to_collision:
+    if time_to_collision is None:
+        time = None
+    else:
         orbital_period = env.protected.get_orbital_period()
         if time_to_collision < orbital_period / 2:
             time = 0
         else:
             time = (time_to_collision - orbital_period / 2) % orbital_period
-    else:
-        time = None
     return time
 
 
@@ -192,3 +188,16 @@ def projection(plane, vector):
     proj = np.linalg.inv(A.T.dot(A))
     proj = A.dot(proj).dot(A.T).dot(x)
     return proj
+
+
+def collision_data(env, step, agent):
+    simulator = Simulator(agent, env, step)
+    simulator.run(log=False)
+    collision_data = env.get_collision_data()
+    env.reset()
+    return collision_data
+
+
+def change_orbit():
+    """Returns maneuvers to change orbit."""
+    pass

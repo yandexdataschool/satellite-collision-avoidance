@@ -26,7 +26,8 @@ class Environment:
 
     def __init__(self, protected, debris, start_time, end_time,
                  coll_prob_thr=1e-4, fuel_cons_thr=10,
-                 traj_dev_thr=(100, 0.01, 0.01, 0.01, 0.01, None)):
+                 traj_dev_thr=(100, 0.01, 0.01, 0.01, 0.01, None),
+                 target_osculating_elements=None):
         """
         Args:
             protected (SpaceObject): protected space object in Environment.
@@ -42,6 +43,9 @@ class Environment:
                     e (eccentricity): 0 < e < 1,
                     i (inclination), W (Longitude of the ascending node): radians,
                     w (Argument of periapsis), M (mean anomaly): radians.
+            target_osculating_elements (tuple):
+                six osculating keplerian elements (a,e,i,W,w,M) of target orbit of protected object,
+                is equal to protected object osculating elements if None.
 
         Note:
             Reward component is not taken into account, if threshold is None.
@@ -53,16 +57,22 @@ class Environment:
         if not (0 < traj_dev_thr[1] < 1):
             raise ValueError(f"eccentricity: {traj_dev_thr[1]}, should be in interval (0, 1).")
 
-        self.init_params = dict(protected=copy(protected), debris=copy(
-            debris), start_time=start_time, end_time=end_time)
+        self.init_params = dict(
+            protected=copy(protected), debris=copy(debris), start_time=start_time,
+            end_time=end_time, coll_prob_thr=coll_prob_thr, fuel_cons_thr=fuel_cons_thr,
+            traj_dev_thr=traj_dev_thr, target_osculating_elements=target_osculating_elements,
+        )
 
         self.protected = protected
         self.debris = debris
 
         self.protected_r = protected.get_radius()
         self.init_fuel = protected.get_fuel()
-        self.init_orbital_elements = np.array(
-            self.protected.osculating_elements(self.init_params["start_time"]))
+        if target_osculating_elements is None:
+            self.init_osculating_elements = np.array(
+                self.protected.osculating_elements(self.init_params["start_time"]))
+        else:
+            self.init_osculating_elements = target_osculating_elements
         self.trajectory_deviation = None
         self.n_debris = len(debris)
         self.debris_r = np.array([d.get_radius() for d in debris])
@@ -200,9 +210,9 @@ class Environment:
             self.min_distances_in_current_conjunction[
                 for_update_debris] = new_curr_dangerous_distances
             self.state_for_min_distances_in_current_conjunction[
-                for_update_debris, :6] = self.state['coord']['st'][0, :]
+                for_update_debris, : 6] = self.state['coord']['st'][0, :]
             self.state_for_min_distances_in_current_conjunction[
-                for_update_debris, 6:12] = self.state['coord']['debr'][for_update_debris, :]
+                for_update_debris, 6: 12] = self.state['coord']['debr'][for_update_debris, :]
             self.state_for_min_distances_in_current_conjunction[
                 for_update_debris, 12] = self.state["epoch"].mjd2000
 
@@ -221,7 +231,8 @@ class Environment:
                     "probability": p,
                     "distance": self.min_distances_in_current_conjunction[d],
                     "epoch": self.state_for_min_distances_in_current_conjunction[d, 12],
-                    "debris name": self.debris[d].get_name(),
+                    "debris_name": self.debris[d].get_name(),
+                    "debris_id": d,
                 })
                 coll_prob.append(p)
             self.collision_probability_prior_to_current_conjunction[end_cojunction_debris] = sum_coll_prob(
@@ -273,7 +284,7 @@ class Environment:
         if zero_update:
             deviation = np.zeros((6))
         else:
-            initial = self.init_orbital_elements
+            initial = self.init_osculating_elements
             current = np.array(self.protected.osculating_elements(self.init_params[
                 "start_time"]))
             deviation = current - initial
@@ -367,15 +378,21 @@ class Environment:
         return self.collision_data
 
     def get_start_time(self):
-        return self.init_params["start_time"].mjd2000
+        return self.init_params["start_time"]
 
     def get_end_time(self):
-        return self.init_params["end_time"].mjd2000
+        return self.init_params["end_time"]
 
     def reset(self):
         """ Return Environment to initial state. """
-        self.__init__(self.init_params['protected'], self.init_params['debris'],
-                      self.init_params['start_time'], self.init_params['end_time'],)
+        self.__init__(
+            self.init_params['protected'], self.init_params['debris'],
+            self.init_params['start_time'], self.init_params['end_time'],
+            self.init_params['coll_prob_thr'],
+            self.init_params['fuel_cons_thr'],
+            self.init_params['traj_dev_thr'],
+            self.init_params['target_osculating_elements'],
+        )
         return self.state
 
 
