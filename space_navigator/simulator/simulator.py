@@ -3,6 +3,8 @@
 
 import logging
 import time
+import json
+from copy import copy
 
 import numpy as np
 import pandas as pd
@@ -18,7 +20,6 @@ import pykep as pk
 from pykep.orbit_plots import plot_planet
 
 from ..agent import TableAgent
-from copy import copy
 
 
 logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
@@ -247,7 +248,7 @@ class Simulator:
         self.vis = None
         self.logger = None
 
-    def run(self, visualize=False, n_steps_vis=1000, log=True, each_step_propagation=False, print_out=False):
+    def run(self, visualize=False, n_steps_vis=1000, log=True, each_step_propagation=False, print_out=False, json_log=False):
         """
         Args:
             visualize (bool): whether show the simulation or not.
@@ -256,6 +257,7 @@ class Simulator:
             each_step_propagation (bool): whether propagate for each step
                 or skip the steps using a lower estimation of the time to conjunction.
             print_out (bool): whether show the print out or not.
+            json_log (bool): whether log the simulation to file or not.
 
         Returns:
             reward (float): reward of the session.
@@ -273,6 +275,10 @@ class Simulator:
         if log:
             iteration = 0
             self.logger = logging.getLogger('simulator.Simulator')
+
+        if json_log:
+            json_log_iter = 0
+            self.log_json(json_log_iter, start=True)
 
         if print_out:
             self.print_start()
@@ -320,12 +326,19 @@ class Simulator:
                     self.vis.pause(PAUSE_TIME)
                 self.vis.clear()
 
+            if json_log:
+                json_log_iter += 1
+                self.log_json(json_log_iter)
+
             if self.curr_time.mjd2000 >= self.end_time.mjd2000:
                 break
 
             next_action_time = self.env.get_next_action().mjd2000
 
-            if np.isnan(next_action_time) or next_action_time > self.end_time.mjd2000:
+            if each_step_propagation:
+                next_time = pk.epoch(
+                    self.curr_time.mjd2000 + self.step, "mjd2000")
+            elif np.isnan(next_action_time) or next_action_time > self.end_time.mjd2000:
                 next_time = self.end_time
             else:
                 next_time = pk.epoch(next_action_time, "mjd2000")
@@ -353,6 +366,10 @@ class Simulator:
             simulation_time = time.time() - simulation_start_time
             self.print_end(simulation_time)
 
+        if json_log:
+            json_log_iter += 1
+            self.log_json(json_log_iter, end=True)
+
         return self.env.get_reward()
 
     def log_protected_position(self):
@@ -373,6 +390,27 @@ class Simulator:
     def log_bad_action(self, message, action):
         self.logger.warning(
             "Unable to make action (dVx:{}, dVy:{}, dVz:{}): {}".format(action[0], action[1], action[2], message))
+
+    def log_json(self, id, start=False, end=False):
+        json_log_path = "vr/json_log.json"
+        if start:
+            with open(json_log_path, "w") as f:
+                f.write("{")
+        point = {
+            "time_mjd2000": self.curr_time.mjd2000,
+            "epoch": str(self.curr_time),
+            "protected_pos": list(self.env.protected.position(self.curr_time)[0]),
+        }
+        for d in self.env.debris:
+            point[f"debris_{d.get_name()}_pos"] = list(d.position(self.curr_time)[0])
+        with open(json_log_path, "a") as f:
+            f.write(f"\"{id}\": ")
+            json.dump(point, f)
+        with open(json_log_path, "a") as f:
+            if end:
+                f.write("}")
+            else:
+                f.write(", ")
 
     def plot_protected(self):
         """ Plot Protected SpaceObject. """
