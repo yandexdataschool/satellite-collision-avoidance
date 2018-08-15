@@ -327,8 +327,8 @@ class Simulator:
                 self.vis.clear()
 
             if json_log:
-                json_log_iter += 1
                 self.log_json(json_log_iter)
+                json_log_iter += 1
 
             if self.curr_time.mjd2000 >= self.end_time.mjd2000:
                 break
@@ -367,7 +367,6 @@ class Simulator:
             self.print_end(simulation_time)
 
         if json_log:
-            json_log_iter += 1
             self.log_json(json_log_iter, end=True)
 
         return self.env.get_reward()
@@ -396,20 +395,21 @@ class Simulator:
         if start:
             with open(json_log_path, "w") as f:
                 f.write("{")
-        point = {
-            "time_mjd2000": self.curr_time.mjd2000,
-            "epoch": str(self.curr_time),
-            "protected_pos": list(self.env.protected.position(self.curr_time)[0]),
-        }
-        for d in self.env.debris:
-            point[f"debris_{d.get_name()}_pos"] = list(d.position(self.curr_time)[0])
-        with open(json_log_path, "a") as f:
-            f.write(f"\"{id}\": ")
-            json.dump(point, f)
+        else:
+            point = {
+                "time_mjd2000": self.curr_time.mjd2000,
+                "epoch": str(self.curr_time),
+                "protected_pos": list(self.env.protected.position(self.curr_time)[0]),
+            }
+            for d in self.env.debris:
+                point[f"debris_{d.get_name()}_pos"] = list(d.position(self.curr_time)[0])
+            with open(json_log_path, "a") as f:
+                f.write(f"\"{id}\": ")
+                json.dump(point, f)
         with open(json_log_path, "a") as f:
             if end:
                 f.write("}")
-            else:
+            elif not start:
                 f.write(", ")
 
     def plot_protected(self):
