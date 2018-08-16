@@ -63,8 +63,8 @@ class Environment:
             traj_dev_thr=traj_dev_thr, target_osculating_elements=target_osculating_elements,
         )
 
-        self.protected = protected
-        self.debris = debris
+        self.protected = copy(protected)
+        self.debris = copy(debris)
 
         self.protected_r = protected.get_radius()
         self.init_fuel = protected.get_fuel()
