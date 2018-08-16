@@ -6,8 +6,9 @@ import numpy as np
 import pykep as pk
 
 
-from .generator_utils import SpaceObject2srt, rotate_velocity
-from ..api import SpaceObject
+from .generator_utils import rotate_velocity
+from ..api import SpaceObject, Environment
+from ..utils import write_environment
 
 
 class Generator:
@@ -22,8 +23,22 @@ class Generator:
     def __init__(self, start_time, end_time):
         # TODO - random start/end time with duration?
         # TODO - random duration?
-        self.start_time = pk.epoch(start_time, "mjd2000")
-        self.end_time = pk.epoch(end_time, "mjd2000")
+        if isinstance(start_time, (int, float)):
+            start_time = pk.epoch(start_time, "mjd2000")
+        elif isinstance(start_time, pk.core._core.epoch):
+            pass
+        else:
+            raise TypeError("Invalid start_time type")
+
+        if isinstance(end_time, (int, float)):
+            end_time = pk.epoch(end_time, "mjd2000")
+        elif isinstance(end_time, pk.core._core.epoch):
+            pass
+        else:
+            raise TypeError("Invalid end_time type")
+
+        self.start_time = start_time
+        self.end_time = end_time
 
         self.protected = None
         self.debris = []
@@ -84,7 +99,7 @@ class Generator:
 
     def add_debris(self, pos_sigma=0, vel_ratio_sigma=0.05,
                    i_threshold=0.5):
-        """Add debris object.
+        """Add debris object to the orbit of protected object.
 
         Args:
             pos_sigma (float): standard deviation of debris position
@@ -156,16 +171,20 @@ class Generator:
 
         self.debris.append(SpaceObject(name, "eph", params))
 
-    def save_env(self, save_path):
-        with open(save_path, 'w') as f:
-            f.write(f'{self.start_time.mjd2000}, {self.end_time.mjd2000}\n')
-            f.write('osc\n')
-            f.write(SpaceObject2srt(self.protected, self.start_time))
-            for debr, epoch in zip(self.debris, self.collision_epochs):
-                f.write(SpaceObject2srt(debr, epoch))
+    def get_env(self, *args, **kwargs):
+        env = Environment(self.protected, self.debris,
+                          self.start_time, self.end_time, *args, **kwargs)
+        return env
 
-    def get_env(self):
-        pass
+    def save_env(self, save_path, *args, **kwargs):
+        env = self.get_env(*args, **kwargs)
+        write_environment(env, path)
+        # with open(save_path, 'w') as f:
+        #     f.write(f'{self.start_time.mjd2000}, {self.end_time.mjd2000}\n')
+        #     f.write('osc\n')
+        #     f.write(SpaceObject2srt(self.protected, self.start_time))
+        #     for debr, epoch in zip(self.debris, self.collision_epochs):
+        #         f.write(SpaceObject2srt(debr, epoch))
 
     def print_info(self):
         pass
