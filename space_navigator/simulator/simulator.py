@@ -343,7 +343,7 @@ class Simulator:
             else:
                 next_time = pk.epoch(next_action_time, "mjd2000")
 
-            if visualize:
+            if visualize and not each_step_propagation:
                 n_steps_to_next_time = int(next_time.mjd2000 / self.step)
                 n_steps_to_next_vis = n_steps_vis - n_steps_since_vis
                 if n_steps_to_next_time > n_steps_to_next_vis:
