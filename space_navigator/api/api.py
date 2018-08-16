@@ -140,10 +140,8 @@ class Environment:
         # restep is less then step.
         n_time_steps_plus_one = int(np.ceil(
             (end_time - curr_time) / step) + 1)
-
         propagation_grid, retstep = np.linspace(
             curr_time, end_time, n_time_steps_plus_one, retstep=True)
-
         if retstep > step:
             raise Exception(
                 "Step in propagation grid should be <= step")
@@ -268,7 +266,8 @@ class Environment:
                 ])
             )
         else:
-            self.total_collision_probability_arr = self.collision_probability_prior_to_current_conjunction
+            self.total_collision_probability_arr = np.copy(
+                self.collision_probability_prior_to_current_conjunction)
 
         self.total_collision_probability = sum_coll_prob(
             self.total_collision_probability_arr
