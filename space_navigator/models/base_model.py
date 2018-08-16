@@ -8,8 +8,8 @@ from .train_utils import generate_session_with_env, time_to_early_first_maneuver
 
 from ..api import Environment, MAX_FUEL_CONSUMPTION
 from ..simulator import Simulator
-from ..agent import TableAgent
-from ..utils import read_space_objects
+from ..agent import TableAgent, adjust_action_table
+from ..utils import read_space_objects, actions_to_maneuvers
 
 
 class BaseTableModel:
@@ -100,3 +100,8 @@ class BaseTableModel:
         print("\nTraining completed in {:.5} sec.".format(train_time))
         print(f"Total Reward: {self.policy_reward}")
         print(f"Action Table:\n{self.action_table}")
+
+    def get_maneuvers(self):
+        maneuvers = actions_to_maneuvers(
+            self.action_table, self.env.get_start_time())
+        return maneuvers
