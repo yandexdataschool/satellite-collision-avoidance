@@ -335,7 +335,8 @@ class Simulator:
 
             next_action_time = self.env.get_next_action().mjd2000
 
-            if each_step_propagation:
+            # TODO: rewrite more clearly after discussion
+            if json_log:
                 next_time = pk.epoch(
                     self.curr_time.mjd2000 + self.step, "mjd2000")
             elif np.isnan(next_action_time) or next_action_time > self.end_time.mjd2000:
@@ -343,7 +344,7 @@ class Simulator:
             else:
                 next_time = pk.epoch(next_action_time, "mjd2000")
 
-            if visualize and not each_step_propagation:
+            if visualize and not json_log:
                 n_steps_to_next_time = int(next_time.mjd2000 / self.step)
                 n_steps_to_next_vis = n_steps_vis - n_steps_since_vis
                 if n_steps_to_next_time > n_steps_to_next_vis:
