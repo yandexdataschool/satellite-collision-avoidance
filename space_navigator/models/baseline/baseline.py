@@ -21,7 +21,8 @@ from ..train_utils import (
 class Baseline(BaseTableModel):
     """Provides prograde/retrograde maneuvers collision-by-collision."""
 
-    def __init__(self, env, step, reverse=True, first_maneuver_direction="auto"):
+    def __init__(self, env, step, reverse=False, first_maneuver_direction="auto",
+                 min_time_to_next_maneuver=0.01):
         """
         Agrs:
             env (Environment): environment with given parameteres.
@@ -35,6 +36,7 @@ class Baseline(BaseTableModel):
                     "forward" (co-directed)
                     "backward" (oppositely directed)
                     "auto" (just collinear).
+            min_time_to_next_maneuver (float): minimum time between two maneuvers (days).
 
         TODO:
             tests - compare with CollinearGridSearch
@@ -45,7 +47,7 @@ class Baseline(BaseTableModel):
 
         self.start_time = self.env.get_start_time()
         self.end_time = self.env.get_end_time()
-        self.min_time_to_next_maneuver = 0.01  # (days)  # TODO: check
+        self.min_time_to_next_maneuver = min_time_to_next_maneuver
         self.first_maneuver_direction = first_maneuver_direction
         self.maneuvers_direction = first_maneuver_direction
         self._avoided_collisions = []
