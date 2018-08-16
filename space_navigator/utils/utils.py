@@ -3,9 +3,11 @@ import pykep as pk
 
 import torch
 
+from copy import copy
+
 from ..api import SpaceObject
 from ..api import Environment
-from ..agent import TableAgent, PytorchAgent
+from ..agent import TableAgent, PytorchAgent, adjust_action_table
 
 
 def read_space_objects(file, param_type):
@@ -95,13 +97,46 @@ def read_space_objects_from_list(lines, param_type):
     return space_objects
 
 
+def space_object_to_str(space_object, epoch):
+    # TODO - different formats?
+    name = space_object.get_name()
+    time = epoch.mjd2000
+    elements = space_object.get_orbital_elements()
+
+    # pykep debug
+    if np.isnan(elements[5]):
+        elements = list(elements)
+        elements[5] = -np.pi
+        elements = tuple(elements)
+
+    mu_central_body = space_object.get_mu_central_body()
+    mu_self = space_object.get_mu_self()
+    radius = space_object.get_radius()
+    safe_radius = space_object.get_safe_radius()
+
+    fuel = space_object.get_fuel()
+
+    s = name + "\n"
+    s += f"{time}\n"
+    s += str(elements).strip('()') + "\n"
+    s += f"{mu_central_body}, {mu_self}, {radius}, {safe_radius}\n"
+    s += f"{fuel}\n"
+
+    return s
+
+
 def read_environment(path):
-    """ Create SpaceObjects from a text file.
+    """ Read Environment from a text file.
+
     Args:
-        path (str): parameter types for initializing a SpaceObject.
-            Could be "tle", "oph" or "osc".
+        path (str): path to file with objects
+
     Returns:
-        (Environment): environment with given in file parameteres.
+        env (Environment): environment with given in file parameteres.
+
+    TODO:
+        param_type (str): parameter types for initializing a SpaceObject.
+            Could be "tle", "oph" or "osc".
     """
     with open(path, 'r') as satellites:
         lines = satellites.readlines()
@@ -115,7 +150,32 @@ def read_environment(path):
     objects = read_space_objects_from_list(lines[2:], param_type)
     protected, debris = objects[0], objects[1:]
 
-    return Environment(protected, debris, start_time, end_time)
+    env = Environment(protected, debris, start_time, end_time)
+
+    return env
+
+
+def write_environment(env, path):
+    """ Write Environment to a text file.
+
+    Args:
+        env (Environment): environment with given parameteres.
+        path (str): path to the file for writing.
+
+    TODO:
+        param_type (str): parameter types for initializing a SpaceObject.
+            Could be "tle", "oph" or "osc".
+    """
+    env = copy(env)
+    env.reset()
+    start_time = env.get_start_time()
+    end_time = env.get_end_time()
+    with open(path, 'w') as f:
+        f.write(f'{start_time.mjd2000}, {end_time.mjd2000}\n')
+        f.write('osc\n')
+        f.write(space_object_to_str(env.protected, start_time))
+        for debr in env.debris:
+            f.write(space_object_to_str(debr, start_time))
 
 
 def get_agent(agent_type, model_path='', num_inputs=6, num_outputs=4, hidden_size=64):
@@ -133,3 +193,28 @@ def get_agent(agent_type, model_path='', num_inputs=6, num_outputs=4, hidden_siz
     else:
         raise ValueError("Invalid agent type")
     return agent
+
+
+def actions_to_maneuvers(action_table, start_time):
+    """
+    Args:
+        action_table (np.array with shape=(n_actions, 4) or (4) or (0)):
+            table of actions with columns ["dVx", "dVy", "dVz", "time to request"].
+        start_time (pk.epoch): initial time of the environment.
+
+    Returns:
+        maneuvers (list of dicts): list of maneuvers.
+
+    """
+    maneuvers = []
+    maneuvers_table = adjust_action_table(action_table)
+    if maneuvers_table.size:
+        maneuvers_table[-1, -1] = 0
+        maneuvers_table[:, 3] = np.cumsum(
+            maneuvers_table[:, 3]) + start_time.mjd2000
+        if np.count_nonzero(maneuvers_table[0, :3]) == 0:
+            maneuvers_table = np.delete(maneuvers_table, 0, axis=0)
+        for man in maneuvers_table:
+            maneuvers.append(
+                {"action": man[:3], "t_man": pk.epoch(man[3], "mjd2000")})
+    return maneuvers
