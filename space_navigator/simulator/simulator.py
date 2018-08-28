@@ -402,8 +402,10 @@ class Simulator:
                 "epoch": str(self.curr_time),
                 "protected_pos": list(self.env.protected.position(self.curr_time)[0]),
             }
+            debris_pos = []
             for d in self.env.debris:
-                point[f"debris_{d.get_name()}_pos"] = list(d.position(self.curr_time)[0])
+                debris_pos.append(list(d.position(self.curr_time)[0]))
+            point["debris_pos"] = debris_pos
             with open(json_log_path, "a") as f:
                 f.write(f"\"{id}\": ")
                 json.dump(point, f)
