@@ -207,8 +207,10 @@ class Environment:
         # Update min distances and states for dangerous debris
         # in current conjunction.
         if for_update_debris.size:
+            _distances = np.empty(self.n_debris)
+            _distances[new_curr_dangerous_debris] = new_curr_dangerous_distances
             self.min_distances_in_current_conjunction[
-                for_update_debris] = new_curr_dangerous_distances
+                for_update_debris] = _distances[for_update_debris]
             self.state_for_min_distances_in_current_conjunction[
                 for_update_debris, : 6] = self.state['coord']['st'][0, :]
             self.state_for_min_distances_in_current_conjunction[
