@@ -486,7 +486,8 @@ class Simulator:
         if n > 0:
             print(f"    without maneuvers (total number: {n}):")
             for i, c in enumerate(collision_data_wo):
-                print(f"        #{i+1}: at {c['epoch']} with {c['debris_name']};")
+                print(f"\n        #{i+1}: at {c['epoch']} with {c['debris_name']};")
+                print(f"        date: {c['epoch']}")
                 print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
         else:
             print("    no collisions without maneuvers.")
@@ -495,7 +496,8 @@ class Simulator:
             if n > 0:
                 print(f"    with maneuvers (total number: {n}):")
                 for i, c in enumerate(collision_data):
-                    print(f"        #{i+1}: at {c['epoch']} with {c['debris_name']};")
+                    print(f"\n        #{i+1}: at {c['epoch']} with {c['debris_name']};")
+                    print(f"        date: {c['epoch']}")
                     print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
             else:
                 print("    no collisions with maneuvers.")

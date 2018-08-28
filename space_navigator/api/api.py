@@ -232,7 +232,8 @@ class Environment:
                 self.collision_data.append({
                     "probability": p,
                     "distance": self.min_distances_in_current_conjunction[d],
-                    "epoch": self.state_for_min_distances_in_current_conjunction[d, 12],
+                    "epoch": pk.epoch(
+                        self.state_for_min_distances_in_current_conjunction[d, 12], 'mjd2000'),
                     "debris_name": self.debris[d].get_name(),
                     "debris_id": d,
                 })
