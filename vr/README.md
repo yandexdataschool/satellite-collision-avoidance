@@ -28,7 +28,7 @@ python  vr/simulation.py -env data/environments/generated_collision_5_debr.env \
 -model training/agents_tables/CE/action_table_CE_for_generated_collision_5_debr.csv
 ```
 
-####JSON output
+#### JSON output
 
 JSON output (json_log.json) format:
 ```
