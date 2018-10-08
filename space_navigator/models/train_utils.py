@@ -190,10 +190,18 @@ def projection(plane, vector):
     return proj
 
 
+def conjunction_data(env, step, agent):
+    simulator = Simulator(agent, env, step)
+    simulator.run(log=False)
+    conjunction_data = env.get_conjunction_data()
+    env.reset()
+    return conjunction_data
+
+
 def collision_data(env, step, agent):
     simulator = Simulator(agent, env, step)
     simulator.run(log=False)
-    collision_data = env.get_collision_data()
+    collision_data = env.collision_data()
     env.reset()
     return collision_data
 
