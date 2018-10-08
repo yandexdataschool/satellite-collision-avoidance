@@ -4,7 +4,7 @@ import time
 
 import time
 
-from .train_utils import generate_session_with_env, time_to_early_first_maneuver
+from .train_utils import generate_session_with_env, time_before_early_first_maneuver
 
 from ..api import Environment, MAX_FUEL_CONSUMPTION
 from ..simulator import Simulator
@@ -37,7 +37,7 @@ class BaseTableModel:
 
         self.first_maneuver_time = first_maneuver_time
         if first_maneuver_time == "early":
-            time_to_first_maneuver = time_to_early_first_maneuver(
+            time_to_first_maneuver = time_before_early_first_maneuver(
                 self.env, self.step)
         else:
             time_to_first_maneuver = None
