@@ -26,7 +26,7 @@ logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
                     filemode='w', format='%(name)s:%(levelname)s\n%(message)s\n')
 
 PAUSE_TIME = 0.0001  # sc
-PAUSE_ACTION_TIME = 2  # sc
+PAUSE_ACTION_TIME = 4  # sc
 ARROW_LENGTH = 4e6  # meters
 EARTH_RADIUS = 6.3781e6  # meters
 
@@ -169,21 +169,21 @@ Reward Components:
     R Fuel Consumption: {r_fuel:.5};
     R Trajectory Deviation: {r_traj_dev:.5}.
 
-Total Reward: {self.reward_arr[-1]:.5}
+Total Reward: {self.reward_arr[-1]:.5}.
 """
         if self.curr_alert_info:
             s_alert = f"""Danger of collision!\n
 Object:                   {self.curr_alert_info["debris_name"]};
 Probability:              {self.curr_alert_info["probability"]};
 Miss distance:            {self.curr_alert_info["distance"]};
-Epoch:                    {self.curr_alert_info["epoch"]};
+Epoch:                    {pk.epoch(self.curr_alert_info["epoch"])};
 Seconds before collision: {self.curr_alert_info["sec_before_collision"]}.
 """
         else:
             s_alert = "No danger."
         self.subplot_3d.text2D(-0.3, 0.7, s,
                                transform=self.subplot_3d.transAxes)
-        self.subplot_3d.text2D(0.4, 1.07, s_alert,
+        self.subplot_3d.text2D(0.35, 1.07, s_alert,
                                transform=self.subplot_3d.transAxes)
 
     def plot_graphics(self):
@@ -213,7 +213,11 @@ Seconds before collision: {self.curr_alert_info["sec_before_collision"]}.
 
         # self.fig.savefig(f'action_{self.dV_plot}_{time}.png', bbox_inches=extent)
         # set plotted action to zero
+        dVx, dVy, dVz = self.dV_plot
         self.dV_plot = np.zeros(3)
+        s = f"Maneuver:\ndVx = {dVx:.5};\ndVy = {dVy:.5};\ndVz = {dVz:.5};"
+        self.subplot_3d.text2D(0.35, 0.9, s,
+                               transform=self.subplot_3d.transAxes)
 
     def save_graphics(self):
         fig = plt.figure(figsize=[7, 12])
@@ -237,7 +241,7 @@ Seconds before collision: {self.curr_alert_info["sec_before_collision"]}.
 
 class Simulator:
     """ Simulator allows to start the simulation of provided environment,
-        and starts agent-environment collaboration.
+        and starts agent - environment collaboration.
     """
 
     def __init__(self, agent, environment, step=1e-6):
@@ -307,7 +311,7 @@ class Simulator:
 
             # collision data with maneuvers
             env_temp.reset()
-            agent = self.agent
+            agent = self.agent.copy()
             simulator_with_man = Simulator(agent, env_temp, self.step)
             simulator_with_man.run(visualize=False, log=False, each_step_propagation=False,
                                    print_out=False, json_log=False, n_orbits_alert=None)
@@ -335,7 +339,7 @@ class Simulator:
             if not are_maneuvers:
                 assert len(self.alerts) == len(collision_data_wo_man)
             if are_maneuvers:
-                for coll in collision_data_wo_man:
+                for coll in collision_data_with_man:
                     if coll["epoch"] >= maneuvers_epochs[0] + warning_time:
                         start_alert_epoch = max(
                             coll["epoch"] - warning_time, 0)
@@ -345,8 +349,8 @@ class Simulator:
                         coll["end_alert_epoch"] = end_alert_epoch
                         self.alerts.append(coll)
 
-            assert len(self.alerts) >= max(
-                len(collision_data_wo_man), len(collision_data_with_man))
+            # assert len(self.alerts) >= max(
+            #     len(collision_data_wo_man), len(collision_data_with_man))
 
             self.curr_alert_id = 0
             self.curr_alert = self.curr_alert_info()
@@ -645,7 +649,7 @@ class Simulator:
                 print(f"        #{i+1}: at {c['epoch']} with {c['debris_name']};")
                 print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
         else:
-            print("    no collisions without maneuvers.")
+            print("    without maneuvers: no collisions.")
         if action_table_not_empty:
             n = len(collision_data)
             if n > 0:
@@ -654,7 +658,7 @@ class Simulator:
                     print(f"        #{i+1}: at {c['epoch']} with {c['debris_name']};")
                     print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
             else:
-                print("    no collisions with maneuvers.")
+                print("    with maneuvers: no collisions.")
 
         # total reward
         print("\nTotal Reward:")
