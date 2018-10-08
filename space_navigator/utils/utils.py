@@ -133,3 +133,20 @@ def get_agent(agent_type, model_path='', num_inputs=6, num_outputs=4, hidden_siz
     else:
         raise ValueError("Invalid agent type")
     return agent
+
+
+def is_action_table_empty(action_table):
+    return action_table.size == 0 or np.count_nonzero(action_table[:, :3]) == 0
+
+
+def action_table2maneuver_table(action_table, start_time):
+    """"""
+    if is_action_table_empty(action_table):
+        return np.zeros((0, 4))
+    maneuvers = action_table
+    maneuvers[1:, 3] = maneuvers[:-1, 3]
+    maneuvers[0, 3] = 0
+    maneuvers[:, 3] = np.cumsum(maneuvers[:, 3]) + start_time.mjd2000
+    if np.count_nonzero(maneuvers[0, :3]) == 0:
+        maneuvers = maneuvers[1:]
+    return maneuvers
