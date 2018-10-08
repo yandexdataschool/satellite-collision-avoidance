@@ -105,12 +105,12 @@ class Environment:
         self.reward = None
 
         # initiate state with initial positions
-        st, debr = self.get_coords_by_epoch(start_time)
+        st, debr = self.coords_by_epoch(start_time)
         coord = dict(st=st, debr=debr)
         self.state = dict(
             coord=coord, epoch=start_time, fuel=self.protected.get_fuel())
 
-        self.collision_data = []
+        self.conjunction_data = []
 
         self._update_all_reward_components(zero_update=True)
 
@@ -150,7 +150,7 @@ class Environment:
         while s < n_time_steps_plus_one:
             t = propagation_grid[s]
             epoch = pk.epoch(t, "mjd2000")
-            st, debr = self.get_coords_by_epoch(epoch)
+            st, debr = self.coords_by_epoch(epoch)
             coord = dict(st=st, debr=debr)
             self.state = dict(
                 coord=coord, epoch=epoch, fuel=self.protected.get_fuel()
@@ -225,7 +225,7 @@ class Environment:
                         d, 6:12],
                     self.protected_r, self.debris_r[d]
                 )
-                self.collision_data.append({
+                self.conjunction_data.append({
                     "probability": p,
                     "distance": self.min_distances_in_current_conjunction[d],
                     "epoch": self.state_for_min_distances_in_current_conjunction[d, 12],
@@ -362,19 +362,9 @@ class Environment:
     def get_fuel_consumption(self):
         return float(self.init_fuel - self.protected.get_fuel())
 
-    def get_coords_by_epoch(self, epoch):
-        st_pos, st_v = self.protected.position(epoch)
-        st = np.hstack((np.array(st_pos), np.array(st_v)))[np.newaxis, ...]
-        n_items = len(self.debris)
-        debr = np.zeros((n_items, 6))
-        for i in range(n_items):
-            pos, v = self.debris[i].position(epoch)
-            debr[i] = np.array(pos + v)
-
-        return st, debr
-
-    def get_collision_data(self):
-        return self.collision_data
+    def get_conjunction_data(self):
+        # TODO: conjunction_data for each object if set of protected
+        return self.conjunction_data
 
     def get_start_time(self):
         return self.init_params["start_time"]
@@ -382,17 +372,37 @@ class Environment:
     def get_end_time(self):
         return self.init_params["end_time"]
 
+    def set_start_time(self, start_time):
+        self.init_params["start_time"] = start_time
+
+    def set_end_time(self, end_time):
+        self.init_params["end_time"] = end_time
+
+    def coords_by_epoch(self, epoch):
+        st_pos, st_v = self.protected.position(epoch)
+        st = np.hstack((np.array(st_pos), np.array(st_v)))[np.newaxis, ...]
+        n_items = len(self.debris)
+        debr = np.zeros((n_items, 6))
+        for i in range(n_items):
+            pos, v = self.debris[i].position(epoch)
+            debr[i] = np.array(pos + v)
+        return st, debr
+
+    def collision_data(self):
+        # TODO: add miss distance thr
+        collision_data = []
+        for coll in self.conjunction_data:
+            if coll["probability"] >= self.coll_prob_thr:
+                collision_data.append(coll)
+        return collision_data
+
     def reset(self):
         """ Return Environment to initial state. """
-        self.__init__(
-            self.init_params['protected'], self.init_params['debris'],
-            self.init_params['start_time'], self.init_params['end_time'],
-            self.init_params['coll_prob_thr'],
-            self.init_params['fuel_cons_thr'],
-            self.init_params['traj_dev_thr'],
-            self.init_params['target_osculating_elements'],
-        )
+        self.__init__(**self.init_params)
         return self.state
+
+    def copy(self):
+        return Environment(**self.init_params)
 
 
 class SpaceObject:
