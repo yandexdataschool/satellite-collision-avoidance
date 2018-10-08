@@ -154,30 +154,27 @@ def print_end_train(reward, train_time, action_table):
     print(f"Action Table:\n{action_table}")
 
 
-def time_to_first_collision_in_env(env, step):
-    # TODO - test
+def time_before_first_collision(env, step):
     agent = TableAgent()
     collisions = collision_data(env, step, agent)
     if collisions:
-        time = collisions[0]['epoch'] - env.get_start_time().mjd2000
-    else:
-        # TODO - if None - empty action table for all models
-        time = None
-    return time
+        return collisions[0]['epoch'] - env.get_start_time().mjd2000
+    return None
 
 
-def time_to_early_first_maneuver(env, step):
-    # TODO - test
-    time_to_collision = time_to_first_collision_in_env(env, step)
-    if time_to_collision is None:
-        time = None
-    else:
-        orbital_period = env.protected.get_orbital_period()
-        if time_to_collision < orbital_period / 2:
-            time = 0
-        else:
-            time = (time_to_collision - orbital_period / 2) % orbital_period
-    return time
+def time_before_early_first_maneuver(env, step, max_n_orbits=0.5):
+    time_before_collision = time_before_first_collision(env, step)
+    if time_before_collision is None:
+        return None
+    orbital_period = env.protected.get_orbital_period()
+    max_time_before_collision = max_n_orbits * orbital_period
+    time_indent = time_before_collision - max_time_before_collision
+    if max_n_orbits <= 0.5:
+        return time_indent
+    before_half_orbit = time_before_collision - orbital_period / 2
+    if time_indent <= 0:
+        return before_half_orbit % orbital_period if before_half_orbit > 0 else 0
+    return before_half_orbit - int(max_n_orbits - 0.5) * orbital_period
 
 
 def projection(plane, vector):
