@@ -156,16 +156,16 @@ class Generator:
 
         self.debris.append(SpaceObject(name, "eph", params))
 
-    def save_env(self, save_path):
+    def save_env(self, save_path, time_before_start_time=0):
         with open(save_path, 'w') as f:
-            f.write(f'{self.start_time.mjd2000}, {self.end_time.mjd2000}\n')
+            f.write(f'{self.start_time.mjd2000 - time_before_start_time}, {self.end_time.mjd2000}\n')
             f.write('osc\n')
             f.write(SpaceObject2srt(self.protected, self.start_time))
             for debr, epoch in zip(self.debris, self.collision_epochs):
                 f.write(SpaceObject2srt(debr, epoch))
 
-    def get_env(self):
+    def env(self):
         pass
 
-    def print_info(self):
+    def info(self):
         pass
