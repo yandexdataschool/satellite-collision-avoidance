@@ -17,7 +17,7 @@ Then, to calculate the maneuvers to vr/training/, run (add ```-full false``` for
 ```
 python vr/simple_training.py -save_dir vr/examples/training -env vr/examples/test.env
 ```
-Please note that in addition to the maneuvers, files with information (...info.csv) about the solution can be found in the directory (vr/training/).
+Please note that in addition to the maneuvers, files with information (...inf.csv) about the solution can be found in the directory (vr/training/).
 
 Finally, to run the simulator for generated environment and obtained maneuvers (add ```-s 0.001``` for demo simulation):
 ```
