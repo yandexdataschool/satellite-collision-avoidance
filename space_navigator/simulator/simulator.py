@@ -512,7 +512,7 @@ class Simulator:
                     "info": self.curr_alert,
                 }
             with open(self.json_log_path, "a") as f:
-                f.write(f"\"{id}\": ")
+                f.write(f'"{id}": ')
                 json.dump(point, f)
         with open(self.json_log_path, "a") as f:
             if end:
