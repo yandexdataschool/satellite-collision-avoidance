@@ -14,7 +14,7 @@ from ..base_model import BaseTableModel
 from ..collinear_GS.collinear_GS import CollinearGridSearch
 from ..train_utils import (
     orbital_period_after_actions, change_orbit,
-    collision_data, generate_session,
+    conjunction_data, generate_session,
 )
 
 
@@ -62,7 +62,7 @@ class Baseline(BaseTableModel):
 
         """
         agent = Agent()
-        collisions = collision_data(self.env, self.step, agent)
+        collisions = conjunction_data(self.env, self.step, agent)
         action_table = copy(self.action_table)
         env = copy(self.env)
         start_time = copy(self.start_time)
@@ -145,7 +145,7 @@ class Baseline(BaseTableModel):
             # update collisions information
             if is_action:
                 agent = Agent()
-                new_collisions = collision_data(env, self.step, agent)
+                new_collisions = conjunction_data(env, self.step, agent)
                 if new_collisions:
                     # skip avoided collisions
                     # TODO: optimize skipping

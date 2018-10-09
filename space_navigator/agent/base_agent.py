@@ -14,6 +14,10 @@ class BaseAgent:
         """"""
         pass
 
+    def copy(self):
+        """"""
+        pass
+
 
 class NNAgent(BaseAgent):
     """docstring for NNAgent"""

@@ -100,17 +100,19 @@ Parameters table:
 
 #### Example 2: maneuvers for random generated collision situation
 
-Run following code to generate collision situation environment with 5 dangerous debris objects in the time interval from 6601 to 6602 ([mjd2000](http://www.solarsystemlab.com/faq.html)) and save it to data/environments/generated_collision_5_debr.env:
+Run following code to generate collision situation environment with 5 dangerous debris objects in the time interval from 6601 to 6601.1 ([mjd2000](http://www.solarsystemlab.com/faq.html)) and save it to data/environments/generated_collision_5_debr.env:
 ```
 python generation/generate_collision.py \
--n_d 5 -start 6601 -end 6602 -save_path data/environments/generated_collision_5_debr.env
+-save_path data/environments/generated_collision_5_debr.env \
+-n_d 5 -start 6601 -end 6601.1 -before 0.1
 ```
 
 Then, to calculate the maneuvers using the Cross Entropy method and save them to training/agents_tables/CE/action_table_CE_for_generated_collision_5_debr.csv, run:
 ```
 python training/CE/CE_train_for_collision.py \
--env data/environments/generated_collision_5_debr.env -print true -progress true \
--save_path training/agents_tables/CE/action_table_CE_for_generated_collision_5_debr.csv
+-env data/environments/generated_collision_5_debr.env -print true \
+-save_path training/agents_tables/CE/action_table_CE_for_generated_collision_5_debr.csv \
+-r false -n_m 1
 ```
 
 Finally, to run the simulator for generated environment and obtained maneuvers:

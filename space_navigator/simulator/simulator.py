@@ -3,6 +3,7 @@
 
 import logging
 import time
+import json
 
 import numpy as np
 import pandas as pd
@@ -18,14 +19,14 @@ import pykep as pk
 from pykep.orbit_plots import plot_planet
 
 from ..agent import TableAgent
-from copy import copy
+from ..utils import is_action_table_empty, action_table2maneuver_table
 
 
 logging.basicConfig(filename="simulator.log", level=logging.DEBUG,
                     filemode='w', format='%(name)s:%(levelname)s\n%(message)s\n')
 
 PAUSE_TIME = 0.0001  # sc
-PAUSE_ACTION_TIME = 2  # sc
+PAUSE_ACTION_TIME = 4  # sc
 ARROW_LENGTH = 4e6  # meters
 EARTH_RADIUS = 6.3781e6  # meters
 
@@ -37,7 +38,7 @@ def full_extent(ax, pad=0.0):
     # are undefined.
     ax.figure.canvas.draw()
     items = ax.get_xticklabels() + ax.get_yticklabels()
-#    items += [ax, ax.title, ax.xaxis.label, ax.yaxis.label]
+    # items += [ax, ax.title, ax.xaxis.label, ax.yaxis.label]
     items += [ax, ax.title]
     bbox = Bbox.union([item.get_window_extent() for item in items])
 
@@ -89,7 +90,7 @@ class Visualizer:
         in real time.
     """
 
-    def __init__(self, curr_time, prob, fuel_cons, traj_dev, reward_components, reward):
+    def __init__(self, curr_time, prob, fuel_cons, traj_dev, reward_components, reward, curr_alert_info):
         self.fig = plt.figure(figsize=[14, 12])
         self.gs = gridspec.GridSpec(15, 2)
         self.subplot_3d = self.fig.add_subplot(self.gs[:, 0], projection='3d')
@@ -106,13 +107,14 @@ class Visualizer:
         self.reward_components = reward_components
         self.r_traj_dev_arr = [sum(traj_dev)]
         self.reward_arr = [reward]
+        self.curr_alert_info = curr_alert_info
         # initialize zero action
         self.dV_plot = np.zeros(3)
 
     def run(self):
         plt.ion()
 
-    def update_data(self, curr_time, prob, fuel_cons, traj_dev, reward_components, reward):
+    def update_data(self, curr_time, prob, fuel_cons, traj_dev, reward_components, reward, curr_alert_info):
         self.time_arr.append(curr_time)
         self.prob_arr.append(prob)
         self.fuel_cons_arr.append(fuel_cons)
@@ -120,6 +122,7 @@ class Visualizer:
         self.reward_components = reward_components
         self.r_traj_dev_arr.append(sum(reward_components["traj_dev"]))
         self.reward_arr.append(reward)
+        self.curr_alert_info = curr_alert_info
 
     def plot_planet(self, satellite, t, size, color):
         """ Plot a pykep.planet object. """
@@ -150,9 +153,7 @@ class Visualizer:
         r_coll_prob = self.reward_components["coll_prob"]
         r_fuel = self.reward_components["fuel"]
         r_traj_dev = sum(self.reward_components["traj_dev"])
-        s = f"""
-Epoch: {epoch}
-
+        s = f"""Epoch: {epoch}\n
 Collision Probability: {self.prob_arr[-1]:.5}.
 Fuel Consumption: {self.fuel_cons_arr[-1]:.5} (|dV|).
 Trajectory Deviation:
@@ -168,9 +169,21 @@ Reward Components:
     R Fuel Consumption: {r_fuel:.5};
     R Trajectory Deviation: {r_traj_dev:.5}.
 
-Total Reward: {self.reward_arr[-1]:.5}
+Total Reward: {self.reward_arr[-1]:.5}.
 """
+        if self.curr_alert_info:
+            s_alert = f"""Danger of collision!\n
+Object:                   {self.curr_alert_info["debris_name"]};
+Probability:              {self.curr_alert_info["probability"]};
+Miss distance:            {self.curr_alert_info["distance"]};
+Epoch:                    {pk.epoch(self.curr_alert_info["epoch"])};
+Seconds before collision: {self.curr_alert_info["sec_before_collision"]}.
+"""
+        else:
+            s_alert = "No danger."
         self.subplot_3d.text2D(-0.3, 0.7, s,
+                               transform=self.subplot_3d.transAxes)
+        self.subplot_3d.text2D(0.35, 1.07, s_alert,
                                transform=self.subplot_3d.transAxes)
 
     def plot_graphics(self):
@@ -200,7 +213,11 @@ Total Reward: {self.reward_arr[-1]:.5}
 
         # self.fig.savefig(f'action_{self.dV_plot}_{time}.png', bbox_inches=extent)
         # set plotted action to zero
+        dVx, dVy, dVz = self.dV_plot
         self.dV_plot = np.zeros(3)
+        s = f"Maneuver:\ndVx = {dVx:.5};\ndVy = {dVy:.5};\ndVz = {dVz:.5};"
+        self.subplot_3d.text2D(0.35, 0.9, s,
+                               transform=self.subplot_3d.transAxes)
 
     def save_graphics(self):
         fig = plt.figure(figsize=[7, 12])
@@ -224,7 +241,7 @@ Total Reward: {self.reward_arr[-1]:.5}
 
 class Simulator:
     """ Simulator allows to start the simulation of provided environment,
-        and starts agent-environment collaboration.
+        and starts agent - environment collaboration.
     """
 
     def __init__(self, agent, environment, step=1e-6):
@@ -246,8 +263,13 @@ class Simulator:
 
         self.vis = None
         self.logger = None
+        self.alerts = None
+        self.curr_alert_id = None
+        self.curr_alert = None
+        self.json_log_path = None
 
-    def run(self, visualize=False, n_steps_vis=1000, log=True, each_step_propagation=False, print_out=False):
+    def run(self, visualize=False, n_steps_vis=1000, log=True, each_step_propagation=False,
+            print_out=False, json_log=False, n_orbits_alert=1., json_log_path="json_log.json"):
         """
         Args:
             visualize (bool): whether show the simulation or not.
@@ -256,16 +278,93 @@ class Simulator:
             each_step_propagation (bool): whether propagate for each step
                 or skip the steps using a lower estimation of the time to conjunction.
             print_out (bool): whether show the print out or not.
+            json_log (bool): whether log the simulation to file or not.
+            n_orbits_alert (float or None): number of orbits before collision emergency alert,
+                or None for not emergency alert; used for visualisation, json_log, log;
+                (should correlate with agent training methods).
+            json_log_path (path): json log path.
 
         Returns:
             reward (float): reward of the session.
 
         """
+        if not (visualize or log or json_log) or n_orbits_alert == 0:
+            n_orbits_alert = None
+
+        if n_orbits_alert is not None:
+            # TODO: move this part to utils
+            if print_out:
+                print("\nPreprocessing started.")
+            env_temp = self.env.copy()
+            orbit_time = env_temp.protected.get_orbital_period()
+            warning_time = orbit_time * n_orbits_alert
+            end_time_shifted = pk.epoch(
+                self.end_time.mjd2000 + warning_time, "mjd2000")
+            env_temp.set_end_time(end_time_shifted)
+            assert self.env.get_end_time().mjd2000 == self.end_time.mjd2000
+
+            # collision data without maneuvers
+            env_temp.reset()
+            agent = TableAgent()
+            simulator_wo_man = Simulator(agent, env_temp, self.step)
+            simulator_wo_man.run(visualize=False, log=False, each_step_propagation=False,
+                                 print_out=False, json_log=False, n_orbits_alert=None)
+            collision_data_wo_man = env_temp.collision_data()
+
+            # collision data with maneuvers
+            env_temp.reset()
+            agent = self.agent.copy()
+            simulator_with_man = Simulator(agent, env_temp, self.step)
+            simulator_with_man.run(visualize=False, log=False, each_step_propagation=False,
+                                   print_out=False, json_log=False, n_orbits_alert=None)
+            collision_data_with_man = env_temp.collision_data()
+
+            # alert data
+            maneuvers = action_table2maneuver_table(
+                agent.get_action_table(), self.start_time)
+            maneuvers_epochs = maneuvers[:, 3]
+            are_maneuvers = maneuvers.size != 0
+            # TODO: expand to many maneuvers
+            self.alerts = []
+            for coll in collision_data_wo_man:
+                if are_maneuvers and coll["epoch"] > maneuvers_epochs[0] + warning_time:
+                    break
+                start_alert_epoch = max(
+                    coll["epoch"] - warning_time, 0)
+                end_alert_epoch = coll["epoch"]
+                if are_maneuvers:
+                    end_alert_epoch = min(end_alert_epoch, maneuvers_epochs[0])
+                coll["start_alert_epoch"] = start_alert_epoch
+                coll["end_alert_epoch"] = end_alert_epoch
+                assert end_alert_epoch >= start_alert_epoch
+                self.alerts.append(coll)
+            if not are_maneuvers:
+                assert len(self.alerts) == len(collision_data_wo_man)
+            if are_maneuvers:
+                for coll in collision_data_with_man:
+                    if coll["epoch"] >= maneuvers_epochs[0] + warning_time:
+                        start_alert_epoch = max(
+                            coll["epoch"] - warning_time, 0)
+                        # TODO: min(coll epoch, next man)
+                        end_alert_epoch = coll["epoch"]
+                        coll["start_alert_epoch"] = start_alert_epoch
+                        coll["end_alert_epoch"] = end_alert_epoch
+                        self.alerts.append(coll)
+
+            # assert len(self.alerts) >= max(
+            #     len(collision_data_wo_man), len(collision_data_with_man))
+
+            self.curr_alert_id = 0
+            self.curr_alert = self.curr_alert_info()
+
+            if print_out:
+                print("Preprocessing ended.\n")
 
         if visualize:
+
             self.vis = Visualizer(self.curr_time.mjd2000, self.env.get_total_collision_probability(),
                                   self.env.get_fuel_consumption(), self.env.get_trajectory_deviation(),
-                                  self.env.get_reward_components(), self.env.get_reward())
+                                  self.env.get_reward_components(), self.env.get_reward(), self.curr_alert)
             self.vis.run()
             action = np.zeros(4)
             n_steps_since_vis = 1
@@ -273,6 +372,11 @@ class Simulator:
         if log:
             iteration = 0
             self.logger = logging.getLogger('simulator.Simulator')
+
+        if json_log:
+            json_log_iter = 0
+            self.json_log_path = json_log_path
+            self.log_json(json_log_iter, start=True)
 
         if print_out:
             self.print_start()
@@ -285,6 +389,7 @@ class Simulator:
             if self.curr_time.mjd2000 >= self.env.get_next_action().mjd2000:
                 s = self.env.get_state()
                 action = self.agent.get_action(s)
+                # TODO: assert: no actions without alert
                 err = self.env.act(action)
 
                 if log:
@@ -320,17 +425,24 @@ class Simulator:
                     self.vis.pause(PAUSE_TIME)
                 self.vis.clear()
 
+            if json_log:
+                self.log_json(json_log_iter)
+                json_log_iter += 1
+
             if self.curr_time.mjd2000 >= self.end_time.mjd2000:
                 break
 
             next_action_time = self.env.get_next_action().mjd2000
 
-            if np.isnan(next_action_time) or next_action_time > self.end_time.mjd2000:
+            if json_log:
+                next_time = pk.epoch(
+                    self.curr_time.mjd2000 + self.step, "mjd2000")
+            elif np.isnan(next_action_time) or next_action_time > self.end_time.mjd2000:
                 next_time = self.end_time
             else:
                 next_time = pk.epoch(next_action_time, "mjd2000")
 
-            if visualize:
+            if visualize and not json_log:
                 n_steps_to_next_time = int(next_time.mjd2000 / self.step)
                 n_steps_to_next_vis = n_steps_vis - n_steps_since_vis
                 if n_steps_to_next_time > n_steps_to_next_vis:
@@ -339,6 +451,9 @@ class Simulator:
                     n_steps_since_vis = n_steps_vis
                 else:
                     n_steps_since_vis += n_steps_to_next_time
+
+            if n_orbits_alert is not None:
+                self.curr_alert = self.curr_alert_info()
 
             self.curr_time = next_time
 
@@ -352,6 +467,9 @@ class Simulator:
         if print_out:
             simulation_time = time.time() - simulation_start_time
             self.print_end(simulation_time)
+
+        if json_log:
+            self.log_json(json_log_iter, end=True)
 
         return self.env.get_reward()
 
@@ -373,6 +491,56 @@ class Simulator:
     def log_bad_action(self, message, action):
         self.logger.warning(
             "Unable to make action (dVx:{}, dVy:{}, dVz:{}): {}".format(action[0], action[1], action[2], message))
+
+    def log_json(self, id, start=False, end=False):
+        if start:
+            with open(self.json_log_path, "w") as f:
+                f.write("{")
+        else:
+            point = {
+                "time_mjd2000": self.curr_time.mjd2000,
+                "epoch": str(self.curr_time),
+                "protected_pos": list(self.env.protected.position(self.curr_time)[0]),
+            }
+            debris_pos = []
+            for d in self.env.debris:
+                debris_pos.append(list(d.position(self.curr_time)[0]))
+            point["debris_pos"] = debris_pos
+            if self.alerts is not None:
+                point["alert"] = {
+                    "is_alert": len(self.curr_alert) != 0,
+                    "info": self.curr_alert,
+                }
+            with open(self.json_log_path, "a") as f:
+                f.write(f'"{id}": ')
+                json.dump(point, f)
+        with open(self.json_log_path, "a") as f:
+            if end:
+                f.write("}")
+            elif not start:
+                f.write(", ")
+
+    def curr_alert_info(self):
+        curr_epoch = self.curr_time.mjd2000
+        # TODO: all alerts info, not just about closest one
+        while self.curr_alert_id < len(self.alerts):
+            if self.alerts[self.curr_alert_id]["start_alert_epoch"] <= curr_epoch:
+                if self.alerts[self.curr_alert_id]["end_alert_epoch"] < curr_epoch:
+                    self.curr_alert_id += 1
+                else:
+                    info = self.alerts[self.curr_alert_id].copy()
+                    info.pop("start_alert_epoch")
+                    info.pop("end_alert_epoch")
+                    info["probability"] = round(info["probability"], 8)
+                    info["distance"] = round(info["distance"], 3)
+                    info["sec_before_collision"] = round(
+                        86400 * (info["epoch"] - self.curr_time.mjd2000), 1)
+                    info["epoch"] = round(info["epoch"], 5)
+                    info["debris_id"] = str(info["debris_id"])
+                    return info
+            else:
+                break
+        return {}
 
     def plot_protected(self):
         """ Plot Protected SpaceObject. """
@@ -396,7 +564,8 @@ class Simulator:
             self.env.get_fuel_consumption(),
             self.env.get_trajectory_deviation(),
             self.env.get_reward_components(),
-            self.env.get_reward())
+            self.env.get_reward(),
+            self.curr_alert)
 
     def print_start(self):
         print("Simulation started.\n\nStart time: {} \t End time: {} \t Simulation step:{}\n".format(
@@ -408,15 +577,13 @@ class Simulator:
             print(spaceObject.satellite)
 
     def print_end(self, simulation_time):
+        # TODO: if alert, do not copy the code
         # data
         coll_prob_thr = self.env.coll_prob_thr
         fuel_cons_thr = self.env.fuel_cons_thr
         traj_dev_thr = self.env.traj_dev_thr
         action_table = self.agent.action_table
-        action_table_not_empty = action_table.size
-        if action_table_not_empty:
-            if np.count_nonzero(action_table[0, :3]) == 0 and action_table.shape[0] == 1:
-                action_table_not_empty = False
+        action_table_not_empty = not is_action_table_empty(action_table)
         crit_distance = self.env.crit_distance
 
         coll_prob = self.env.get_total_collision_probability()
@@ -427,12 +594,12 @@ class Simulator:
         coll_prob_r = reward_components["coll_prob"]
         fuel_r = reward_components["fuel"]
         traj_dev_r = reward_components["traj_dev"]
-        collision_data = self.env.get_collision_data()
+        collision_data = self.env.collision_data()
 
         # w/o maneuvers
         if action_table_not_empty:
             agent = TableAgent()
-            env_wo = copy(self.env)
+            env_wo = self.env.copy()
             env_wo.reset()
             simulator_wo = Simulator(agent, env_wo, self.step)
             simulator_wo.run(visualize=False, n_steps_vis=1000,
@@ -446,7 +613,7 @@ class Simulator:
             coll_prob_r_wo = reward_components_wo["coll_prob"]
             fuel_r_wo = reward_components_wo["fuel"]
             traj_dev_r_wo = reward_components_wo["traj_dev"]
-            collision_data_wo = env_wo.get_collision_data()
+            collision_data_wo = env_wo.collision_data()
         else:
             coll_prob_wo = coll_prob
             fuel_cons_wo = fuel_cons
@@ -464,13 +631,8 @@ class Simulator:
         # maneuvers
         print("\nManeuvers table:")
         if action_table_not_empty:
-            maneuvers = action_table
-            maneuvers[1:, 3] = maneuvers[:-1, 3]
-            maneuvers[0, 3] = 0
-            maneuvers[:, 3] = np.cumsum(
-                maneuvers[:, 3]) + self.start_time.mjd2000
-            if np.count_nonzero(maneuvers[0, :3]) == 0:
-                maneuvers = maneuvers[1:]
+            maneuvers = action_table2maneuver_table(
+                action_table, self.start_time)
             columns = ["dVx (m^2/s)", "dVy (m^2/s)",
                        "dVz (m^2/s)", "time (mjd2000)"]
             df = pd.DataFrame(maneuvers,
@@ -489,7 +651,7 @@ class Simulator:
                 print(f"        #{i+1}: at {c['epoch']} with {c['debris_name']};")
                 print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
         else:
-            print("    no collisions without maneuvers.")
+            print("    without maneuvers: no collisions.")
         if action_table_not_empty:
             n = len(collision_data)
             if n > 0:
@@ -498,7 +660,7 @@ class Simulator:
                     print(f"        #{i+1}: at {c['epoch']} with {c['debris_name']};")
                     print(f"        distance: {c['distance']:.5}; probability: {c['probability']:.5}.")
             else:
-                print("    no collisions with maneuvers.")
+                print("    with maneuvers: no collisions.")
 
         # total reward
         print("\nTotal Reward:")

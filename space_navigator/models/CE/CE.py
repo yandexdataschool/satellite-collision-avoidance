@@ -148,7 +148,7 @@ class CrossEntropy(BaseTableModel):
         self.percentile = percentile
 
         self.fuel_level = env.init_fuel
-        self.policy_reward = self.get_reward(self.action_table)
+        self.policy_reward = self.get_reward()
 
         self.progress = None
         self.log_rewards = None
@@ -275,7 +275,7 @@ class CrossEntropy(BaseTableModel):
                         "if reverse -  it has to be only 3 actions")
             self.n_maneuvers = action_table.shape[0]
             self.action_table = np.copy(action_table)
-            self.policy_reward = self.get_reward(self.action_table)
+            self.policy_reward = self.get_reward()
 
     def set_action_table_from_path(self, model_path):
         action_table = np.loadtxt(model_path, delimiter=',')

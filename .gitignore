@@ -112,3 +112,9 @@ simulation_graphics.png
 
 # training
 training/CE/CE_graphics.png
+
+# json.swp
+.json.swp
+.json
+json_log/
+*log

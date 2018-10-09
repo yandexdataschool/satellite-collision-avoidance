@@ -4,7 +4,7 @@ import time
 
 import time
 
-from .train_utils import generate_session_with_env, time_to_early_first_maneuver
+from .train_utils import generate_session_with_env, time_before_early_first_maneuver
 
 from ..api import Environment, MAX_FUEL_CONSUMPTION
 from ..simulator import Simulator
@@ -37,14 +37,14 @@ class BaseTableModel:
 
         self.first_maneuver_time = first_maneuver_time
         if first_maneuver_time == "early":
-            time_to_first_maneuver = time_to_early_first_maneuver(
+            time_to_first_maneuver = time_before_early_first_maneuver(
                 self.env, self.step)
         else:
             time_to_first_maneuver = None
         self.time_to_first_maneuver = time_to_first_maneuver
 
         self.action_table = np.empty((0, 4))
-        self.policy_reward = self.get_reward(self.action_table)
+        self.policy_reward = self.get_reward()
 
         self.protected = env.protected
         self.debris = env.debris
@@ -82,9 +82,14 @@ class BaseTableModel:
     def iteration(self, print_out, *args, **kwargs):
         pass
 
-    def get_reward(self, action_table):
+    def get_reward(self, action_table=None):
+        if action_table is None:
+            action_table = self.action_table
         agent = TableAgent(action_table)
         return generate_session_with_env(agent, self.env, self.step)
+
+    def get_action_table(self):
+        return self.action_table
 
     def save_action_table(self, path):
         # TODO - save reward here?

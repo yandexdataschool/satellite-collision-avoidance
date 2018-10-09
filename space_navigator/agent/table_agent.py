@@ -45,3 +45,6 @@ class TableAgent(BaseAgent):
 
     def get_action_table(self):
         return self.action_table
+
+    def copy(self):
+        return TableAgent(self.action_table)
