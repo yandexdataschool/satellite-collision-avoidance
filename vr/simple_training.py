@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+import os
 import pandas as pd
 
 from space_navigator.utils import read_environment
@@ -46,7 +47,7 @@ def model_info(env, model, step):
 
 
 def save_result(model, name, dir_path, env, step):
-    path = dir_path + name
+    path = os.path.join(dir_path, name)
     model.save_action_table(path + "_act.csv")
     model_info(env, model, step).to_csv(path + "_inf.csv")
 
@@ -71,6 +72,8 @@ def main(args):
     full_train = args.full_train.lower() == "true"
     step = args.step
     save_action_table_dir = args.save_action_table_dir
+    if not os.path.exists(save_action_table_dir):
+        os.makedirs(save_action_table_dir)
     print_out = args.print_out.lower() == "true"
     env_path = args.environment
 

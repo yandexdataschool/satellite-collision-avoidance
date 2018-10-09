@@ -33,6 +33,8 @@ def main(args):
                         default="True", required=False)
     parser.add_argument("-print", "--print_out", type=str,
                         default="True", required=False)
+    parser.add_argument("-json_path", "---json_log_path", type=str,
+                        default="vr/json_log.json", required=False)
 
     args = parser.parse_args(args)
 
@@ -45,6 +47,7 @@ def main(args):
     # simulator run args
     log = args.logging.lower() == "true"
     print_out = args.print_out.lower() == "true"
+    json_log_path = args.json_log_path
 
     # simulation
     env = read_environment(env_path)
@@ -53,7 +56,7 @@ def main(args):
         agent=agent, environment=env, step=step)
     simulator.run(visualize=False, n_steps_vis=None, log=log,
                   each_step_propagation=True, print_out=print_out,
-                  json_log=True)
+                  json_log=True, json_log_path=json_log_path)
     return
 
 

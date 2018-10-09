@@ -9,25 +9,19 @@ python vr/simulation.py
 
 #### Example 2: maneuvers for random generated collision situation
 
-Run following code to generate collision situation environment with 5 dangerous debris objects in the time interval from 6601 to 6601.1 ([mjd2000](http://www.solarsystemlab.com/faq.html)) and save it to data/environments/generated_collision_5_debr.env:
+Run following code to generate collision situation environment with 5 dangerous debris objects in the time interval from 6601 to 6601.1 ([mjd2000](http://www.solarsystemlab.com/faq.html)) and save it to vr/examples/test.env:
 ```
-python generation/generate_collision.py \
--save_path data/environments/generated_collision_5_debr.env \
--n_d 5 -start 6601 -end 6601.1 -before 0.1
+python generation/generate_collision.py -save_path vr/examples/test.env -n_d 5 -start 6601 -end 6601.1 -before 0.1
 ```
+Then, to calculate the maneuvers to vr/training/, run (add ```-full false``` for demo calculation):
+```
+python vr/simple_training.py -save_dir vr/examples/training -env vr/examples/test.env
+```
+Please note that in addition to the maneuvers, files with information (...info.csv) about the solution can be found in the directory (vr/training/).
 
-Then, to calculate the maneuvers using the Cross Entropy method and save them to training/agents_tables/CE/action_table_CE_for_generated_collision_5_debr.csv, run:
+Finally, to run the simulator for generated environment and obtained maneuvers (add ```-s 0.001``` for demo simulation):
 ```
-python training/CE/CE_train_for_collision.py \
--env data/environments/generated_collision_5_debr.env -print true \
--save_path training/agents_tables/CE/action_table_CE_for_generated_collision_5_debr.csv \
--r false -n_m 1
-```
-
-Finally, to run the simulator for generated environment and obtained maneuvers:
-```
-python  vr/simulation.py -env data/environments/generated_collision_5_debr.env \
--model training/agents_tables/CE/action_table_CE_for_generated_collision_5_debr.csv
+python  vr/simulation_dir.py -env vr/examples/test.env -models_dir vr/examples/training
 ```
 
 #### JSON output

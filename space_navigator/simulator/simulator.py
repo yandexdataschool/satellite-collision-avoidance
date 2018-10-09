@@ -266,9 +266,10 @@ class Simulator:
         self.alerts = None
         self.curr_alert_id = None
         self.curr_alert = None
+        self.json_log_path = None
 
     def run(self, visualize=False, n_steps_vis=1000, log=True, each_step_propagation=False,
-            print_out=False, json_log=False, n_orbits_alert=1.):
+            print_out=False, json_log=False, n_orbits_alert=1., json_log_path="json_log.json"):
         """
         Args:
             visualize (bool): whether show the simulation or not.
@@ -281,6 +282,7 @@ class Simulator:
             n_orbits_alert (float or None): number of orbits before collision emergency alert,
                 or None for not emergency alert; used for visualisation, json_log, log;
                 (should correlate with agent training methods).
+            json_log_path (path): json log path.
 
         Returns:
             reward (float): reward of the session.
@@ -373,6 +375,7 @@ class Simulator:
 
         if json_log:
             json_log_iter = 0
+            self.json_log_path = json_log_path
             self.log_json(json_log_iter, start=True)
 
         if print_out:
@@ -490,9 +493,8 @@ class Simulator:
             "Unable to make action (dVx:{}, dVy:{}, dVz:{}): {}".format(action[0], action[1], action[2], message))
 
     def log_json(self, id, start=False, end=False):
-        json_log_path = "vr/json_log.json"
         if start:
-            with open(json_log_path, "w") as f:
+            with open(self.json_log_path, "w") as f:
                 f.write("{")
         else:
             point = {
@@ -509,10 +511,10 @@ class Simulator:
                     "is_alert": len(self.curr_alert) != 0,
                     "info": self.curr_alert,
                 }
-            with open(json_log_path, "a") as f:
+            with open(self.json_log_path, "a") as f:
                 f.write(f"\"{id}\": ")
                 json.dump(point, f)
-        with open(json_log_path, "a") as f:
+        with open(self.json_log_path, "a") as f:
             if end:
                 f.write("}")
             elif not start:
