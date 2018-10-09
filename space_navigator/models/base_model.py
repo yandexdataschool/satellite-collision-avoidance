@@ -44,7 +44,7 @@ class BaseTableModel:
         self.time_to_first_maneuver = time_to_first_maneuver
 
         self.action_table = np.empty((0, 4))
-        self.policy_reward = self.get_reward(self.action_table)
+        self.policy_reward = self.get_reward()
 
         self.protected = env.protected
         self.debris = env.debris
@@ -82,9 +82,14 @@ class BaseTableModel:
     def iteration(self, print_out, *args, **kwargs):
         pass
 
-    def get_reward(self, action_table):
+    def get_reward(self, action_table=None):
+        if action_table is None:
+            action_table = self.action_table
         agent = TableAgent(action_table)
         return generate_session_with_env(agent, self.env, self.step)
+
+    def get_action_table(self):
+        return self.action_table
 
     def save_action_table(self, path):
         # TODO - save reward here?
