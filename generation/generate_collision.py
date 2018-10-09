@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+import os
 
 from space_navigator.generator import Generator
 
@@ -41,6 +42,9 @@ def main(args):
     i_threshold = args.i_threshold
 
     save_path = args.environment_save_path
+    dirname = os.path.dirname(save_path)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
 
     # generation
     generator = Generator(start_time, end_time)

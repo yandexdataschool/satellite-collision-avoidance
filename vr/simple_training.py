@@ -81,14 +81,15 @@ def main(args):
     env = read_environment(env_path)
 
     # in-track one (collinear): baseline
-    print("\nIn-track. One object.\n")
-    model1 = Baseline(env, step, REVERSE)
-    iteration_kwargs1 = {
-        "n_sessions": 1000 if full_train else 50,
-    }
-    model1.train(1, print_out, **iteration_kwargs1)
-    name1 = "in-track_one_obj"
-    save_result(model1, name1, save_action_table_dir, env, step)
+
+    # print("\nIn-track. One object.\n")
+    # model1 = Baseline(env, step, REVERSE)
+    # iteration_kwargs1 = {
+    #     "n_sessions": 1000 if full_train else 50,
+    # }
+    # model1.train(1, print_out, **iteration_kwargs1)
+    # name1 = "in-track_one_obj"
+    # save_result(model1, name1, save_action_table_dir, env, step)
 
     # in-track all (collinear): collinear GS
     print("\nIn-track. All objects.\n")
@@ -160,9 +161,17 @@ def main(args):
     save_result(model5, name5, save_action_table_dir, env, step)
 
     # print end
+
+#     print(f"""
+# Total Reward:
+# in-track_one_obj:  {model1.get_reward():.5};
+# in-track_all_obj:  {model2.get_reward():.5};
+# in-plane_all_obj:  {model34.get_reward():.5};
+# out-plane_all_obj: {model4.get_reward():.5}.
+# """)
+
     print(f"""
 Total Reward:
-in-track_one_obj:  {model1.get_reward():.5};
 in-track_all_obj:  {model2.get_reward():.5};
 in-plane_all_obj:  {model34.get_reward():.5};
 out-plane_all_obj: {model4.get_reward():.5}.
