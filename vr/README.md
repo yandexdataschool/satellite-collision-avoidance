@@ -34,6 +34,17 @@ JSON output (json_log.json) format:
     "epoch": epoch,
     "protected_pos": [x, y, z],
     "debris_pos": [[x1, y1, z1], [x2, y2, z2], ...],
+    "alert": {
+      "is_alert": bool,
+      "info": {
+        "probability": float,
+        "distance": miss distance,
+        "epoch": epoch,
+        "debris_name": name,
+        "debris_id": id,
+        "sec_before_collision": float
+      }
+    }
   }
   ...
 }
