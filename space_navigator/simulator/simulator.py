@@ -94,7 +94,7 @@ class Visualizer:
         self.fig = plt.figure(figsize=[14, 12])
         self.gs = gridspec.GridSpec(15, 2)
         self.subplot_3d = self.fig.add_subplot(self.gs[:, 0], projection='3d')
-        self.subplot_3d.set_aspect("equal")
+        self.subplot_3d.set_aspect("auto")
         self.subplot_p = self.fig.add_subplot(self.gs[:3, 1])
         self.subplot_f = self.fig.add_subplot(self.gs[4:7, 1])
         self.subplot_r_t = self.fig.add_subplot(self.gs[8:11, 1])
@@ -126,7 +126,7 @@ class Visualizer:
 
     def plot_planet(self, satellite, t, size, color):
         """ Plot a pykep.planet object. """
-        plot_planet(satellite, ax=self.subplot_3d,
+        plot_planet(satellite, axes=self.subplot_3d,
                     t0=t, s=size, legend=True, color=color)
 
     def plot_earth(self):
