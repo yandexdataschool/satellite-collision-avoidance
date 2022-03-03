@@ -23,11 +23,11 @@ setup(
     # What does your project relate to?
     keywords='machine learning, reinforcement learning, collision avoidance, spacecraft',
 
-    install_requires=[
-        'pykep == 2.1',
-        'pandas >= 0.20.3',
-        'matplotlib >= 2.1.0',
-        'numpy >= 1.14.2',
-        'scipy >= 1.0.1'
-    ],
+    # install_requires=[
+    #     'pykep == 2.1',
+    #     'pandas >= 0.20.3',
+    #     'matplotlib >= 2.1.0',
+    #     'numpy >= 1.14.2',
+    #     'scipy >= 1.0.1'
+    # ],
 )

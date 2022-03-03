@@ -300,7 +300,7 @@ class Environment:
                 [self.get_fuel_consumption()],
                 np.abs(self.get_trajectory_deviation()),
             )
-        ).astype(np.float)
+        ).astype(np.float64)
         reward_arr = reward_func(values, self._reward_thr)
         coll_prob_r = reward_arr[0]
         fuel_r = reward_arr[1]

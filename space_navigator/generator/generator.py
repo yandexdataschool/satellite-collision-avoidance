@@ -5,7 +5,6 @@ import sys
 import numpy as np
 import pykep as pk
 
-
 from .generator_utils import SpaceObject2srt, rotate_velocity
 from ..api import SpaceObject
 
@@ -22,13 +21,14 @@ class Generator:
     def __init__(self, start_time, end_time):
         # TODO - random start/end time with duration?
         # TODO - random duration?
-        self.start_time = pk.epoch(start_time, "mjd2000")
-        self.end_time = pk.epoch(end_time, "mjd2000")
+        self.start_time = start_time  # pk.epoch(start_time, "mjd2000")
+        self.end_time = end_time  # pk.epoch(end_time, "mjd2000")
 
         self.protected = None
         self.debris = []
 
         self.collision_epochs = []
+        self.protected_params = None
 
     def add_protected(self):
         """Add protected object."""
@@ -70,8 +70,8 @@ class Generator:
         elements = [a, e, i, W, w, M]
 
         # protected object parameters
-        params = {
-            "epoch": self.start_time,
+        protected_params = {
+            "start_time": self.start_time,
             "elements": elements,
             "mu_central_body": pk.MU_EARTH,
             "mu_self": mu_self,
@@ -80,7 +80,14 @@ class Generator:
             "fuel": fuel
         }
 
-        self.protected = SpaceObject("PROTECTED", "osc", params)
+        self.add_protected_by_params(protected_params)
+
+    def add_protected_by_params(self, protected_params):
+        self.protected_params = protected_params
+        protected_params_with_epoch = self.protected_params.copy()
+        protected_params_with_epoch["epoch"] = pk.epoch(protected_params_with_epoch['start_time'], "mjd2000")
+        del protected_params_with_epoch['start_time']
+        self.protected = SpaceObject("PROTECTED", "osc", protected_params_with_epoch)
 
     def add_debris(self, pos_sigma=0, vel_ratio_sigma=0.05,
                    i_threshold=0.5):
@@ -104,9 +111,12 @@ class Generator:
         if not self.protected:
             raise Exception("no protected object")
 
+        start_time = pk.epoch(self.start_time, "mjd2000")
+        end_time = pk.epoch(self.end_time, "mjd2000")
+
         # TODO - indent?
         collision_time = np.random.uniform(
-            self.start_time.mjd2000, self.end_time.mjd2000
+            start_time.mjd2000, end_time.mjd2000
         )
 
         collision_time = pk.epoch(collision_time, "mjd2000")
@@ -157,12 +167,17 @@ class Generator:
         self.debris.append(SpaceObject(name, "eph", params))
 
     def save_env(self, save_path, time_before_start_time=0):
+        start_time = pk.epoch(self.start_time, "mjd2000")
+        end_time = pk.epoch(self.end_time, "mjd2000")
         with open(save_path, 'w') as f:
-            f.write(f'{self.start_time.mjd2000 - time_before_start_time}, {self.end_time.mjd2000}\n')
+            f.write(f'{start_time.mjd2000 - time_before_start_time}, {end_time.mjd2000}\n')
             f.write('osc\n')
-            f.write(SpaceObject2srt(self.protected, self.start_time))
+            f.write(SpaceObject2srt(self.protected, start_time))
             for debr, epoch in zip(self.debris, self.collision_epochs):
                 f.write(SpaceObject2srt(debr, epoch))
+
+    def get_protected_params(self):
+        return self.protected_params
 
     def env(self):
         pass
