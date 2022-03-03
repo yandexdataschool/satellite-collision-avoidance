@@ -70,7 +70,7 @@ def sent_result():
     return send_file(
         maneuvers_path,
         mimetype='text/csv',
-        attachment_filename=maneuvers_path,
+        attachment_filename='maneuver.csv',
         as_attachment=True
     )
 
